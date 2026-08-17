@@ -14,7 +14,9 @@ PWA de un solo `index.html` (sin build, sin backend) para **anotar lo que pasa e
    `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo`, en orden cronológico.
 
    Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
-3. **⚙️ Datos** — exportar / importar JSON de respaldo, glosario interno (86, 101, arqueo ciego) y borrado total.
+3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude y lo mandas: **📲 Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
+4. **📤 Informes** — los informes guardados con su modo, período y fecha; desde cada uno: WhatsApp, copiar, descargar `.txt` o borrar.
+5. **⚙️ Datos** — exportar / importar JSON de respaldo (notas + informes), glosario interno (86, 101, arqueo ciego) y borrado.
 
 El texto del período (`lun 17-08`, `17-08 al 23-08`) se calcula solo, pero es editable a mano.
 
@@ -23,7 +25,8 @@ El texto del período (`lun 17-08`, `17-08 al 23-08`) se calcula solo, pero es e
 Todo en el navegador del dispositivo:
 
 - `if_notas_v1` — las notas.
-- `if_prefs_v1` — modo claro/oscuro.
+- `if_informes_v1` — los informes que pegaste de vuelta.
+- `if_prefs_v1` — modo claro/oscuro y número de WhatsApp.
 
 No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Importar JSON**. La importación no duplica (compara por `id`).
 

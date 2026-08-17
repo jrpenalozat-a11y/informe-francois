@@ -115,6 +115,10 @@ pre.out{
   font-size:12.5px; line-height:1.45; max-height:44vh; overflow:auto; margin:0;
 }
 .hint{font-size:12.5px; color:var(--tx3); margin:8px 0 0}
+.metaInf{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:baseline; font-size:13px; color:var(--tx2); margin-bottom:9px}
+.metaInf b{color:var(--acc); letter-spacing:.4px}
+body.dark .metaInf b{color:var(--acc2)}
+.metaInf span{color:var(--tx3); font-size:12px; margin-left:auto}
 .pill{display:inline-block; background:var(--accSoft); color:var(--acc); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700}
 body.dark .pill{color:var(--acc2)}
 .seg{display:flex; gap:6px; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:4px}
@@ -155,6 +159,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   <nav class="tabs">
     <button data-tab="notas" class="on">📝 Notas</button>
     <button data-tab="generar">📄 Generar</button>
+    <button data-tab="informes">📤 Informes</button>
     <button data-tab="datos">⚙️ Datos</button>
   </nav>
 
@@ -244,6 +249,28 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint">Copia y pega en Claude. Si no hay notas en el período, avisa antes de copiar.</p>
       <pre class="out mt" id="preview"></pre>
     </div>
+
+    <div class="card">
+      <h2>Informe de vuelta <span class="pill">pégalo aquí</span></h2>
+      <p class="hint" style="margin:0 0 10px">Pega lo que te devolvió Claude. Desde aquí lo mandas al grupo y queda guardado.</p>
+      <textarea id="rTexto" style="min-height:150px" placeholder="*Bitácora François* — lun 17-08&#10;…"></textarea>
+      <div class="row mt">
+        <div><label class="f" for="rNum">Enviar directo a este número <span style="text-transform:none;font-weight:600">(opcional)</span></label>
+          <input type="text" id="rNum" placeholder="56912345678" inputmode="numeric"></div>
+      </div>
+      <div class="btns mt">
+        <button class="btn ok" id="btnWA">📲 Enviar por WhatsApp</button>
+        <button class="btn sec" id="btnCopiarInf">📋 Copiar</button>
+        <button class="btn sec" id="btnGuardarInf">💾 Guardar</button>
+        <button class="btn sec" id="btnLimpiarInf">Limpiar</button>
+      </div>
+      <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes.</p>
+    </div>
+  </section>
+
+  <!-- ============ INFORMES ============ -->
+  <section id="tab-informes" class="hide">
+    <div id="listaInf"></div>
   </section>
 
   <!-- ============ DATOS ============ -->
@@ -270,6 +297,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <h2>Zona de riesgo</h2>
       <div class="btns">
         <button class="btn danger" id="btnBorrarTodo">Borrar todas las notas</button>
+        <button class="btn danger" id="btnBorrarInf">Borrar los informes</button>
       </div>
     </div>
   </section>
@@ -281,17 +309,19 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
 <script>
 /* ================= Estado ================= */
-var KEY='if_notas_v1', PREF='if_prefs_v1';
+var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1';
 var AREAS=['SALA','COCINA','CAJA','PERSONAL','PROVEEDORES','EQUIPOS','PRODUCTO','OTRO'];
 var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
 
 var notas=load(KEY,[]);
-var prefs=load(PREF,{dark:false});
+var informes=load(INF,[]);
+var prefs=load(PREF,{dark:false, wa:''});
 var sel={area:'SALA', edit:null};
 var gen={modo:'DIARIO'};
 
 function load(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
 function save(){ localStorage.setItem(KEY,JSON.stringify(notas)); }
+function saveInf(){ localStorage.setItem(INF,JSON.stringify(informes)); }
 function savePrefs(){ localStorage.setItem(PREF,JSON.stringify(prefs)); }
 function $(s){ return document.querySelector(s); }
 function toast(m){ var t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('on');},1900); }
@@ -523,6 +553,53 @@ function setModo(m){
   autoRango(); renderPreview();
 }
 
+/* ================= Informes ================= */
+function guardarInforme(silencioso){
+  var txt=$('#rTexto').value.trim();
+  if(!txt){ if(!silencioso) toast('Pega primero el informe'); return null; }
+  var ya=informes.find(function(i){ return i.texto===txt; });
+  if(ya){ if(!silencioso) toast('Ese informe ya estaba guardado'); return ya; }
+  var inf={ id:Date.now()+'-'+Math.random().toString(36).slice(2,7),
+            modo:gen.modo, rango:$('#gRango').value.trim(),
+            creado:new Date().toISOString(), texto:txt };
+  informes.unshift(inf); saveInf(); renderInformes();
+  if(!silencioso) toast('Informe guardado');
+  return inf;
+}
+
+function enviarWA(txt){
+  txt=(txt||'').trim();
+  if(!txt){ toast('No hay informe que enviar'); return; }
+  if(txt.length>1800){
+    copiar(txt,'Informe copiado');
+    if(!confirm('El informe tiene '+txt.length+' caracteres y WhatsApp puede cortarlo.\n'+
+                'Ya quedó copiado: puedes pegarlo directo en el chat.\n\n¿Abrir WhatsApp igual?')) return;
+  }
+  var num=(prefs.wa||'').replace(/\D/g,'');
+  window.open('https://wa.me/'+num+'?text='+encodeURIComponent(txt), '_blank', 'noopener');
+}
+
+function renderInformes(){
+  if(!informes.length){
+    $('#listaInf').innerHTML='<div class="empty">Todavía no guardas informes.<br>Pega en «Generar» el texto que te devuelva Claude y mándalo desde ahí. 📄</div>';
+    return;
+  }
+  $('#listaInf').innerHTML = informes.map(function(i){
+    var f=new Date(i.creado);
+    return '<div class="card">'+
+      '<div class="metaInf"><b>'+i.modo+'</b> · '+esc(i.rango||'sin período')+
+      '<span>guardado '+etiqueta(hoyISO(f))+' · '+p2(f.getHours())+':'+p2(f.getMinutes())+'</span></div>'+
+      '<pre class="out" style="max-height:210px">'+esc(i.texto)+'</pre>'+
+      '<div class="btns mt">'+
+        '<button class="btn ok sm" data-wa="'+i.id+'">📲 WhatsApp</button>'+
+        '<button class="btn sec sm" data-copyinf="'+i.id+'">📋 Copiar</button>'+
+        '<button class="btn sec sm" data-txtinf="'+i.id+'">⬇️ .txt</button>'+
+        '<button class="btn danger sm" data-delinf="'+i.id+'">Borrar</button>'+
+      '</div></div>';
+  }).join('');
+}
+function infPorId(id){ return informes.find(function(i){ return i.id===id; }); }
+
 /* ================= Copiar / archivos ================= */
 function copiar(txt, msg){
   function fallback(){
@@ -549,10 +626,11 @@ document.addEventListener('click', function(e){
 
   if(t.dataset.tab){
     document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b===t); });
-    ['notas','generar','datos'].forEach(function(id){
+    ['notas','generar','informes','datos'].forEach(function(id){
       $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
     });
     if(t.dataset.tab==='generar') renderPreview();
+    if(t.dataset.tab==='informes') renderInformes();
     if(t.dataset.tab==='datos') stats();
     window.scrollTo({top:0});
     return;
@@ -561,6 +639,21 @@ document.addEventListener('click', function(e){
   if(t.dataset.edit){ editar(t.dataset.edit); return; }
   if(t.dataset.del){ borrar(t.dataset.del); return; }
   if(t.dataset.modo){ setModo(t.dataset.modo); return; }
+
+  if(t.dataset.wa){ var iw=infPorId(t.dataset.wa); if(iw) enviarWA(iw.texto); return; }
+  if(t.dataset.copyinf){ var ic=infPorId(t.dataset.copyinf); if(ic) copiar(ic.texto,'Informe copiado'); return; }
+  if(t.dataset.txtinf){
+    var it=infPorId(t.dataset.txtinf);
+    if(it) bajar('informe-'+it.modo.toLowerCase()+'-'+(it.rango||'').replace(/[^0-9a-zA-Z]+/g,'-')+'.txt', it.texto);
+    return;
+  }
+  if(t.dataset.delinf){
+    if(confirm('¿Borrar este informe guardado?')){
+      informes=informes.filter(function(i){ return i.id!==t.dataset.delinf; });
+      saveInf(); renderInformes(); stats(); toast('Informe borrado');
+    }
+    return;
+  }
 
   if(t.dataset.atajo){
     var h=new Date();
@@ -579,12 +672,21 @@ document.addEventListener('click', function(e){
       if(!notasDelPeriodo().length && !confirm('No hay notas en el período. ¿Copiar igual?')) break;
       copiar(construirPrompt(),'Prompt copiado'); break;
     case 'btnCopiarNotas': copiar(textoNotas(),'Notas copiadas'); break;
+    case 'btnWA': guardarInforme(true); enviarWA($('#rTexto').value); break;
+    case 'btnCopiarInf': copiar($('#rTexto').value.trim(),'Informe copiado'); break;
+    case 'btnGuardarInf': guardarInforme(false); break;
+    case 'btnLimpiarInf': $('#rTexto').value=''; toast('Cuadro limpio'); break;
     case 'btnTxt': bajar('informe-francois-'+gen.modo.toLowerCase()+'-'+hoyISO()+'.txt', construirPrompt()); break;
-    case 'btnExport': bajar('notas-francois-'+hoyISO()+'.json', JSON.stringify(notas,null,2)); break;
+    case 'btnExport': bajar('informe-francois-'+hoyISO()+'.json', JSON.stringify({notas:notas, informes:informes},null,2)); break;
     case 'btnImport': $('#fileImport').click(); break;
     case 'btnBorrarTodo':
       if(confirm('Esto borra las '+notas.length+' notas guardadas en este dispositivo. ¿Seguro?')){
-        notas=[]; save(); renderLista(); renderPreview(); stats(); toast('Todo borrado');
+        notas=[]; save(); renderLista(); renderPreview(); stats(); toast('Notas borradas');
+      }
+      break;
+    case 'btnBorrarInf':
+      if(confirm('Esto borra los '+informes.length+' informes guardados. ¿Seguro?')){
+        informes=[]; saveInf(); renderInformes(); stats(); toast('Informes borrados');
       }
       break;
     case 'btnInstall':
@@ -598,6 +700,7 @@ document.addEventListener('input', function(e){
   if(id==='fBuscar'||id==='fFiltro') renderLista();
   if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); }
   if(id==='gRango'||id==='gPend') renderPreview();
+  if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
 });
 document.addEventListener('change', function(e){
   if(e.target.id==='fFiltro') renderLista();
@@ -608,11 +711,18 @@ document.addEventListener('change', function(e){
     r.onload=function(){
       try{
         var d=JSON.parse(r.result);
-        if(!Array.isArray(d)) throw 0;
+        var dn = Array.isArray(d) ? d : (d && Array.isArray(d.notas) ? d.notas : null);
+        var di = (d && Array.isArray(d.informes)) ? d.informes : [];
+        if(!dn) throw 0;
         var ids={}; notas.forEach(function(n){ ids[n.id]=1; });
-        var nuevas=d.filter(function(n){ return n && n.texto && n.fecha && !ids[n.id]; });
-        notas=notas.concat(nuevas); save(); renderLista(); renderPreview(); stats();
-        toast(nuevas.length+' nota'+(nuevas.length===1?'':'s')+' importada'+(nuevas.length===1?'':'s'));
+        var nuevas=dn.filter(function(n){ return n && n.texto && n.fecha && !ids[n.id]; });
+        notas=notas.concat(nuevas); save();
+        var idsI={}; informes.forEach(function(i){ idsI[i.id]=1; });
+        var nuevosI=di.filter(function(i){ return i && i.texto && !idsI[i.id]; });
+        informes=nuevosI.concat(informes); saveInf();
+        renderLista(); renderPreview(); renderInformes(); stats();
+        toast(nuevas.length+' nota'+(nuevas.length===1?'':'s')+
+              (nuevosI.length?' y '+nuevosI.length+' informe'+(nuevosI.length===1?'':'s'):'')+' · importado');
       }catch(err){ toast('Archivo no válido'); }
       e.target.value='';
     };
@@ -625,8 +735,9 @@ document.addEventListener('keydown', function(e){
 
 function stats(){
   var dias={}; notas.forEach(function(n){ dias[n.fecha]=1; });
-  $('#statTxt').textContent = notas.length+' nota'+(notas.length===1?'':'s')+' guardada'+(notas.length===1?'':'s')+
-    ' en '+Object.keys(dias).length+' día'+(Object.keys(dias).length===1?'':'s')+'.';
+  var d=Object.keys(dias).length;
+  $('#statTxt').textContent = notas.length+' nota'+(notas.length===1?'':'s')+' en '+d+' día'+(d===1?'':'s')+
+    ' · '+informes.length+' informe'+(informes.length===1?'':'s')+' guardado'+(informes.length===1?'':'s')+'.';
 }
 function aplicaTema(){
   document.body.classList.toggle('dark', !!prefs.dark);
@@ -638,6 +749,8 @@ function aplicaTema(){
   aplicaTema();
   resetForm();
   renderLista();
+  renderInformes();
+  $('#rNum').value = prefs.wa || '';
   var h=new Date();
   $('#gDia').value=hoyISO(h);
   var l=lunesDe(h);

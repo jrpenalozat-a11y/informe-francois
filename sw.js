@@ -1,7 +1,7 @@
 /* Informe François — service worker
    HTML: network-first (siempre lo más nuevo con conexión).
    Resto: cache-first. Sube CACHE al cambiar assets del núcleo. */
-const CACHE = "if-v1";
+const CACHE = "if-v2";
 const CORE = ["./", "./index.html", "./manifest.json", "./icon.svg", "./icon-maskable.svg"];
 
 self.addEventListener("install", e => {
