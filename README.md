@@ -25,7 +25,14 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
    `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo → MEDIDA: se hizo arqueo ciego de nuevo`, en orden cronológico.
 
    Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
-3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude y lo mandas. **Al pegar deja solo el informe**: si viene dentro de ``` ``` usa el bloque, y si trae texto antes o comentarios después, los recorta (empieza en `*Bitácora François*` o en `RESUMEN DE LA SEMANA`; en modo CIERRE no toca la cola porque termina en prosa). El botón **✂️ Dejar solo el informe** repite esa limpieza a mano. Lo que se envía es exactamente lo que quede en el cuadro: el prompt y las notas nunca salen. Botones: **📲 Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
+3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude, **lo corriges y lo mandas**. Incluye:
+
+   - **Vista «cómo llega al grupo»**: una burbuja tipo WhatsApp con las negritas y viñetas ya renderizadas, para revisar antes de enviar.
+   - **Revisión de formato**: avisa si hay `**doble asterisco**`, encabezados con `#`, viñetas con guion, filas de tabla o un asterisco sin cerrar. **🧹 Arreglar formato** lo pasa todo a formato WhatsApp (`*negrita*`, `• viñeta`), y al enviar, si queda algo, pregunta si lo arregla primero.
+   - **Barra de redacción**: `*N*` pone en negrita lo que marques, `*TÍTULO*` convierte la línea en encabezado, `•` le pone viñeta, `⛶` agranda el cuadro.
+   - **Borrador automático**: lo que estés escribiendo se guarda (`if_borrador_v1`) y vuelve si cierras la app.
+
+   **Al pegar deja solo el informe**: si viene dentro de ``` ``` usa el bloque, y si trae texto antes o comentarios después, los recorta (empieza en `*Bitácora François*` o en `RESUMEN DE LA SEMANA`; en modo CIERRE no toca la cola porque termina en prosa). El botón **✂️ Dejar solo el informe** repite esa limpieza a mano. Lo que se envía es exactamente lo que quede en el cuadro: el prompt y las notas nunca salen. Botones: **📲 Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
 4. **📤 Informes** — los informes guardados con su modo, período y fecha; desde cada uno: WhatsApp, copiar, descargar `.txt` o borrar.
 5. **⚙️ Datos** — exportar / importar JSON de respaldo (notas + informes), glosario interno (86, 101, arqueo ciego) y borrado.
 
@@ -37,6 +44,7 @@ Todo en el navegador del dispositivo:
 
 - `if_notas_v1` — las notas.
 - `if_informes_v1` — los informes que pegaste de vuelta.
+- `if_borrador_v1` — el informe que estás redactando (borrador).
 - `if_prefs_v1` — modo claro/oscuro y número de WhatsApp.
 
 No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Importar JSON**. La importación no duplica (compara por `id`).

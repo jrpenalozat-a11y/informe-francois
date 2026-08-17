@@ -122,6 +122,33 @@ pre.out{
   font-size:12.5px; line-height:1.45; max-height:44vh; overflow:auto; margin:0;
 }
 .hint{font-size:12.5px; color:var(--tx3); margin:8px 0 0}
+/* Barra de formato + cuadro de redacción */
+.fmt{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
+.fmtb{
+  border:1px solid var(--line); background:var(--bg2); color:var(--tx2);
+  padding:7px 11px; border-radius:9px; font:inherit; font-size:13px; font-weight:700; cursor:pointer;
+}
+.fmtb:active{transform:scale(.96)}
+#rTexto{min-height:190px; font-size:15px; line-height:1.5}
+#rTexto.grande{min-height:60vh}
+.aviso{
+  display:flex; gap:8px; align-items:flex-start; background:var(--dangerSoft); color:var(--danger);
+  border:1px solid var(--line); border-radius:11px; padding:9px 11px; font-size:13px; margin-top:8px;
+}
+.aviso.ok{background:var(--okSoft); color:var(--ok)}
+
+/* Vista previa tipo WhatsApp */
+.waChat{
+  background:#0b141a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23ffffff' stroke-opacity='.03'/%3E%3C/svg%3E");
+  border:1px solid var(--line); border-radius:14px; padding:14px 12px; overflow:auto; max-height:46vh;
+}
+.waBub{
+  background:#075e54; color:#eaf5f0; border-radius:12px 12px 12px 4px; padding:10px 12px;
+  font-size:14.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word;
+  max-width:min(100%,420px); box-shadow:0 1px 2px rgba(0,0,0,.4);
+}
+.waBub b{color:#fff}
+.waBub .waVacio{opacity:.6; font-style:italic}
 .metaInf{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:baseline; font-size:13px; color:var(--tx2); margin-bottom:9px}
 .metaInf b{color:var(--acc); letter-spacing:.4px}
 body.dark .metaInf b{color:var(--acc2)}
@@ -262,9 +289,22 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
 
     <div class="card">
-      <h2>Informe de vuelta <span class="pill">pégalo aquí</span></h2>
-      <p class="hint" style="margin:0 0 10px">Pega lo que te devolvió Claude. Desde aquí lo mandas al grupo y queda guardado.</p>
-      <textarea id="rTexto" style="min-height:150px" placeholder="*Bitácora François* — lun 17-08&#10;…"></textarea>
+      <h2>Informe de vuelta <span class="pill">pégalo y corrígelo</span></h2>
+      <p class="hint" style="margin:0 0 10px">Pega lo que te devolvió Claude, arréglalo si hace falta y mándalo. Abajo ves cómo va a llegar al grupo.</p>
+      <div class="fmt">
+        <button class="fmtb" data-fmt="negrita" title="Poner en negrita lo seleccionado">*N*</button>
+        <button class="fmtb" data-fmt="titulo" title="Convertir la línea en título">*TÍTULO*</button>
+        <button class="fmtb" data-fmt="vineta" title="Poner viñeta a la línea">•</button>
+        <button class="fmtb" data-fmt="arreglar" title="Pasar el texto a formato WhatsApp">🧹 Arreglar formato</button>
+        <button class="fmtb" data-fmt="expandir" title="Agrandar el cuadro">⛶</button>
+      </div>
+      <textarea id="rTexto" placeholder="*Bitácora François* — lun 17-08&#10;…"></textarea>
+      <p class="hint" id="rCuenta"></p>
+      <div id="rAvisos"></div>
+
+      <label class="f mt" style="margin-top:14px">Cómo llega al grupo</label>
+      <div class="waChat"><div class="waBub" id="rVista"><span class="waVacio">Todavía no hay nada que mostrar.</span></div></div>
+
       <div class="row mt">
         <div><label class="f" for="rNum">Enviar directo a este número <span style="text-transform:none;font-weight:600">(opcional)</span></label>
           <input type="text" id="rNum" placeholder="56912345678" inputmode="numeric"></div>
@@ -276,7 +316,6 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <button class="btn sec" id="btnSoloInf">✂️ Dejar solo el informe</button>
         <button class="btn sec" id="btnLimpiarInf">Limpiar</button>
       </div>
-      <p class="hint" id="rCuenta"></p>
       <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes.</p>
     </div>
   </section>
@@ -322,7 +361,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
 <script>
 /* ================= Estado ================= */
-var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1';
+var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1', BORR='if_borrador_v1';
 var AREAS=['SALA','COCINA','CAJA','PERSONAL','PROVEEDORES','EQUIPOS','PRODUCTO','OTRO'];
 var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
 
@@ -598,13 +637,87 @@ function soloInforme(t){
 function aplicarSolo(silencioso){
   var antes=$('#rTexto').value, despues=soloInforme(antes);
   if(!despues){ if(!silencioso) toast('No encontré el informe'); return; }
-  if(despues===antes.trim()){ if(!silencioso) toast('Ya estaba limpio'); cuentaInf(); return; }
-  $('#rTexto').value=despues; cuentaInf();
+  if(despues===antes.trim()){ if(!silencioso) toast('Ya estaba limpio'); refrescarInf(); return; }
+  $('#rTexto').value=despues; refrescarInf();
   toast('Se quitó el texto de más');
 }
 function cuentaInf(){
   var n=$('#rTexto').value.trim().length;
   $('#rCuenta').textContent = n ? n+' caracteres'+(n>1800?' · largo para un solo mensaje de WhatsApp':'') : '';
+}
+
+/* --- Cómo se verá en WhatsApp --- */
+function waHTML(t){
+  var h=esc(t);
+  h=h.replace(/```([\s\S]+?)```/g, function(_,c){ return '<code>'+c+'</code>'; });
+  h=h.replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s.,;:!?)])/g, '$1<b>$2</b>');
+  h=h.replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s.,;:!?)])/g, '$1<i>$2</i>');
+  h=h.replace(/(^|[\s(])~([^~\n]+)~(?=$|[\s.,;:!?)])/g, '$1<s>$2</s>');
+  return h;
+}
+function vistaInf(){
+  var t=$('#rTexto').value.trim();
+  $('#rVista').innerHTML = t ? waHTML(t) : '<span class="waVacio">Todavía no hay nada que mostrar.</span>';
+}
+
+/* --- Revisión del formato WhatsApp --- */
+function problemasWA(t){
+  var p=[], cierre=/^\s*RESUMEN DE LA SEMANA/i.test(t);
+  if(/\*\*[^*\n]+\*\*/.test(t)) p.push('Hay negritas con doble asterisco (**así**): WhatsApp las muestra con los asteriscos.');
+  if(/^\s{0,3}#{1,6}\s+\S/m.test(t)) p.push('Hay encabezados con # : WhatsApp no los convierte en título.');
+  if(/^\s*[-–—]\s+\S/m.test(t)) p.push('Hay viñetas con guion: en el grupo se usan con «• ».');
+  if(!cierre && /^\s*\|.*\|\s*$/m.test(t)) p.push('Hay filas de tabla con | : WhatsApp no dibuja tablas.');
+  var lineas=t.split('\n');
+  for(var i=0;i<lineas.length;i++){
+    var n=(lineas[i].match(/\*/g)||[]).length;
+    if(n%2===1){ p.push('Línea '+(i+1)+': hay un asterisco sin cerrar, la negrita va a salir mal.'); break; }
+  }
+  return p;
+}
+function avisosInf(){
+  var t=$('#rTexto').value.trim(), box=$('#rAvisos');
+  if(!t){ box.innerHTML=''; return; }
+  var p=problemasWA(t);
+  box.innerHTML = p.length
+    ? p.map(function(x){ return '<div class="aviso"><span>⚠️</span><span>'+esc(x)+'</span></div>'; }).join('')
+    : '<div class="aviso ok"><span>✓</span><span>El formato está listo para WhatsApp.</span></div>';
+}
+
+/* --- Pasar el texto a formato WhatsApp --- */
+function arreglarWA(t){
+  t=(t||'').replace(/\r/g,'');
+  var cierre=/^\s*RESUMEN DE LA SEMANA/i.test(t);
+  t=t.replace(/\*\*([^*\n]+)\*\*/g,'*$1*');
+  t=t.replace(/^\s{0,3}#{1,6}\s*(.+?)\s*#*\s*$/gm,'*$1*');
+  t=t.replace(/^\s*[-–—]\s+/gm,'• ');
+  t=t.replace(/^\s*\*\s+(?=\S)/gm,'• ');
+  if(!cierre) t=t.replace(/^\s*\|.*\|\s*$/gm,'');
+  t=t.replace(/^[\s:\-|]{6,}$/gm,'');
+  t=t.replace(/\n{3,}/g,'\n\n');
+  return t.trim();
+}
+
+/* --- Redacción: formato sobre la selección o la línea --- */
+function envolver(marca){
+  var ta=$('#rTexto'), i=ta.selectionStart, f=ta.selectionEnd, v=ta.value;
+  if(i===f){ toast('Marca primero el texto'); ta.focus(); return; }
+  ta.value=v.slice(0,i)+marca+v.slice(i,f)+marca+v.slice(f);
+  ta.focus(); ta.setSelectionRange(i, f+marca.length*2);
+  refrescarInf();
+}
+function porLinea(fn){
+  var ta=$('#rTexto'), i=ta.selectionStart, v=ta.value;
+  var ini=v.lastIndexOf('\n', Math.max(0,i-1))+1;
+  var fin=v.indexOf('\n', i); if(fin<0) fin=v.length;
+  var nueva=fn(v.slice(ini,fin));
+  ta.value=v.slice(0,ini)+nueva+v.slice(fin);
+  ta.focus(); ta.setSelectionRange(ini+nueva.length, ini+nueva.length);
+  refrescarInf();
+}
+
+function refrescarInf(){
+  cuentaInf(); vistaInf(); avisosInf();
+  try{ localStorage.setItem(BORR, $('#rTexto').value); }catch(e){}
 }
 
 function guardarInforme(silencioso){
@@ -693,6 +806,22 @@ document.addEventListener('click', function(e){
   if(t.dataset.del){ borrar(t.dataset.del); return; }
   if(t.dataset.modo){ setModo(t.dataset.modo); return; }
 
+  if(t.dataset.fmt){
+    if(t.dataset.fmt==='negrita') envolver('*');
+    if(t.dataset.fmt==='titulo') porLinea(function(l){ var s=l.trim().replace(/^\*+|\*+$/g,''); return s?'*'+s+'*':l; });
+    if(t.dataset.fmt==='vineta') porLinea(function(l){ var s=l.replace(/^\s*[•*\-–—]\s*/,'').trim(); return s?'• '+s:l; });
+    if(t.dataset.fmt==='arreglar'){
+      var antes=$('#rTexto').value, despues=arreglarWA(antes);
+      $('#rTexto').value=despues; refrescarInf();
+      toast(antes.trim()===despues ? 'Ya estaba en formato WhatsApp' : 'Formato arreglado');
+    }
+    if(t.dataset.fmt==='expandir'){
+      $('#rTexto').classList.toggle('grande');
+      t.textContent = $('#rTexto').classList.contains('grande') ? '⛝' : '⛶';
+    }
+    return;
+  }
+
   if(t.dataset.wa){ var iw=infPorId(t.dataset.wa); if(iw) enviarWA(iw.texto); return; }
   if(t.dataset.copyinf){ var ic=infPorId(t.dataset.copyinf); if(ic) copiar(ic.texto,'Informe copiado'); return; }
   if(t.dataset.txtinf){
@@ -725,11 +854,21 @@ document.addEventListener('click', function(e){
       if(!notasDelPeriodo().length && !confirm('No hay notas en el período. ¿Copiar igual?')) break;
       copiar(construirPrompt(),'Prompt copiado'); break;
     case 'btnCopiarNotas': copiar(textoNotas(),'Notas copiadas'); break;
-    case 'btnWA': guardarInforme(true); enviarWA($('#rTexto').value); break;
+    case 'btnWA':
+      var pw=problemasWA($('#rTexto').value.trim());
+      if(pw.length && confirm('El formato tiene detalles que WhatsApp no muestra bien:\n\n• '+pw.join('\n• ')+
+                              '\n\n¿Lo arreglo antes de enviar?')){
+        $('#rTexto').value=arreglarWA($('#rTexto').value); refrescarInf();
+      }
+      guardarInforme(true); enviarWA($('#rTexto').value);
+      break;
     case 'btnCopiarInf': copiar($('#rTexto').value.trim(),'Informe copiado'); break;
     case 'btnGuardarInf': guardarInforme(false); break;
     case 'btnSoloInf': aplicarSolo(false); break;
-    case 'btnLimpiarInf': $('#rTexto').value=''; cuentaInf(); toast('Cuadro limpio'); break;
+    case 'btnLimpiarInf':
+      if($('#rTexto').value.trim() && !confirm('¿Vaciar el cuadro? Se pierde lo que estás redactando.')) break;
+      $('#rTexto').value=''; refrescarInf(); toast('Cuadro limpio');
+      break;
     case 'btnTxt': bajar('informe-francois-'+gen.modo.toLowerCase()+'-'+hoyISO()+'.txt', construirPrompt()); break;
     case 'btnExport': bajar('informe-francois-'+hoyISO()+'.json', JSON.stringify({notas:notas, informes:informes},null,2)); break;
     case 'btnImport': $('#fileImport').click(); break;
@@ -755,13 +894,13 @@ document.addEventListener('input', function(e){
   if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); }
   if(id==='gRango'||id==='gPend') renderPreview();
   if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
-  if(id==='rTexto') cuentaInf();
+  if(id==='rTexto') refrescarInf();
 });
 
 /* Al pegar la respuesta de Claude, deja solo el informe. */
 document.addEventListener('paste', function(e){
   if(e.target.id!=='rTexto') return;
-  setTimeout(function(){ aplicarSolo(true); cuentaInf(); }, 0);
+  setTimeout(function(){ aplicarSolo(true); refrescarInf(); }, 0);
 });
 document.addEventListener('change', function(e){
   if(e.target.id==='fFiltro') renderLista();
@@ -812,7 +951,8 @@ function aplicaTema(){
   renderLista();
   renderInformes();
   $('#rNum').value = prefs.wa || '';
-  cuentaInf();
+  try{ $('#rTexto').value = localStorage.getItem(BORR) || ''; }catch(e){}
+  refrescarInf();
   var h=new Date();
   $('#gDia').value=hoyISO(h);
   var l=lunesDe(h);
