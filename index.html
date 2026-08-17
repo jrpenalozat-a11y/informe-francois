@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Informe François</title>
+<meta name="description" content="Notas del turno y generador del prompt maestro de bitácora (diario, semanal y cierre).">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7a4a22">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{
+  --bg:#faf6f1; --bg2:#fffdfb; --card:#ffffff; --line:#e7dccf;
+  --tx:#2c1e14; --tx2:#7a6553; --tx3:#a08c78;
+  --acc:#b5651d; --acc2:#8a4a16; --accSoft:#f6e8da;
+  --ok:#2e7d4f; --okSoft:#e3f2e8;
+  --warn:#b3541e; --danger:#b3261e; --dangerSoft:#fbe6e5;
+  --sh:0 1px 2px rgba(44,30,20,.06), 0 8px 24px rgba(44,30,20,.06);
+  --r:14px;
+}
+body.dark{
+  --bg:#17120e; --bg2:#1e1813; --card:#231b15; --line:#3a2e24;
+  --tx:#f3e9df; --tx2:#c2ab96; --tx3:#9b8571;
+  --acc:#e0913f; --acc2:#f0ad60; --accSoft:#3a2a1a;
+  --ok:#6ec48e; --okSoft:#1e3527;
+  --warn:#e0913f; --danger:#ef7a72; --dangerSoft:#3a1f1d;
+  --sh:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16px; line-height:1.5; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:880px; margin:0 auto; padding:0 16px 96px}
+
+/* Header */
+header.top{
+  background:linear-gradient(135deg,var(--acc2),var(--acc));
+  color:#fff; padding:20px 16px 18px; border-radius:0 0 22px 22px;
+}
+header.top .in{max-width:880px; margin:0 auto; display:flex; align-items:center; gap:12px}
+.logo{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:22px;flex:0 0 auto}
+header.top h1{margin:0; font-size:20px; letter-spacing:.2px}
+header.top p{margin:2px 0 0; font-size:13px; opacity:.9}
+.topbtns{margin-left:auto; display:flex; gap:8px}
+.iconbtn{
+  border:0; background:rgba(255,255,255,.18); color:#fff; width:38px;height:38px;
+  border-radius:11px; font-size:17px; cursor:pointer;
+}
+.iconbtn:active{transform:scale(.94)}
+
+/* Tabs */
+nav.tabs{display:flex; gap:8px; margin:16px 0 18px}
+nav.tabs button{
+  flex:1; padding:11px 8px; border-radius:12px; border:1px solid var(--line);
+  background:var(--card); color:var(--tx2); font-size:14px; font-weight:600; cursor:pointer;
+}
+nav.tabs button.on{background:var(--acc); border-color:var(--acc); color:#fff}
+
+/* Cards */
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh); padding:16px; margin-bottom:14px}
+.card h2{margin:0 0 12px; font-size:15px; letter-spacing:.4px; text-transform:uppercase; color:var(--tx2)}
+label.f{display:block; font-size:12px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:var(--tx2); margin:0 0 5px}
+input[type=text],input[type=date],input[type=time],textarea,select{
+  width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:11px;
+  background:var(--bg2); color:var(--tx); font:inherit; font-size:15px;
+}
+textarea{resize:vertical; min-height:82px}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--acc); outline-offset:1px}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row>div{flex:1 1 140px}
+.mt{margin-top:12px}
+
+/* Chips de área */
+.chips{display:flex; flex-wrap:wrap; gap:7px}
+.chip{
+  border:1px solid var(--line); background:var(--bg2); color:var(--tx2);
+  padding:7px 12px; border-radius:999px; font-size:13px; font-weight:600; cursor:pointer;
+}
+.chip.on{background:var(--accSoft); border-color:var(--acc); color:var(--acc)}
+body.dark .chip.on{color:var(--acc2)}
+
+/* Botones */
+.btn{
+  border:0; border-radius:12px; padding:12px 16px; font:inherit; font-weight:700;
+  font-size:15px; cursor:pointer; background:var(--acc); color:#fff;
+}
+.btn:active{transform:scale(.98)}
+.btn.sec{background:var(--bg2); color:var(--tx); border:1px solid var(--line)}
+.btn.ok{background:var(--ok)}
+.btn.danger{background:var(--dangerSoft); color:var(--danger); border:1px solid var(--line)}
+.btn.sm{padding:8px 12px; font-size:13px; border-radius:10px}
+.btns{display:flex; gap:8px; flex-wrap:wrap}
+
+/* Lista de notas */
+.day{margin:18px 0 8px; font-size:13px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--tx2); display:flex; align-items:center; gap:8px}
+.day span.n{font-weight:600; color:var(--tx3); text-transform:none; letter-spacing:0}
+.note{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 12px; margin-bottom:8px; display:flex; gap:10px; align-items:flex-start}
+.note .body{flex:1; min-width:0}
+.note .meta{font-size:12px; color:var(--tx3); margin-bottom:2px}
+.note .meta b{color:var(--acc); font-weight:700}
+body.dark .note .meta b{color:var(--acc2)}
+.note .txt{white-space:pre-wrap; word-break:break-word}
+.note .acts{display:flex; gap:4px; flex:0 0 auto}
+.note .acts button{border:0; background:transparent; cursor:pointer; font-size:15px; padding:4px; border-radius:8px; color:var(--tx3)}
+.empty{color:var(--tx3); font-size:14px; text-align:center; padding:26px 10px}
+
+/* Preview */
+pre.out{
+  white-space:pre-wrap; word-break:break-word; background:var(--bg2); border:1px solid var(--line);
+  border-radius:12px; padding:13px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px; line-height:1.45; max-height:44vh; overflow:auto; margin:0;
+}
+.hint{font-size:12.5px; color:var(--tx3); margin:8px 0 0}
+.pill{display:inline-block; background:var(--accSoft); color:var(--acc); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700}
+body.dark .pill{color:var(--acc2)}
+.seg{display:flex; gap:6px; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:4px}
+.seg button{flex:1; border:0; background:transparent; color:var(--tx2); font:inherit; font-weight:700; font-size:14px; padding:9px 6px; border-radius:9px; cursor:pointer}
+.seg button.on{background:var(--acc); color:#fff}
+.chk{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--tx2); cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--acc)}
+.hide{display:none !important}
+
+/* Toast */
+#toast{
+  position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+  background:var(--tx); color:var(--bg); padding:11px 18px; border-radius:999px;
+  font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.22s; z-index:60;
+}
+#toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
+footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
+</style>
+</head>
+<body class="">
+
+<header class="top">
+  <div class="in">
+    <div class="logo">📋</div>
+    <div>
+      <h1>Informe François</h1>
+      <p>Notas del turno → prompt listo para pegar</p>
+    </div>
+    <div class="topbtns">
+      <button class="iconbtn" id="btnTheme" title="Modo claro / oscuro">🌙</button>
+      <button class="iconbtn" id="btnInstall" title="Instalar app" style="display:none">📲</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <nav class="tabs">
+    <button data-tab="notas" class="on">📝 Notas</button>
+    <button data-tab="generar">📄 Generar</button>
+    <button data-tab="datos">⚙️ Datos</button>
+  </nav>
+
+  <!-- ============ NOTAS ============ -->
+  <section id="tab-notas">
+    <div class="card">
+      <h2 id="formTitle">Nueva nota</h2>
+      <div class="row">
+        <div><label class="f" for="fFecha">Fecha</label><input type="date" id="fFecha"></div>
+        <div><label class="f" for="fHora">Hora</label><input type="time" id="fHora"></div>
+      </div>
+      <div class="mt">
+        <label class="f">Área</label>
+        <div class="chips" id="fAreas"></div>
+      </div>
+      <div class="mt">
+        <label class="f" for="fTexto">Nota</label>
+        <textarea id="fTexto" placeholder="Tal como la anotaste al paso. Ej: diferencia de 3.400 en el arqueo"></textarea>
+      </div>
+      <div class="btns mt">
+        <button class="btn" id="btnGuardar">Agregar nota</button>
+        <button class="btn sec hide" id="btnCancelar">Cancelar</button>
+      </div>
+      <p class="hint">Ctrl + Enter para agregar rápido. La hora y la fecha vienen puestas en «ahora».</p>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:flex-end">
+        <div style="flex:2 1 200px"><label class="f" for="fBuscar">Buscar</label><input type="text" id="fBuscar" placeholder="texto, área…"></div>
+        <div><label class="f" for="fFiltro">Mostrar</label>
+          <select id="fFiltro">
+            <option value="7">Últimos 7 días</option>
+            <option value="14">Últimos 14 días</option>
+            <option value="30">Últimos 30 días</option>
+            <option value="0">Todas</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="lista"></div>
+  </section>
+
+  <!-- ============ GENERAR ============ -->
+  <section id="tab-generar" class="hide">
+    <div class="card">
+      <h2>Modo</h2>
+      <div class="seg" id="segModo">
+        <button data-modo="DIARIO" class="on">DIARIO</button>
+        <button data-modo="SEMANAL">SEMANAL</button>
+        <button data-modo="CIERRE">CIERRE</button>
+      </div>
+      <p class="hint" id="modoHint"></p>
+    </div>
+
+    <div class="card">
+      <h2>Período</h2>
+      <div id="boxDia" class="row">
+        <div><label class="f" for="gDia">Día</label><input type="date" id="gDia"></div>
+        <div style="flex:0 0 auto; align-self:flex-end"><button class="btn sec sm" data-atajo="hoy">Hoy</button> <button class="btn sec sm" data-atajo="ayer">Ayer</button></div>
+      </div>
+      <div id="boxSemana" class="row hide">
+        <div><label class="f" for="gDesde">Desde</label><input type="date" id="gDesde"></div>
+        <div><label class="f" for="gHasta">Hasta</label><input type="date" id="gHasta"></div>
+        <div style="flex:0 0 auto; align-self:flex-end"><button class="btn sec sm" data-atajo="estaSem">Esta semana</button> <button class="btn sec sm" data-atajo="semPasada">Semana pasada</button></div>
+      </div>
+      <div class="mt">
+        <label class="f" for="gRango">Texto del período (va en el prompt)</label>
+        <input type="text" id="gRango" placeholder="lun 18-08">
+      </div>
+      <p class="hint" id="conteo"></p>
+    </div>
+
+    <div class="card hide" id="boxPend">
+      <h2>Pendientes de la reunión pasada <span class="pill">opcional</span></h2>
+      <textarea id="gPend" placeholder="Uno por línea. El informe te dirá cuáles siguen apareciendo en la bitácora y cuáles no se volvieron a mencionar."></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Prompt</h2>
+      <label class="chk"><input type="checkbox" id="gTodos"> Incluir las reglas de los tres modos</label>
+      <div class="btns mt">
+        <button class="btn" id="btnCopiar">📋 Copiar prompt</button>
+        <button class="btn sec" id="btnCopiarNotas">Copiar solo las notas</button>
+        <button class="btn sec" id="btnTxt">Descargar .txt</button>
+      </div>
+      <p class="hint">Copia y pega en Claude. Si no hay notas en el período, avisa antes de copiar.</p>
+      <pre class="out mt" id="preview"></pre>
+    </div>
+  </section>
+
+  <!-- ============ DATOS ============ -->
+  <section id="tab-datos" class="hide">
+    <div class="card">
+      <h2>Respaldo</h2>
+      <p class="hint" style="margin-top:0" id="statTxt"></p>
+      <div class="btns mt">
+        <button class="btn sec" id="btnExport">⬇️ Exportar JSON</button>
+        <button class="btn sec" id="btnImport">⬆️ Importar JSON</button>
+        <input type="file" id="fileImport" accept="application/json" class="hide">
+      </div>
+      <p class="hint">Las notas se guardan solo en este dispositivo (localStorage). Exporta de vez en cuando.</p>
+    </div>
+    <div class="card">
+      <h2>Glosario interno</h2>
+      <p class="hint" style="margin-top:0">
+        <b>86</b> = producto agotado · <b>101</b> = producto prioritario de vender o sugerir ·
+        <b>arqueo ciego</b> = el cajero no ajusta ni borra mesas para calzar la caja.
+        El prompt ya lleva estas definiciones.
+      </p>
+    </div>
+    <div class="card">
+      <h2>Zona de riesgo</h2>
+      <div class="btns">
+        <button class="btn danger" id="btnBorrarTodo">Borrar todas las notas</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>François · La Florida — datos locales, sin servidor.</footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= Estado ================= */
+var KEY='if_notas_v1', PREF='if_prefs_v1';
+var AREAS=['SALA','COCINA','CAJA','PERSONAL','PROVEEDORES','EQUIPOS','PRODUCTO','OTRO'];
+var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
+
+var notas=load(KEY,[]);
+var prefs=load(PREF,{dark:false});
+var sel={area:'SALA', edit:null};
+var gen={modo:'DIARIO'};
+
+function load(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function save(){ localStorage.setItem(KEY,JSON.stringify(notas)); }
+function savePrefs(){ localStorage.setItem(PREF,JSON.stringify(prefs)); }
+function $(s){ return document.querySelector(s); }
+function toast(m){ var t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('on');},1900); }
+
+/* ================= Fechas ================= */
+function hoyISO(d){ d=d||new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+function p2(n){ return (n<10?'0':'')+n; }
+function dObj(iso){ var a=iso.split('-'); return new Date(+a[0], +a[1]-1, +a[2]); }
+function etiqueta(iso){ var d=dObj(iso); return DIAS[d.getDay()]+' '+p2(d.getDate())+'-'+p2(d.getMonth()+1); }
+function corta(iso){ var d=dObj(iso); return p2(d.getDate())+'-'+p2(d.getMonth()+1); }
+function lunesDe(d){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); var dw=(x.getDay()+6)%7; x.setDate(x.getDate()-dw); return x; }
+function sumaDias(d,n){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()+n); return x; }
+
+/* ================= Notas ================= */
+function renderChips(){
+  $('#fAreas').innerHTML = AREAS.map(function(a){
+    return '<button class="chip'+(a===sel.area?' on':'')+'" data-area="'+a+'">'+cap(a)+'</button>';
+  }).join('');
+}
+function cap(a){ return a.charAt(0)+a.slice(1).toLowerCase(); }
+
+function resetForm(){
+  var n=new Date();
+  $('#fFecha').value=hoyISO(n);
+  $('#fHora').value=p2(n.getHours())+':'+p2(n.getMinutes());
+  $('#fTexto').value='';
+  sel.area='SALA'; sel.edit=null;
+  $('#formTitle').textContent='Nueva nota';
+  $('#btnGuardar').textContent='Agregar nota';
+  $('#btnCancelar').classList.add('hide');
+  renderChips();
+}
+
+function guardar(){
+  var txt=$('#fTexto').value.trim();
+  if(!txt){ toast('Escribe la nota'); $('#fTexto').focus(); return; }
+  var n={ id: sel.edit || (Date.now()+'-'+Math.random().toString(36).slice(2,7)),
+          fecha: $('#fFecha').value || hoyISO(),
+          hora: $('#fHora').value || '',
+          area: sel.area, texto: txt };
+  if(sel.edit){
+    var i=notas.findIndex(function(x){return x.id===sel.edit;});
+    if(i>=0) notas[i]=n;
+    toast('Nota actualizada');
+  } else {
+    notas.push(n);
+    toast('Nota agregada');
+  }
+  save(); resetForm(); renderLista(); renderPreview();
+}
+
+function editar(id){
+  var n=notas.find(function(x){return x.id===id;}); if(!n) return;
+  sel.edit=id; sel.area=n.area;
+  $('#fFecha').value=n.fecha; $('#fHora').value=n.hora; $('#fTexto').value=n.texto;
+  $('#formTitle').textContent='Editando nota';
+  $('#btnGuardar').textContent='Guardar cambios';
+  $('#btnCancelar').classList.remove('hide');
+  renderChips();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function borrar(id){
+  var n=notas.find(function(x){return x.id===id;}); if(!n) return;
+  if(!confirm('¿Borrar esta nota?\n\n'+n.texto)) return;
+  notas=notas.filter(function(x){return x.id!==id;});
+  if(sel.edit===id) resetForm();
+  save(); renderLista(); renderPreview(); toast('Nota borrada');
+}
+
+function ordenadas(arr){
+  return arr.slice().sort(function(a,b){
+    return (a.fecha+(a.hora||'00:00')).localeCompare(b.fecha+(b.hora||'00:00'));
+  });
+}
+
+function renderLista(){
+  var q=$('#fBuscar').value.trim().toLowerCase();
+  var dias=+$('#fFiltro').value;
+  var limite = dias ? hoyISO(sumaDias(new Date(), -(dias-1))) : '';
+  var arr=notas.filter(function(n){
+    if(limite && n.fecha < limite) return false;
+    if(q && (n.texto+' '+n.area).toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  arr = ordenadas(arr).reverse();
+
+  if(!arr.length){
+    $('#lista').innerHTML='<div class="empty">'+(notas.length?'Nada con ese filtro.':'Todavía no hay notas. Empieza arriba. ☝️')+'</div>';
+    return;
+  }
+  var html='', dia='';
+  arr.forEach(function(n){
+    if(n.fecha!==dia){
+      dia=n.fecha;
+      var cuantas=arr.filter(function(x){return x.fecha===dia;}).length;
+      html+='<div class="day">'+etiqueta(dia)+' <span class="n">· '+cuantas+' nota'+(cuantas>1?'s':'')+'</span></div>';
+    }
+    html+='<div class="note"><div class="body">'+
+      '<div class="meta">'+(n.hora||'—')+' · <b>'+cap(n.area)+'</b></div>'+
+      '<div class="txt">'+esc(n.texto)+'</div></div>'+
+      '<div class="acts"><button data-edit="'+n.id+'" title="Editar">✏️</button>'+
+      '<button data-del="'+n.id+'" title="Borrar">🗑️</button></div></div>';
+  });
+  $('#lista').innerHTML=html;
+}
+function esc(s){ return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+/* ================= Prompt maestro ================= */
+var REGLAS =
+'REGLAS QUE VALEN PARA LOS TRES MODOS\n\n'+
+'1. Español de Chile, registro directo y sobrio. Sin introducciones, sin cierres, sin frases de relleno tipo "en resumen" o "cabe destacar".\n'+
+'2. No inventes nada: ni causas, ni nombres, ni horas, ni cifras que no estén en las notas. Si una nota es ambigua, déjala casi textual y márcala con "(revisar)".\n'+
+'3. Junta en un solo punto las notas que hablan de lo mismo. Si un tema se repite en distintos días, dilo con el dato: "3 veces esta semana (mar, jue, vie)".\n'+
+'4. Si una nota posterior contradice o resuelve a una anterior, gana la más nueva y lo señalas: "resuelto el jueves".\n'+
+'5. Terminología interna que debes respetar tal cual: 86 = producto agotado; 101 = producto prioritario de vender o sugerir; arqueo ciego = el cajero no ajusta ni borra mesas para calzar la caja.\n'+
+'6. Formato WhatsApp: negrita con un solo asterisco a cada lado (*ASÍ*). Nada de #, ni tablas, ni doble asterisco, ni viñetas de markdown. Cada punto parte con "• ".\n'+
+'7. Los nombres de personas van tal como aparecen en las notas. Si una nota apunta a alguien de forma crítica, redáctala sobre el hecho y no sobre la persona.\n'+
+'8. Nunca cierres con preguntas al lector ni con ofrecimientos.';
+
+function bloqueDiario(rango){ return (
+'SI EL MODO ES "DIARIO"\n\n'+
+'Salida máxima 180 palabras.\n\n'+
+'*Bitácora François* — '+rango+'\n'+
+'Dos o tres líneas corridas contando cómo estuvo el día: carga de trabajo, lo que se salió de lo normal, cómo se cerró.\n\n'+
+'Después, los puntos agrupados por tema (usa solo los temas que aparezcan: SALA, COCINA, CAJA, PERSONAL, PROVEEDORES, EQUIPOS, PRODUCTO). Encabezado del tema en negrita y mayúsculas, y debajo sus puntos con "• ".\n\n'+
+'Cierra con:\n*PENDIENTES PARA MAÑANA*\n• lo que quedó abierto, con responsable solo si la nota lo dice.\n\n'+
+'Si el día no tuvo nada relevante, dilo en una línea y no rellenes.'); }
+
+function bloqueSemanal(rango){ return (
+'SI EL MODO ES "SEMANAL"\n\n'+
+'Salida máxima 350 palabras.\n\n'+
+'*Bitácora François* — semana del '+rango+'\n'+
+'Tres o cuatro líneas con el pulso de la semana: qué se repitió, qué mejoró, qué se cayó.\n\n'+
+'Puntos agrupados por tema, igual que en el modo diario, pero ya consolidados: nada de repetir el mismo hecho en días distintos.\n\n'+
+'Cierra con:\n*PENDIENTES*\n• lo que sigue abierto.\n'+
+'*POSITIVOS*\n• reconocimientos concretos al equipo, con el hecho que los respalda. Si no hay, omite la sección entera.'); }
+
+function bloqueCierre(){ return (
+'SI EL MODO ES "CIERRE"\n\n'+
+'Este no va al grupo: es el insumo para la reunión del lunes. Puede ser largo. Estructura exacta:\n\n'+
+'RESUMEN DE LA SEMANA\n'+
+'Cuatro a seis líneas de prosa. Qué pasó, qué patrón se ve, qué quedó sin resolver.\n\n'+
+'TEMAS PARA LA REUNIÓN\n'+
+'Ordenados por prioridad Eisenhower, en tres bloques: HACER AHORA / PLANIFICAR / DELEGAR Y SEGUIR. Un tema por línea numerada, con estos campos separados por " | ":\n'+
+'N° | CATEGORÍA | Qué pasó (una frase) | Acuerdo propuesto (una frase, en infinitivo) | Responsable sugerido (solo si la nota lo dice, si no: "por definir") | Evidencia (fechas de las notas que lo respaldan)\n\n'+
+'El acuerdo propuesto es una propuesta tuya para discutir, no una decisión tomada; redáctalo como acción concreta y verificable, no como intención.\n\n'+
+'RESUELTOS (SOLO CONFIRMAR)\n'+
+'Lo que se cerró durante la semana y solo hay que dar por visto.\n\n'+
+'POSITIVOS\n'+
+'Hechos concretos para reconocer al equipo.\n\n'+
+'FALTA INFORMACIÓN\n'+
+'Preguntas que las notas dejan abiertas y que conviene resolver en la reunión. Si no falta nada, escribe "Sin vacíos".'); }
+
+function lineaNota(n){
+  var t='['+etiqueta(n.fecha)+(n.hora?' · '+n.hora:'')+'] ('+cap(n.area)+') '+n.texto.replace(/\s*\n\s*/g,' ');
+  return t;
+}
+
+function notasDelPeriodo(){
+  var arr;
+  if(gen.modo==='DIARIO'){
+    var d=$('#gDia').value;
+    arr=notas.filter(function(n){ return n.fecha===d; });
+  } else {
+    var a=$('#gDesde').value, b=$('#gHasta').value;
+    arr=notas.filter(function(n){ return (!a||n.fecha>=a) && (!b||n.fecha<=b); });
+  }
+  return ordenadas(arr);
+}
+
+function textoNotas(){
+  var arr=notasDelPeriodo();
+  if(!arr.length) return '(sin notas registradas en el período)';
+  return arr.map(lineaNota).join('\n');
+}
+
+function construirPrompt(){
+  var rango=$('#gRango').value.trim() || '(sin período)';
+  var modo=gen.modo;
+  var partes=[];
+  partes.push('Eres el asistente de bitácora de François, cafetería, pastelería y panadería en La Florida, Santiago de Chile. Recibes las notas que el supervisor tomó al paso durante el turno: desordenadas, cortas, a veces repetidas o incompletas.');
+  partes.push('MODO: '+modo+'\nPERÍODO: '+rango);
+  partes.push(REGLAS);
+  if($('#gTodos').checked){
+    partes.push(bloqueDiario(rango)); partes.push(bloqueSemanal(rango)); partes.push(bloqueCierre());
+  } else {
+    partes.push(modo==='DIARIO'?bloqueDiario(rango):(modo==='SEMANAL'?bloqueSemanal(rango):bloqueCierre()));
+  }
+  if(modo==='CIERRE'){
+    var pend=$('#gPend').value.trim();
+    if(pend) partes.push('PENDIENTES DE LA REUNIÓN PASADA\n'+pend+'\n\nCruza estos pendientes con las notas del período: di cuáles siguen apareciendo (con la evidencia) y cuáles no se volvieron a mencionar.');
+  }
+  partes.push('NOTAS DEL PERÍODO\n'+textoNotas());
+  return partes.join('\n\n');
+}
+
+function renderPreview(){
+  var arr=notasDelPeriodo();
+  $('#conteo').textContent = arr.length
+    ? arr.length+' nota'+(arr.length>1?'s':'')+' en el período · '+areasDe(arr)
+    : 'No hay notas en el período elegido.';
+  $('#preview').textContent=construirPrompt();
+}
+function areasDe(arr){
+  var s={}; arr.forEach(function(n){ s[n.area]=1; });
+  return Object.keys(s).map(cap).join(', ');
+}
+
+function autoRango(){
+  if(gen.modo==='DIARIO'){
+    var d=$('#gDia').value; $('#gRango').value = d?etiqueta(d):'';
+  } else {
+    var a=$('#gDesde').value, b=$('#gHasta').value;
+    $('#gRango').value = (a&&b) ? corta(a)+' al '+corta(b) : (a?corta(a):'');
+  }
+}
+
+function setModo(m){
+  gen.modo=m;
+  document.querySelectorAll('#segModo button').forEach(function(b){ b.classList.toggle('on', b.dataset.modo===m); });
+  $('#boxDia').classList.toggle('hide', m!=='DIARIO');
+  $('#boxSemana').classList.toggle('hide', m==='DIARIO');
+  $('#boxPend').classList.toggle('hide', m!=='CIERRE');
+  $('#modoHint').textContent = m==='DIARIO'
+    ? 'Resumen del día para mandar al grupo al cierre del turno.'
+    : (m==='SEMANAL' ? 'Resumen de la semana para mandar al grupo (domingo).'
+                     : 'Informe de cierre: insumo para la reunión del lunes. No va al grupo.');
+  autoRango(); renderPreview();
+}
+
+/* ================= Copiar / archivos ================= */
+function copiar(txt, msg){
+  function fallback(){
+    var ta=document.createElement('textarea'); ta.value=txt;
+    ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); toast(msg); }catch(e){ toast('No se pudo copiar'); }
+    document.body.removeChild(ta);
+  }
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(txt).then(function(){ toast(msg); }, fallback);
+  } else fallback();
+}
+function bajar(nombre, txt){
+  var b=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nombre;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+}
+
+/* ================= Eventos ================= */
+document.addEventListener('click', function(e){
+  var t=e.target.closest('button'); if(!t) return;
+
+  if(t.dataset.tab){
+    document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b===t); });
+    ['notas','generar','datos'].forEach(function(id){
+      $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
+    });
+    if(t.dataset.tab==='generar') renderPreview();
+    if(t.dataset.tab==='datos') stats();
+    window.scrollTo({top:0});
+    return;
+  }
+  if(t.dataset.area){ sel.area=t.dataset.area; renderChips(); return; }
+  if(t.dataset.edit){ editar(t.dataset.edit); return; }
+  if(t.dataset.del){ borrar(t.dataset.del); return; }
+  if(t.dataset.modo){ setModo(t.dataset.modo); return; }
+
+  if(t.dataset.atajo){
+    var h=new Date();
+    if(t.dataset.atajo==='hoy'){ $('#gDia').value=hoyISO(h); }
+    if(t.dataset.atajo==='ayer'){ $('#gDia').value=hoyISO(sumaDias(h,-1)); }
+    if(t.dataset.atajo==='estaSem'){ var l=lunesDe(h); $('#gDesde').value=hoyISO(l); $('#gHasta').value=hoyISO(sumaDias(l,6)); }
+    if(t.dataset.atajo==='semPasada'){ var l2=sumaDias(lunesDe(h),-7); $('#gDesde').value=hoyISO(l2); $('#gHasta').value=hoyISO(sumaDias(l2,6)); }
+    autoRango(); renderPreview(); return;
+  }
+
+  switch(t.id){
+    case 'btnGuardar': guardar(); break;
+    case 'btnCancelar': resetForm(); break;
+    case 'btnTheme': prefs.dark=!prefs.dark; savePrefs(); aplicaTema(); break;
+    case 'btnCopiar':
+      if(!notasDelPeriodo().length && !confirm('No hay notas en el período. ¿Copiar igual?')) break;
+      copiar(construirPrompt(),'Prompt copiado'); break;
+    case 'btnCopiarNotas': copiar(textoNotas(),'Notas copiadas'); break;
+    case 'btnTxt': bajar('informe-francois-'+gen.modo.toLowerCase()+'-'+hoyISO()+'.txt', construirPrompt()); break;
+    case 'btnExport': bajar('notas-francois-'+hoyISO()+'.json', JSON.stringify(notas,null,2)); break;
+    case 'btnImport': $('#fileImport').click(); break;
+    case 'btnBorrarTodo':
+      if(confirm('Esto borra las '+notas.length+' notas guardadas en este dispositivo. ¿Seguro?')){
+        notas=[]; save(); renderLista(); renderPreview(); stats(); toast('Todo borrado');
+      }
+      break;
+    case 'btnInstall':
+      if(window._ip){ window._ip.prompt(); window._ip=null; $('#btnInstall').style.display='none'; }
+      break;
+  }
+});
+
+document.addEventListener('input', function(e){
+  var id=e.target.id;
+  if(id==='fBuscar'||id==='fFiltro') renderLista();
+  if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); }
+  if(id==='gRango'||id==='gPend') renderPreview();
+});
+document.addEventListener('change', function(e){
+  if(e.target.id==='fFiltro') renderLista();
+  if(e.target.id==='gTodos') renderPreview();
+  if(e.target.id==='fileImport'){
+    var f=e.target.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var d=JSON.parse(r.result);
+        if(!Array.isArray(d)) throw 0;
+        var ids={}; notas.forEach(function(n){ ids[n.id]=1; });
+        var nuevas=d.filter(function(n){ return n && n.texto && n.fecha && !ids[n.id]; });
+        notas=notas.concat(nuevas); save(); renderLista(); renderPreview(); stats();
+        toast(nuevas.length+' nota'+(nuevas.length===1?'':'s')+' importada'+(nuevas.length===1?'':'s'));
+      }catch(err){ toast('Archivo no válido'); }
+      e.target.value='';
+    };
+    r.readAsText(f);
+  }
+});
+document.addEventListener('keydown', function(e){
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter' && !$('#tab-notas').classList.contains('hide')) guardar();
+});
+
+function stats(){
+  var dias={}; notas.forEach(function(n){ dias[n.fecha]=1; });
+  $('#statTxt').textContent = notas.length+' nota'+(notas.length===1?'':'s')+' guardada'+(notas.length===1?'':'s')+
+    ' en '+Object.keys(dias).length+' día'+(Object.keys(dias).length===1?'':'s')+'.';
+}
+function aplicaTema(){
+  document.body.classList.toggle('dark', !!prefs.dark);
+  $('#btnTheme').textContent = prefs.dark ? '☀️' : '🌙';
+}
+
+/* ================= Init ================= */
+(function init(){
+  aplicaTema();
+  resetForm();
+  renderLista();
+  var h=new Date();
+  $('#gDia').value=hoyISO(h);
+  var l=lunesDe(h);
+  $('#gDesde').value=hoyISO(l); $('#gHasta').value=hoyISO(sumaDias(l,6));
+  setModo('DIARIO');
+  stats();
+})();
+
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault(); window._ip=e; $('#btnInstall').style.display='';
+});
+if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>

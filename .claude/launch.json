@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "informe-francois-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", ".", "-l", "5189"],
+      "port": 5189
+    }
+  ]
+}
