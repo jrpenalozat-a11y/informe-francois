@@ -1,6 +1,15 @@
 # Informe François
 
+**https://informe-francois.vercel.app**
+
 PWA de un solo `index.html` (sin build, sin backend) para **anotar lo que pasa en el turno** y salir con el **prompt maestro de bitácora** ya armado, listo para pegar en Claude.
+
+## Instalarla en el teléfono
+
+- **Android (Chrome):** abre la URL → menú ⋮ → *Instalar aplicación* / *Agregar a pantalla principal*. También aparece el botón 📲 arriba a la derecha dentro de la app.
+- **iPhone (Safari):** abre la URL → botón *Compartir* → *Agregar a inicio*. Debe ser Safari; desde Chrome iOS no se instala.
+
+Queda con ícono propio, a pantalla completa y **funciona sin señal** (service worker). Las notas viven en ese teléfono: si instalas la app en dos aparatos, cada uno tiene las suyas.
 
 ## Qué hace
 
@@ -51,4 +60,8 @@ npx serve . -l 5189
 
 ## Deploy
 
-Es estático: subir la carpeta a Vercel o Netlify sin comando de build. No lleva claves ni datos: las notas nunca salen del dispositivo.
+- Repo: https://github.com/jrpenalozat-a11y/informe-francois (rama `master`).
+- Producción: https://informe-francois.vercel.app — proyecto Vercel `informe-francois`, **conectado al repo**: cada `git push` a `master` redespliega solo. Sin build, sin variables de entorno.
+- Deploy manual, si hiciera falta: `npx vercel --prod --yes` desde la carpeta.
+
+No lleva claves ni datos: las notas nunca salen del dispositivo.
