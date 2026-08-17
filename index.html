@@ -268,8 +268,10 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <button class="btn ok" id="btnWA">📲 Enviar por WhatsApp</button>
         <button class="btn sec" id="btnCopiarInf">📋 Copiar</button>
         <button class="btn sec" id="btnGuardarInf">💾 Guardar</button>
+        <button class="btn sec" id="btnSoloInf">✂️ Dejar solo el informe</button>
         <button class="btn sec" id="btnLimpiarInf">Limpiar</button>
       </div>
+      <p class="hint" id="rCuenta"></p>
       <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes.</p>
     </div>
   </section>
@@ -565,6 +567,41 @@ function setModo(m){
 }
 
 /* ================= Informes ================= */
+/* Deja solo el mensaje: quita el texto que venga antes o después del informe. */
+function soloInforme(t){
+  t=(t||'').replace(/\r/g,'').trim();
+  var bloque=t.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+  if(bloque) t=bloque[1].trim();                                   // vino dentro de ``` ```
+  var lineas=t.split('\n');
+  var ini=-1;
+  for(var i=0;i<lineas.length;i++){
+    if(/^\s*\*Bit[áa]cora/i.test(lineas[i]) || /^\s*RESUMEN DE LA SEMANA\s*$/i.test(lineas[i])){ ini=i; break; }
+  }
+  if(ini>0) lineas=lineas.slice(ini);
+  var esCierre=/^\s*RESUMEN DE LA SEMANA/i.test(lineas[0]||'');
+  if(!esCierre){                                                   // DIARIO y SEMANAL: cortar la cola
+    var fin=-1;
+    for(var j=lineas.length-1;j>=0;j--){
+      var l=lineas[j].trim();
+      if(!l) continue;
+      if(/^[•*]/.test(l)){ fin=j; break; }
+    }
+    if(fin>=0) lineas=lineas.slice(0,fin+1);
+  }
+  return lineas.join('\n').trim();
+}
+function aplicarSolo(silencioso){
+  var antes=$('#rTexto').value, despues=soloInforme(antes);
+  if(!despues){ if(!silencioso) toast('No encontré el informe'); return; }
+  if(despues===antes.trim()){ if(!silencioso) toast('Ya estaba limpio'); cuentaInf(); return; }
+  $('#rTexto').value=despues; cuentaInf();
+  toast('Se quitó el texto de más');
+}
+function cuentaInf(){
+  var n=$('#rTexto').value.trim().length;
+  $('#rCuenta').textContent = n ? n+' caracteres'+(n>1800?' · largo para un solo mensaje de WhatsApp':'') : '';
+}
+
 function guardarInforme(silencioso){
   var txt=$('#rTexto').value.trim();
   if(!txt){ if(!silencioso) toast('Pega primero el informe'); return null; }
@@ -686,7 +723,8 @@ document.addEventListener('click', function(e){
     case 'btnWA': guardarInforme(true); enviarWA($('#rTexto').value); break;
     case 'btnCopiarInf': copiar($('#rTexto').value.trim(),'Informe copiado'); break;
     case 'btnGuardarInf': guardarInforme(false); break;
-    case 'btnLimpiarInf': $('#rTexto').value=''; toast('Cuadro limpio'); break;
+    case 'btnSoloInf': aplicarSolo(false); break;
+    case 'btnLimpiarInf': $('#rTexto').value=''; cuentaInf(); toast('Cuadro limpio'); break;
     case 'btnTxt': bajar('informe-francois-'+gen.modo.toLowerCase()+'-'+hoyISO()+'.txt', construirPrompt()); break;
     case 'btnExport': bajar('informe-francois-'+hoyISO()+'.json', JSON.stringify({notas:notas, informes:informes},null,2)); break;
     case 'btnImport': $('#fileImport').click(); break;
@@ -712,6 +750,13 @@ document.addEventListener('input', function(e){
   if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); }
   if(id==='gRango'||id==='gPend') renderPreview();
   if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
+  if(id==='rTexto') cuentaInf();
+});
+
+/* Al pegar la respuesta de Claude, deja solo el informe. */
+document.addEventListener('paste', function(e){
+  if(e.target.id!=='rTexto') return;
+  setTimeout(function(){ aplicarSolo(true); cuentaInf(); }, 0);
 });
 document.addEventListener('change', function(e){
   if(e.target.id==='fFiltro') renderLista();
@@ -762,6 +807,7 @@ function aplicaTema(){
   renderLista();
   renderInformes();
   $('#rNum').value = prefs.wa || '';
+  cuentaInf();
   var h=new Date();
   $('#gDia').value=hoyISO(h);
   var l=lunesDe(h);
