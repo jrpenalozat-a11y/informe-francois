@@ -104,6 +104,8 @@ body.dark .chip.on{color:var(--acc2)}
 .note .meta b{color:var(--acc); font-weight:700}
 body.dark .note .meta b{color:var(--acc2)}
 .note .txt{white-space:pre-wrap; word-break:break-word}
+.note .med{white-space:pre-wrap; word-break:break-word; font-size:13.5px; color:var(--ok); margin-top:4px; padding-left:14px; position:relative}
+.note .med:before{content:"↳"; position:absolute; left:0; opacity:.75}
 .note .acts{display:flex; gap:4px; flex:0 0 auto}
 .note .acts button{border:0; background:transparent; cursor:pointer; font-size:15px; padding:4px; border-radius:8px; color:var(--tx3)}
 .empty{color:var(--tx3); font-size:14px; text-align:center; padding:26px 10px}
@@ -176,8 +178,12 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <div class="chips" id="fAreas"></div>
       </div>
       <div class="mt">
-        <label class="f" for="fTexto">Nota</label>
+        <label class="f" for="fTexto">Qué pasó</label>
         <textarea id="fTexto" placeholder="Tal como la anotaste al paso. Ej: diferencia de 3.400 en el arqueo"></textarea>
+      </div>
+      <div class="mt">
+        <label class="f" for="fMedida">Medida tomada en el momento <span style="text-transform:none;font-weight:600">(opcional)</span></label>
+        <textarea id="fMedida" style="min-height:56px" placeholder="Qué hiciste ahí mismo. Ej: se hizo arqueo ciego de nuevo y se dejó la diferencia anotada"></textarea>
       </div>
       <div class="btns mt">
         <button class="btn" id="btnGuardar">Agregar nota</button>
@@ -348,6 +354,7 @@ function resetForm(){
   $('#fFecha').value=hoyISO(n);
   $('#fHora').value=p2(n.getHours())+':'+p2(n.getMinutes());
   $('#fTexto').value='';
+  $('#fMedida').value='';
   sel.area='SALA'; sel.edit=null;
   $('#formTitle').textContent='Nueva nota';
   $('#btnGuardar').textContent='Agregar nota';
@@ -361,7 +368,7 @@ function guardar(){
   var n={ id: sel.edit || (Date.now()+'-'+Math.random().toString(36).slice(2,7)),
           fecha: $('#fFecha').value || hoyISO(),
           hora: $('#fHora').value || '',
-          area: sel.area, texto: txt };
+          area: sel.area, texto: txt, medida: $('#fMedida').value.trim() };
   if(sel.edit){
     var i=notas.findIndex(function(x){return x.id===sel.edit;});
     if(i>=0) notas[i]=n;
@@ -377,6 +384,7 @@ function editar(id){
   var n=notas.find(function(x){return x.id===id;}); if(!n) return;
   sel.edit=id; sel.area=n.area;
   $('#fFecha').value=n.fecha; $('#fHora').value=n.hora; $('#fTexto').value=n.texto;
+  $('#fMedida').value=n.medida||'';
   $('#formTitle').textContent='Editando nota';
   $('#btnGuardar').textContent='Guardar cambios';
   $('#btnCancelar').classList.remove('hide');
@@ -404,7 +412,7 @@ function renderLista(){
   var limite = dias ? hoyISO(sumaDias(new Date(), -(dias-1))) : '';
   var arr=notas.filter(function(n){
     if(limite && n.fecha < limite) return false;
-    if(q && (n.texto+' '+n.area).toLowerCase().indexOf(q)<0) return false;
+    if(q && (n.texto+' '+n.area+' '+(n.medida||'')).toLowerCase().indexOf(q)<0) return false;
     return true;
   });
   arr = ordenadas(arr).reverse();
@@ -422,7 +430,8 @@ function renderLista(){
     }
     html+='<div class="note"><div class="body">'+
       '<div class="meta">'+(n.hora||'—')+' · <b>'+cap(n.area)+'</b></div>'+
-      '<div class="txt">'+esc(n.texto)+'</div></div>'+
+      '<div class="txt">'+esc(n.texto)+'</div>'+
+      (n.medida?'<div class="med">'+esc(n.medida)+'</div>':'')+'</div>'+
       '<div class="acts"><button data-edit="'+n.id+'" title="Editar">✏️</button>'+
       '<button data-del="'+n.id+'" title="Borrar">🗑️</button></div></div>';
   });
@@ -440,7 +449,8 @@ var REGLAS =
 '5. Terminología interna que debes respetar tal cual: 86 = producto agotado; 101 = producto prioritario de vender o sugerir; arqueo ciego = el cajero no ajusta ni borra mesas para calzar la caja.\n'+
 '6. Formato WhatsApp: negrita con un solo asterisco a cada lado (*ASÍ*). Nada de #, ni tablas, ni doble asterisco, ni viñetas de markdown. Cada punto parte con "• ".\n'+
 '7. Los nombres de personas van tal como aparecen en las notas. Si una nota apunta a alguien de forma crítica, redáctala sobre el hecho y no sobre la persona.\n'+
-'8. Nunca cierres con preguntas al lector ni con ofrecimientos.';
+'8. Nunca cierres con preguntas al lector ni con ofrecimientos.\n'+
+'9. Algunas notas traen, después de "→ MEDIDA:", lo que se hizo en el momento. Eso ya está hecho: menciónalo en el mismo punto y en pasado ("se hizo X"), y no lo pongas como pendiente. Si la medida deja el tema cerrado, trátalo como resuelto; si solo lo parcha, dilo y deja el pendiente de fondo. Si una nota no trae medida, no supongas que se hizo algo.';
 
 function bloqueDiario(rango){ return (
 'SI EL MODO ES "DIARIO"\n\n'+
@@ -478,6 +488,7 @@ function bloqueCierre(){ return (
 
 function lineaNota(n){
   var t='['+etiqueta(n.fecha)+(n.hora?' · '+n.hora:'')+'] ('+cap(n.area)+') '+n.texto.replace(/\s*\n\s*/g,' ');
+  if(n.medida) t+=' → MEDIDA: '+n.medida.replace(/\s*\n\s*/g,' ');
   return t;
 }
 

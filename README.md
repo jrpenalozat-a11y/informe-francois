@@ -4,14 +4,16 @@ PWA de un solo `index.html` (sin build, sin backend) para **anotar lo que pasa e
 
 ## Qué hace
 
-1. **📝 Notas** — agregas la nota al paso: fecha, hora, área (Sala · Cocina · Caja · Personal · Proveedores · Equipos · Producto · Otro) y el texto tal como lo anotaste. Se pueden editar y borrar; se agrupan por día. `Ctrl + Enter` guarda rápido.
+1. **📝 Notas** — agregas la nota al paso: fecha, hora, área (Sala · Cocina · Caja · Personal · Proveedores · Equipos · Producto · Otro), **qué pasó** y, opcional, la **medida tomada en el momento**. Se pueden editar y borrar; se agrupan por día. `Ctrl + Enter` guarda rápido.
+
+   La medida viaja al prompt en la misma línea, después de `→ MEDIDA:`, y la regla 9 le dice a Claude que eso ya está hecho: lo reporta en pasado dentro del mismo punto, no lo repite como pendiente, y si la medida cierra el tema lo trata como resuelto (si solo lo parcha, lo dice y deja el pendiente de fondo).
 2. **📄 Generar** — eliges modo y período y la app arma el prompt completo:
    - **DIARIO** → resumen del día para el grupo (elige un día).
    - **SEMANAL** → resumen de la semana para el grupo (desde/hasta, con atajos «esta semana» / «semana pasada»).
    - **CIERRE** → informe para la reunión del lunes; aparece el campo opcional **Pendientes de la reunión pasada**, que se cruza con las notas del período.
 
    Las notas del período se insertan en el bloque `NOTAS DEL PERÍODO` con el formato acordado:
-   `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo`, en orden cronológico.
+   `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo → MEDIDA: se hizo arqueo ciego de nuevo`, en orden cronológico.
 
    Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
 3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude y lo mandas: **📲 Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
