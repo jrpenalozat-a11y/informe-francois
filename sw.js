@@ -1,8 +1,9 @@
 /* Informe François — service worker
    HTML: network-first (siempre lo más nuevo con conexión).
    Resto: cache-first. Sube CACHE al cambiar assets del núcleo. */
-const CACHE = "if-v4";
-const CORE = ["./", "./index.html", "./manifest.json", "./icon.svg", "./icon-maskable.svg"];
+const CACHE = "if-v5";
+const CORE = ["./", "./index.html", "./manifest.json", "./icon.svg",
+              "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./icon-maskable-512.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
