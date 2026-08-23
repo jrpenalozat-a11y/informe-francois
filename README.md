@@ -6,8 +6,11 @@ PWA de un solo `index.html` (sin build, sin backend) para **anotar lo que pasa e
 
 ## Instalarla en el teléfono
 
-- **Android (Chrome):** abre la URL → menú ⋮ → *Instalar aplicación* / *Agregar a pantalla principal*. También aparece el botón 📲 arriba a la derecha dentro de la app.
-- **iPhone (Safari):** abre la URL → botón *Compartir* → *Agregar a inicio*. Debe ser Safari; desde Chrome iOS no se instala.
+Abre la URL y toca el botón **📲** (arriba a la derecha, o en la pestaña *Datos* → «Instalar en el teléfono»). La ficha muestra los pasos de tu propio dispositivo:
+
+- **Android (Chrome):** normalmente ofrece *Instalar ahora* de una vez; si no, menú ⋮ → *Instalar aplicación*.
+- **iPhone (Safari):** *Compartir* → *Agregar a inicio*. Si estás en Chrome iOS te avisa que abras en Safari y te copia la dirección.
+- **Computador:** te deja copiar o compartir el enlace para abrirlo en el teléfono (y el navegador también puede instalarla ahí).
 
 Queda con ícono propio, a pantalla completa y **funciona sin señal** (service worker). Las notas viven en ese teléfono: si instalas la app en dos aparatos, cada uno tiene las suyas.
 

@@ -162,6 +162,29 @@ body.dark .pill{color:var(--acc2)}
 .chk input{width:18px;height:18px;accent-color:var(--acc)}
 .hide{display:none !important}
 
+/* Ficha de instalación */
+.ovl{
+  position:fixed; inset:0; background:rgba(20,13,8,.62); backdrop-filter:blur(2px);
+  display:grid; place-items:center; padding:18px; z-index:70;
+}
+.ovlCard{
+  background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--sh);
+  padding:20px; max-width:440px; width:100%; max-height:88vh; overflow:auto;
+}
+.ovlCard h2{margin:0 0 12px; font-size:17px; font-weight:700; color:var(--tx)}
+.pasos{counter-reset:paso; list-style:none; margin:0; padding:0}
+.pasos li{
+  position:relative; padding:0 0 0 34px; margin-bottom:11px; font-size:14.5px; line-height:1.5; color:var(--tx);
+}
+.pasos li:before{
+  counter-increment:paso; content:counter(paso);
+  position:absolute; left:0; top:1px; width:24px; height:24px; border-radius:8px;
+  background:var(--accSoft); color:var(--acc); display:grid; place-items:center;
+  font-size:13px; font-weight:800;
+}
+body.dark .pasos li:before{color:var(--acc2)}
+.ovlCard .nota{font-size:13px; color:var(--tx3); margin:10px 0 0}
+
 /* Toast */
 #toast{
   position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
@@ -183,7 +206,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
     <div class="topbtns">
       <button class="iconbtn" id="btnTheme" title="Modo claro / oscuro">🌙</button>
-      <button class="iconbtn" id="btnInstall" title="Instalar app" style="display:none">📲</button>
+      <button class="iconbtn" id="btnInstall" title="Instalar en el teléfono">📲</button>
     </div>
   </div>
 </header>
@@ -338,6 +361,13 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint">Las notas se guardan solo en este dispositivo (localStorage). Exporta de vez en cuando.</p>
     </div>
     <div class="card">
+      <h2>App en el teléfono</h2>
+      <p class="hint" style="margin-top:0" id="instEstado"></p>
+      <div class="btns mt">
+        <button class="btn" id="btnInstall2">📲 Instalar en el teléfono</button>
+      </div>
+    </div>
+    <div class="card">
       <h2>Glosario interno</h2>
       <p class="hint" style="margin-top:0">
         <b>86</b> = producto agotado · <b>101</b> = producto prioritario de vender o sugerir ·
@@ -355,6 +385,20 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   </section>
 
   <footer>François · La Florida — datos locales, sin servidor.</footer>
+</div>
+
+<!-- ============ INSTALAR ============ -->
+<div id="ovlInstall" class="ovl hide">
+  <div class="ovlCard">
+    <h2>📲 Instalar en el teléfono</h2>
+    <div id="instPasos"></div>
+    <div class="btns mt">
+      <button class="btn hide" id="btnInstallGo">Instalar ahora</button>
+      <button class="btn sec" id="btnCopiarUrl">🔗 Copiar dirección</button>
+      <button class="btn sec hide" id="btnCompartir">↗️ Compartir</button>
+      <button class="btn sec" id="btnCerrarInst">Cerrar</button>
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -766,6 +810,61 @@ function renderInformes(){
 }
 function infPorId(id){ return informes.find(function(i){ return i.id===id; }); }
 
+/* ================= Instalación en el teléfono ================= */
+var UA=navigator.userAgent||'';
+var esIOS=/iPad|iPhone|iPod/.test(UA) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+var esSafari=/Safari/i.test(UA) && !/Chrome|CriOS|FxiOS|EdgiOS|OPiOS|Android/i.test(UA);
+var esAndroid=/Android/i.test(UA);
+function yaInstalada(){
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+         navigator.standalone===true;
+}
+
+function pasosInstalar(){
+  if(yaInstalada()) return '<p>Ya la tienes instalada: ábrela desde el ícono en tu pantalla de inicio. Ahí funciona sin señal.</p>';
+
+  if(window._ip) return '<p>Tu navegador puede instalarla de una vez.</p>'+
+    '<ol class="pasos"><li>Toca <b>Instalar ahora</b>.</li><li>Confirma <b>Instalar</b> en el aviso del navegador.</li>'+
+    '<li>Queda el ícono 📋 en tu pantalla de inicio.</li></ol>';
+
+  if(esIOS && esSafari) return '<ol class="pasos">'+
+    '<li>Toca el botón <b>Compartir</b> (el cuadrito con la flecha hacia arriba, abajo en la pantalla).</li>'+
+    '<li>Baja en la lista y toca <b>Agregar a inicio</b>.</li>'+
+    '<li>Toca <b>Agregar</b> arriba a la derecha.</li></ol>'+
+    '<p class="nota">Queda el ícono en tu pantalla, se abre a pantalla completa y funciona sin señal.</p>';
+
+  if(esIOS) return '<p>Estás en un navegador que no puede instalarla en el iPhone.</p>'+
+    '<ol class="pasos"><li>Toca <b>Copiar dirección</b>.</li><li>Abre <b>Safari</b> y pega la dirección.</li>'+
+    '<li>Ahí usa <b>Compartir → Agregar a inicio</b>.</li></ol>';
+
+  if(esAndroid) return '<ol class="pasos">'+
+    '<li>Abre el menú <b>⋮</b> arriba a la derecha del navegador.</li>'+
+    '<li>Toca <b>Instalar aplicación</b> (o <b>Agregar a pantalla principal</b>).</li>'+
+    '<li>Confirma y queda el ícono 📋 en tu pantalla de inicio.</li></ol>'+
+    '<p class="nota">Si no aparece la opción, recarga la página y vuelve a intentar.</p>';
+
+  return '<p>Estás en un computador. Para tenerla en el teléfono:</p>'+
+    '<ol class="pasos">'+
+    '<li>Toca <b>Copiar dirección</b>'+(navigator.share?' o <b>Compartir</b>':'')+' y mándate el enlace al teléfono.</li>'+
+    '<li>Ábrelo allá: en Android con Chrome, menú <b>⋮ → Instalar aplicación</b>; en iPhone con Safari, <b>Compartir → Agregar a inicio</b>.</li>'+
+    '</ol><p class="nota">En este computador también puedes instalarla: el ícono de instalar aparece al final de la barra de direcciones.</p>';
+}
+
+function abrirInstalar(){
+  $('#instPasos').innerHTML=pasosInstalar();
+  $('#btnInstallGo').classList.toggle('hide', !window._ip || yaInstalada());
+  $('#btnCompartir').classList.toggle('hide', !navigator.share);
+  $('#ovlInstall').classList.remove('hide');
+}
+function cerrarInstalar(){ $('#ovlInstall').classList.add('hide'); }
+
+function estadoInstal(){
+  var e=$('#instEstado'); if(!e) return;
+  e.textContent = yaInstalada()
+    ? 'Ya está instalada en este dispositivo: se abre a pantalla completa y funciona sin señal.'
+    : 'Instálala para tenerla como una app más: ícono propio, pantalla completa y sin necesidad de señal.';
+}
+
 /* ================= Copiar / archivos ================= */
 function copiar(txt, msg){
   function fallback(){
@@ -882,10 +981,34 @@ document.addEventListener('click', function(e){
         informes=[]; saveInf(); renderInformes(); stats(); toast('Informes borrados');
       }
       break;
-    case 'btnInstall':
-      if(window._ip){ window._ip.prompt(); window._ip=null; $('#btnInstall').style.display='none'; }
+    case 'btnInstall': case 'btnInstall2': abrirInstalar(); break;
+    case 'btnCerrarInst': cerrarInstalar(); break;
+    case 'btnCopiarUrl': copiar(location.href.split('?')[0], 'Dirección copiada'); break;
+    case 'btnCompartir':
+      if(navigator.share){
+        navigator.share({ title:'Informe François', text:'App para las notas del turno', url:location.href.split('?')[0] })
+          .catch(function(){});
+      }
+      break;
+    case 'btnInstallGo':
+      if(window._ip){
+        window._ip.prompt();
+        window._ip.userChoice.then(function(r){
+          window._ip=null;
+          if(r && r.outcome==='accepted'){ cerrarInstalar(); toast('Instalando…'); }
+          else { $('#instPasos').innerHTML=pasosInstalar(); $('#btnInstallGo').classList.add('hide'); }
+        });
+      } else abrirInstalar();
       break;
   }
+});
+
+/* Cerrar la ficha de instalación al tocar fuera o con Escape */
+document.addEventListener('click', function(e){
+  if(e.target.id==='ovlInstall') cerrarInstalar();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape') cerrarInstalar();
 });
 
 document.addEventListener('input', function(e){
@@ -959,10 +1082,19 @@ function aplicaTema(){
   $('#gDesde').value=hoyISO(l); $('#gHasta').value=hoyISO(sumaDias(l,6));
   setModo('DIARIO');
   stats();
+  estadoInstal();
+  if(yaInstalada()) $('#btnInstall').style.display='none';
 })();
 
 window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault(); window._ip=e; $('#btnInstall').style.display='';
+  e.preventDefault(); window._ip=e;
+  if(!$('#ovlInstall').classList.contains('hide')){        // ficha abierta: ofrece el botón directo
+    $('#instPasos').innerHTML=pasosInstalar();
+    $('#btnInstallGo').classList.remove('hide');
+  }
+});
+window.addEventListener('appinstalled', function(){
+  window._ip=null; cerrarInstalar(); estadoInstal(); toast('App instalada 🎉');
 });
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
