@@ -52,8 +52,9 @@ No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Im
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE = "if-v1"`: **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
-- `manifest.json`, `icon.svg`, `icon-maskable.svg` — PWA instalable.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v6`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
+- `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
+- `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
 - `vercel.json` / `netlify.toml` — deploy estático sin build; `/sw.js` se sirve con `Cache-Control: no-cache`.
 
 ## Correr en local
@@ -65,6 +66,18 @@ npx serve . -l 5189
 ```
 
 ⚠️ El navegador puede cachear `index.html`: al verificar cambios usa recarga forzada o `?v=<timestamp>`.
+
+## La skill de Claude
+
+El mismo prompt vive también como **skill** (`bitacora-francois`), instalada en
+`~/.claude/skills/bitacora-francois/SKILL.md`. La copia versionada de este repo está en
+[`skill/SKILL.md`](skill/SKILL.md): si la editas aquí, cópiala a `~/.claude/skills/` para que
+tome efecto.
+
+Con la skill instalada no hace falta pegar el prompt: basta con pegar las notas (o escribir
+`/bitacora-francois`) y Claude redacta el informe con las mismas reglas y los mismos tres modos.
+El botón **Copiar prompt** de la app sigue siendo útil para pegarlo donde no esté la skill
+—claude.ai, otro computador, el teléfono—.
 
 ## Deploy
 
