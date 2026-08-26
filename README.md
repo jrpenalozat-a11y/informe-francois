@@ -19,6 +19,10 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
 1. **📝 Notas** — agregas la nota al paso: fecha, hora, área (Sala · Cocina · Caja · Personal · Proveedores · Equipos · Producto · Otro), **qué pasó** y, opcional, la **medida tomada en el momento**. Se pueden editar y borrar; se agrupan por día. `Ctrl + Enter` guarda rápido.
 
    La medida viaja al prompt en la misma línea, después de `→ MEDIDA:`, y la regla 9 le dice a Claude que eso ya está hecho: lo reporta en pasado dentro del mismo punto, no lo repite como pendiente, y si la medida cierra el tema lo trata como resuelto (si solo lo parcha, lo dice y deja el pendiente de fondo).
+
+   **📷 Fotos de evidencia** — cada nota admite fotos: **Tomar foto** abre la cámara del teléfono y **Desde la galería** toma una ya sacada (varias a la vez). Se comprimen a 1600 px / JPEG antes de guardarlas (una foto de teléfono queda en ~100-250 KB), aparecen como miniaturas en el formulario y en la nota, y se abren en el visor: pasar entre fotos, **Compartir** (mandarla por WhatsApp desde el teléfono), **Guardar** en el dispositivo o **Borrar**. Si aprietas «Agregar nota» mientras la foto se está guardando, la nota se guarda sola apenas termina.
+
+   Al prompt solo va la marca `[con foto]` / `[con N fotos]` al final de la línea: **la imagen no viaja al chat**. La regla 10 le dice a Claude que no describa ni suponga lo que muestra, y que como mucho cierre ese punto con «(hay foto)».
 2. **📄 Generar** — eliges modo y período y la app arma el prompt completo:
    - **DIARIO** → resumen del día para el grupo (elige un día).
    - **SEMANAL** → resumen de la semana para el grupo (desde/hasta, con atajos «esta semana» / «semana pasada»).
@@ -41,7 +45,7 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
 
    **Al pegar deja solo el informe**: si viene dentro de ``` ``` usa el bloque, y si trae texto antes o comentarios después, los recorta (empieza en `*Bitácora François*` o en `RESUMEN DE LA SEMANA`; en modo CIERRE no toca la cola porque termina en prosa). El botón **✂️ Dejar solo el informe** repite esa limpieza a mano. Lo que se envía es exactamente lo que quede en el cuadro: el prompt y las notas nunca salen. Botones: **📲 Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
 4. **📤 Informes** — los informes guardados con su modo, período y fecha; desde cada uno: WhatsApp, copiar, descargar `.txt` o borrar.
-5. **⚙️ Datos** — exportar / importar JSON de respaldo (notas + informes), glosario interno (86, 101, arqueo ciego) y borrado.
+5. **⚙️ Datos** — exportar / importar JSON de respaldo (notas + informes y, si marcas la casilla, **las fotos**), glosario interno (86, 101, arqueo ciego) y borrado (notas, informes o solo las fotos).
 
 El texto del período (`lun 17-08`, `17-08 al 23-08`) se calcula solo, pero es editable a mano.
 
@@ -54,12 +58,14 @@ Todo en el navegador del dispositivo:
 - `if_borrador_v1` — el informe que estás redactando (borrador).
 - `if_prefs_v1` — modo claro/oscuro y número de WhatsApp.
 
-No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Importar JSON**. La importación no duplica (compara por `id`).
+Las **fotos** no caben en `localStorage`, así que van en IndexedDB (base `if_fotos_v1`): el almacén `fotos` guarda la imagen comprimida y `thumbs` la miniatura y el peso; la nota solo lleva los `id` de sus fotos. Las fotos que quedaron sin nota (la app se cerró antes de guardarla) se limpian solas al abrir.
+
+No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Importar JSON**. La importación no duplica (compara por `id`). El respaldo incluye las fotos en base64 si dejas marcada la casilla — pesa bastante más, así que para mover solo el texto, desmárcala.
 
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v9`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v10`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
 - `vercel.json` / `netlify.toml` — deploy estático sin build; `/sw.js` se sirve con `Cache-Control: no-cache`.

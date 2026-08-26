@@ -186,6 +186,37 @@ body.dark .pill{color:var(--acc2)}
 body.dark .pasos li:before{color:var(--acc2)}
 .ovlCard .nota{font-size:13px; color:var(--tx3); margin:10px 0 0}
 
+/* Fotos de evidencia */
+.thumbs{display:flex; flex-wrap:wrap; gap:8px; margin-top:9px}
+.th{
+  position:relative; width:76px; height:76px; border:1px solid var(--line); border-radius:11px;
+  overflow:hidden; background:var(--bg2); padding:0; cursor:pointer; flex:0 0 auto;
+}
+.th img{width:100%; height:100%; object-fit:cover; display:block}
+.th .x{
+  position:absolute; top:3px; right:3px; width:23px; height:23px; padding:0; border:0;
+  border-radius:8px; background:rgba(0,0,0,.58); color:#fff; font-size:12px; line-height:23px; cursor:pointer;
+}
+.th .cargando{display:grid; place-items:center; width:100%; height:100%; font-size:17px; color:var(--tx3)}
+.note .thumbs{margin-top:7px}
+.note .thumbs .th{width:60px; height:60px; border-radius:9px}
+.note .meta i{font-style:normal; color:var(--tx3)}
+
+/* Visor de fotos */
+.fotoBox{width:100%; max-width:min(96vw,720px)}
+.fotoBox img{
+  width:100%; max-height:72vh; object-fit:contain; display:block;
+  border-radius:14px; background:#000;
+}
+.fotoPie{display:flex; align-items:center; gap:10px; justify-content:center; color:#fff; font-size:13px; margin-top:10px}
+.fotoBar{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px}
+.fotoBar .btn{font-size:14px; padding:10px 14px}
+.navf{
+  border:0; background:rgba(255,255,255,.16); color:#fff; width:40px; height:40px;
+  border-radius:12px; font-size:18px; cursor:pointer;
+}
+.navf:disabled{opacity:.3}
+
 /* Toast */
 #toast{
   position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
@@ -241,11 +272,21 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <label class="f" for="fMedida">Medida tomada en el momento <span style="text-transform:none;font-weight:600">(opcional)</span></label>
         <textarea id="fMedida" style="min-height:56px" placeholder="Qué hiciste ahí mismo. Ej: se hizo arqueo ciego de nuevo y se dejó la diferencia anotada"></textarea>
       </div>
+      <div class="mt">
+        <label class="f">Fotos de evidencia <span style="text-transform:none;font-weight:600">(opcional)</span></label>
+        <div class="btns">
+          <button class="btn sec sm" id="btnCam">📷 Tomar foto</button>
+          <button class="btn sec sm" id="btnGal">🖼️ Desde la galería</button>
+        </div>
+        <input type="file" id="fCam" accept="image/*" capture="environment" multiple class="hide">
+        <input type="file" id="fGal" accept="image/*" multiple class="hide">
+        <div class="thumbs" id="fThumbs"></div>
+      </div>
       <div class="btns mt">
         <button class="btn" id="btnGuardar">Agregar nota</button>
         <button class="btn sec hide" id="btnCancelar">Cancelar</button>
       </div>
-      <p class="hint">Ctrl + Enter para agregar rápido. La hora y la fecha vienen puestas en «ahora».</p>
+      <p class="hint">Ctrl + Enter para agregar rápido. La hora y la fecha vienen puestas en «ahora». Las fotos quedan guardadas en el teléfono junto a la nota: el prompt solo avisa que hay foto, la imagen no viaja al chat.</p>
     </div>
 
     <div class="card">
@@ -361,12 +402,13 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     <div class="card">
       <h2>Respaldo</h2>
       <p class="hint" style="margin-top:0" id="statTxt"></p>
+      <label class="chk"><input type="checkbox" id="gFotos" checked> Incluir las fotos en el respaldo <span style="color:var(--tx3)">(archivo mucho más pesado)</span></label>
       <div class="btns mt">
         <button class="btn sec" id="btnExport">⬇️ Exportar JSON</button>
         <button class="btn sec" id="btnImport">⬆️ Importar JSON</button>
         <input type="file" id="fileImport" accept="application/json" class="hide">
       </div>
-      <p class="hint">Las notas se guardan solo en este dispositivo (localStorage). Exporta de vez en cuando.</p>
+      <p class="hint">Las notas se guardan solo en este dispositivo (localStorage) y las fotos en el almacén del navegador. Exporta de vez en cuando.</p>
     </div>
     <div class="card">
       <h2>App en el teléfono</h2>
@@ -388,6 +430,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <div class="btns">
         <button class="btn danger" id="btnBorrarTodo">Borrar todas las notas</button>
         <button class="btn danger" id="btnBorrarInf">Borrar los informes</button>
+        <button class="btn danger" id="btnBorrarFotos">Borrar todas las fotos</button>
       </div>
     </div>
   </section>
@@ -409,6 +452,24 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   </div>
 </div>
 
+<!-- ============ VISOR DE FOTOS ============ -->
+<div id="ovlFoto" class="ovl hide">
+  <div class="fotoBox">
+    <img id="fotoImg" alt="Foto de la nota">
+    <div class="fotoPie">
+      <button class="navf" id="fotoPrev" title="Anterior">‹</button>
+      <span id="fotoInfo"></span>
+      <button class="navf" id="fotoNext" title="Siguiente">›</button>
+    </div>
+    <div class="fotoBar">
+      <button class="btn sec" id="fotoShare">↗️ Compartir</button>
+      <button class="btn sec" id="fotoDown">⬇️ Guardar</button>
+      <button class="btn danger" id="fotoDel">🗑️ Borrar foto</button>
+      <button class="btn sec" id="fotoClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -420,7 +481,7 @@ var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
 var notas=load(KEY,[]);
 var informes=load(INF,[]);
 var prefs=load(PREF,{dark:false, wa:''});
-var sel={area:'SALA', edit:null};
+var sel={area:'SALA', edit:null, fotos:[]};
 var gen={modo:'DIARIO'};
 
 function load(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
@@ -439,6 +500,217 @@ function corta(iso){ var d=dObj(iso); return p2(d.getDate())+'-'+p2(d.getMonth()
 function lunesDe(d){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); var dw=(x.getDay()+6)%7; x.setDate(x.getDate()-dw); return x; }
 function sumaDias(d,n){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()+n); return x; }
 
+/* ================= Fotos de evidencia (IndexedDB) =================
+   La nota (en localStorage) guarda solo los id de sus fotos.
+   La imagen comprimida vive en IndexedDB (almacén "fotos") y su
+   miniatura en el almacén "thumbs", que se carga entero en memoria. */
+var DBN='if_fotos_v1', SF='fotos', ST='thumbs';
+var LADO=1600, CAL=0.72, LTH=180;
+var DB=null, thumbs={}, visor={ids:[], i:0, nota:null, url:''};
+
+function conDB(cb){
+  if(DB) return cb(DB);
+  if(!window.indexedDB) return cb(null);
+  try{
+    var r=indexedDB.open(DBN,1);
+    r.onupgradeneeded=function(){
+      var d=r.result;
+      if(!d.objectStoreNames.contains(SF)) d.createObjectStore(SF,{keyPath:'id'});
+      if(!d.objectStoreNames.contains(ST)) d.createObjectStore(ST,{keyPath:'id'});
+    };
+    r.onsuccess=function(){ DB=r.result; cb(DB); };
+    r.onerror=function(){ cb(null); };
+  }catch(e){ cb(null); }
+}
+function fotoGuardar(id, blob, thumb, cb){
+  conDB(function(d){
+    if(!d) return cb(false);
+    try{
+      var tx=d.transaction([SF,ST],'readwrite');
+      tx.objectStore(SF).put({id:id, blob:blob});
+      tx.objectStore(ST).put({id:id, t:thumb, tam:blob.size, ts:Date.now()});
+      tx.oncomplete=function(){ thumbs[id]={t:thumb, tam:blob.size}; cb(true); };
+      tx.onerror=function(){ cb(false); };
+      tx.onabort=function(){ cb(false); };
+    }catch(e){ cb(false); }
+  });
+}
+function fotoLeer(id, cb){
+  conDB(function(d){
+    if(!d) return cb(null);
+    try{
+      var q=d.transaction(SF,'readonly').objectStore(SF).get(id);
+      q.onsuccess=function(){ cb(q.result ? q.result.blob : null); };
+      q.onerror=function(){ cb(null); };
+    }catch(e){ cb(null); }
+  });
+}
+function fotoBorrar(id, cb){
+  delete thumbs[id];
+  conDB(function(d){
+    if(!d) return cb&&cb();
+    try{
+      var tx=d.transaction([SF,ST],'readwrite');
+      tx.objectStore(SF).delete(id); tx.objectStore(ST).delete(id);
+      tx.oncomplete=function(){ cb&&cb(); };
+      tx.onerror=function(){ cb&&cb(); };
+    }catch(e){ cb&&cb(); }
+  });
+}
+function thumbsCargar(cb){
+  conDB(function(d){
+    if(!d) return cb();
+    try{
+      var q=d.transaction(ST,'readonly').objectStore(ST).getAll();
+      q.onsuccess=function(){
+        (q.result||[]).forEach(function(r){ thumbs[r.id]={t:r.t, tam:r.tam||0}; });
+        cb();
+      };
+      q.onerror=function(){ cb(); };
+    }catch(e){ cb(); }
+  });
+}
+/* Fotos que quedaron sin nota (la app se cerró antes de guardarla) */
+function limpiarHuerfanas(){
+  var vivas=usadas();
+  Object.keys(thumbs).forEach(function(id){ if(!vivas[id]) fotoBorrar(id); });
+}
+function usadas(){
+  var m={};
+  notas.forEach(function(n){ (n.fotos||[]).forEach(function(id){ m[id]=1; }); });
+  (sel.fotos||[]).forEach(function(id){ m[id]=1; });
+  return m;
+}
+
+/* --- Comprimir --- */
+function cargarImg(file, cb){
+  if(window.createImageBitmap){
+    try{
+      createImageBitmap(file,{imageOrientation:'from-image'}).then(cb, function(){ viaImg(file,cb); });
+      return;
+    }catch(e){}
+  }
+  viaImg(file, cb);
+}
+function viaImg(file, cb){
+  var u=URL.createObjectURL(file), im=new Image();
+  im.onload=function(){ cb(im); setTimeout(function(){ URL.revokeObjectURL(u); },0); };
+  im.onerror=function(){ URL.revokeObjectURL(u); cb(null); };
+  im.src=u;
+}
+function lienzo(img, lado){
+  var w=img.width, h=img.height, r=Math.min(1, lado/Math.max(w,h));
+  var c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(w*r)); c.height=Math.max(1,Math.round(h*r));
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  return c;
+}
+function aBlob(canvas, cb){
+  if(canvas.toBlob) canvas.toBlob(function(b){ cb(b); },'image/jpeg',CAL);
+  else cb(dataUrlABlob(canvas.toDataURL('image/jpeg',CAL)));
+}
+function dataUrlABlob(u){
+  var p=u.split(','), tipo=(p[0].match(/:(.*?);/)||[,'image/jpeg'])[1];
+  var bin=atob(p[1]), a=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
+  return new Blob([a],{type:tipo});
+}
+function blobADataUrl(b, cb){
+  var r=new FileReader(); r.onload=function(){ cb(r.result); }; r.onerror=function(){ cb(null); };
+  r.readAsDataURL(b);
+}
+function nuevoId(){ return 'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* --- Tomar / elegir fotos --- */
+function agregarFotos(files){
+  var lista=[].slice.call(files||[]).filter(function(f){ return f && /^image\//.test(f.type||''); });
+  if(!lista.length){ toast('Eso no es una imagen'); return; }
+  var falta=lista.length, ok=0;
+  lista.forEach(function(f){
+    var id=nuevoId();
+    sel.fotos.push(id);
+    renderThumbsForm();
+    cargarImg(f, function(img){
+      if(!img){ sel.fotos=sel.fotos.filter(function(x){return x!==id;}); fin(); return; }
+      aBlob(lienzo(img,LADO), function(blob){
+        if(!blob){ sel.fotos=sel.fotos.filter(function(x){return x!==id;}); fin(); return; }
+        var th=lienzo(img,LTH).toDataURL('image/jpeg',0.6);
+        if(img.close) img.close();
+        fotoGuardar(id, blob, th, function(bien){
+          if(!bien){ sel.fotos=sel.fotos.filter(function(x){return x!==id;}); toast('No se pudo guardar la foto'); }
+          else ok++;
+          fin();
+        });
+      });
+    });
+  });
+  function fin(){
+    falta--; renderThumbsForm();
+    if(!falta && ok) toast(ok===1?'Foto lista':ok+' fotos listas');
+  }
+}
+
+/* --- Miniaturas --- */
+function thumbHTML(id, cerrable, extra){
+  var t=thumbs[id];
+  var dentro = t ? '<img src="'+t.t+'" alt="">' : '<span class="cargando">⏳</span>';
+  return '<button class="th" '+(extra||'')+' title="Ver la foto">'+dentro+
+         (cerrable?'<span class="x" data-quitar="'+id+'">✕</span>':'')+'</button>';
+}
+function renderThumbsForm(){
+  var c=$('#fThumbs'); if(!c) return;
+  c.innerHTML = sel.fotos.map(function(id,i){
+    return thumbHTML(id, true, 'data-verform="'+i+'"');
+  }).join('');
+}
+
+/* --- Visor --- */
+function abrirVisor(ids, i, notaId){
+  if(!ids.length) return;
+  visor={ids:ids.slice(), i:i||0, nota:notaId||null, url:''};
+  $('#ovlFoto').classList.remove('hide');
+  pintarVisor();
+}
+function pintarVisor(){
+  var id=visor.ids[visor.i];
+  $('#fotoInfo').textContent=(visor.i+1)+' de '+visor.ids.length;
+  $('#fotoPrev').disabled = visor.i<=0;
+  $('#fotoNext').disabled = visor.i>=visor.ids.length-1;
+  if(visor.url){ URL.revokeObjectURL(visor.url); visor.url=''; }
+  var t=thumbs[id];
+  $('#fotoImg').src = t ? t.t : '';
+  fotoLeer(id, function(b){
+    if(!b || visor.ids[visor.i]!==id) return;
+    visor.url=URL.createObjectURL(b);
+    $('#fotoImg').src=visor.url;
+  });
+}
+function cerrarVisor(){
+  if(visor.url){ URL.revokeObjectURL(visor.url); visor.url=''; }
+  $('#ovlFoto').classList.add('hide');
+}
+function fotoActual(cb){ fotoLeer(visor.ids[visor.i], cb); }
+function nombreFoto(){
+  var n = visor.nota ? notas.find(function(x){return x.id===visor.nota;}) : null;
+  var base = n ? (n.fecha+'-'+(n.hora||'').replace(':','')+'-'+n.area.toLowerCase()) : 'francois-'+hoyISO();
+  return 'foto-'+base+'-'+(visor.i+1)+'.jpg';
+}
+function quitarFotoVisor(){
+  var id=visor.ids[visor.i];
+  if(!confirm('¿Borrar esta foto? No se puede recuperar.')) return;
+  if(visor.nota){
+    var n=notas.find(function(x){return x.id===visor.nota;});
+    if(n){ n.fotos=(n.fotos||[]).filter(function(x){return x!==id;}); save(); }
+  }
+  sel.fotos=sel.fotos.filter(function(x){return x!==id;});
+  fotoBorrar(id);
+  visor.ids=visor.ids.filter(function(x){return x!==id;});
+  if(visor.i>=visor.ids.length) visor.i=visor.ids.length-1;
+  renderThumbsForm(); renderLista(); renderPreview(); stats();
+  toast('Foto borrada');
+  if(!visor.ids.length) cerrarVisor(); else pintarVisor();
+}
+
 /* ================= Notas ================= */
 function renderChips(){
   $('#fAreas').innerHTML = AREAS.map(function(a){
@@ -447,26 +719,57 @@ function renderChips(){
 }
 function cap(a){ return a.charAt(0)+a.slice(1).toLowerCase(); }
 
+var esperaFoto=0;
+function pararEspera(){ if(esperaFoto){ clearInterval(esperaFoto); esperaFoto=0; } }
+
+function quitarDelForm(id){
+  var n = sel.edit ? notas.find(function(x){return x.id===sel.edit;}) : null;
+  var guardada = n && (n.fotos||[]).indexOf(id)>=0;
+  if(guardada && !confirm('¿Borrar esta foto de la nota? No se puede recuperar.')) return;
+  sel.fotos=sel.fotos.filter(function(x){return x!==id;});
+  if(guardada){ n.fotos=n.fotos.filter(function(x){return x!==id;}); save(); }
+  fotoBorrar(id);
+  renderThumbsForm(); renderLista(); renderPreview(); stats();
+}
+
 function resetForm(){
+  pararEspera();
   var n=new Date();
   $('#fFecha').value=hoyISO(n);
   $('#fHora').value=p2(n.getHours())+':'+p2(n.getMinutes());
   $('#fTexto').value='';
   $('#fMedida').value='';
+  (sel.fotos||[]).forEach(function(id){
+    var puesta=notas.some(function(x){ return (x.fotos||[]).indexOf(id)>=0; });
+    if(!puesta) fotoBorrar(id);                 // foto tomada y no guardada en ninguna nota
+  });
+  sel.fotos=[];
   sel.area='SALA'; sel.edit=null;
   $('#formTitle').textContent='Nueva nota';
   $('#btnGuardar').textContent='Agregar nota';
   $('#btnCancelar').classList.add('hide');
-  renderChips();
+  renderChips(); renderThumbsForm();
 }
 
 function guardar(){
   var txt=$('#fTexto').value.trim();
   if(!txt){ toast('Escribe la nota'); $('#fTexto').focus(); return; }
+  if(sel.fotos.some(function(id){ return !thumbs[id]; })){   // foto todavía comprimiéndose: guarda sola al terminar
+    if(!esperaFoto){
+      toast('Terminando de guardar la foto…');
+      esperaFoto=setInterval(function(){
+        if(sel.fotos.every(function(id){ return thumbs[id]; })){ pararEspera(); guardar(); }
+      },200);
+      setTimeout(pararEspera, 15000);
+    }
+    return;
+  }
+  pararEspera();
   var n={ id: sel.edit || (Date.now()+'-'+Math.random().toString(36).slice(2,7)),
           fecha: $('#fFecha').value || hoyISO(),
           hora: $('#fHora').value || '',
-          area: sel.area, texto: txt, medida: $('#fMedida').value.trim() };
+          area: sel.area, texto: txt, medida: $('#fMedida').value.trim(),
+          fotos: sel.fotos.slice() };
   if(sel.edit){
     var i=notas.findIndex(function(x){return x.id===sel.edit;});
     if(i>=0) notas[i]=n;
@@ -480,22 +783,24 @@ function guardar(){
 
 function editar(id){
   var n=notas.find(function(x){return x.id===id;}); if(!n) return;
-  sel.edit=id; sel.area=n.area;
+  sel.edit=id; sel.area=n.area; sel.fotos=(n.fotos||[]).slice();
   $('#fFecha').value=n.fecha; $('#fHora').value=n.hora; $('#fTexto').value=n.texto;
   $('#fMedida').value=n.medida||'';
   $('#formTitle').textContent='Editando nota';
   $('#btnGuardar').textContent='Guardar cambios';
   $('#btnCancelar').classList.remove('hide');
-  renderChips();
+  renderChips(); renderThumbsForm();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
 function borrar(id){
   var n=notas.find(function(x){return x.id===id;}); if(!n) return;
-  if(!confirm('¿Borrar esta nota?\n\n'+n.texto)) return;
+  var k=(n.fotos||[]).length;
+  if(!confirm('¿Borrar esta nota'+(k?' y su'+(k>1?'s '+k+' fotos':' foto'):'')+'?\n\n'+n.texto)) return;
+  (n.fotos||[]).forEach(function(f){ fotoBorrar(f); });
   notas=notas.filter(function(x){return x.id!==id;});
   if(sel.edit===id) resetForm();
-  save(); renderLista(); renderPreview(); toast('Nota borrada');
+  save(); renderLista(); renderPreview(); stats(); toast('Nota borrada');
 }
 
 function ordenadas(arr){
@@ -526,10 +831,15 @@ function renderLista(){
       var cuantas=arr.filter(function(x){return x.fecha===dia;}).length;
       html+='<div class="day">'+etiqueta(dia)+' <span class="n">· '+cuantas+' nota'+(cuantas>1?'s':'')+'</span></div>';
     }
+    var fs=n.fotos||[];
     html+='<div class="note"><div class="body">'+
-      '<div class="meta">'+(n.hora||'—')+' · <b>'+cap(n.area)+'</b></div>'+
+      '<div class="meta">'+(n.hora||'—')+' · <b>'+cap(n.area)+'</b>'+
+        (fs.length?' · <i>📷 '+fs.length+'</i>':'')+'</div>'+
       '<div class="txt">'+esc(n.texto)+'</div>'+
-      (n.medida?'<div class="med">'+esc(n.medida)+'</div>':'')+'</div>'+
+      (n.medida?'<div class="med">'+esc(n.medida)+'</div>':'')+
+      (fs.length?'<div class="thumbs">'+fs.map(function(f,i){
+        return thumbHTML(f,false,'data-vernota="'+n.id+'" data-idx="'+i+'"');
+      }).join('')+'</div>':'')+'</div>'+
       '<div class="acts"><button data-edit="'+n.id+'" title="Editar">✏️</button>'+
       '<button data-del="'+n.id+'" title="Borrar">🗑️</button></div></div>';
   });
@@ -548,7 +858,8 @@ var REGLAS =
 '6. Formato WhatsApp: negrita con un solo asterisco a cada lado (*ASÍ*). Nada de #, ni tablas, ni doble asterisco, ni viñetas de markdown. Cada punto parte con "• ".\n'+
 '7. Los nombres de personas van tal como aparecen en las notas. Si una nota apunta a alguien de forma crítica, redáctala sobre el hecho y no sobre la persona.\n'+
 '8. Nunca cierres con preguntas al lector ni con ofrecimientos.\n'+
-'9. Algunas notas traen, después de "→ MEDIDA:", lo que se hizo en el momento. Eso ya está hecho: menciónalo en el mismo punto y en pasado ("se hizo X"), y no lo pongas como pendiente. Si la medida deja el tema cerrado, trátalo como resuelto; si solo lo parcha, dilo y deja el pendiente de fondo. Si una nota no trae medida, no supongas que se hizo algo.';
+'9. Algunas notas traen, después de "→ MEDIDA:", lo que se hizo en el momento. Eso ya está hecho: menciónalo en el mismo punto y en pasado ("se hizo X"), y no lo pongas como pendiente. Si la medida deja el tema cerrado, trátalo como resuelto; si solo lo parcha, dilo y deja el pendiente de fondo. Si una nota no trae medida, no supongas que se hizo algo.\n'+
+'10. Cuando una nota termina en "[con foto]" o "[con N fotos]" significa que hay respaldo fotográfico guardado en el teléfono. No describas la foto ni supongas lo que muestra: solo, si ese punto llega al informe, cierra la línea con "(hay foto)".';
 
 function bloqueDiario(rango){ return (
 'SI EL MODO ES "DIARIO"\n\n'+
@@ -587,6 +898,8 @@ function bloqueCierre(){ return (
 function lineaNota(n){
   var t='['+etiqueta(n.fecha)+(n.hora?' · '+n.hora:'')+'] ('+cap(n.area)+') '+n.texto.replace(/\s*\n\s*/g,' ');
   if(n.medida) t+=' → MEDIDA: '+n.medida.replace(/\s*\n\s*/g,' ');
+  var k=(n.fotos||[]).length;
+  if(k) t+=' [con '+(k===1?'foto':k+' fotos')+']';
   return t;
 }
 
@@ -905,6 +1218,47 @@ function copiar(txt, msg){
     navigator.clipboard.writeText(txt).then(function(){ toast(msg); }, fallback);
   } else fallback();
 }
+function exportar(){
+  var base={notas:notas, informes:informes};
+  var nombre='informe-francois-'+hoyISO()+'.json';
+  var ids=[];
+  notas.forEach(function(n){ (n.fotos||[]).forEach(function(f){ if(thumbs[f]) ids.push(f); }); });
+  if(!$('#gFotos').checked || !ids.length){
+    bajar(nombre, JSON.stringify(base,null,2));
+    if(ids.length) toast('Respaldo sin las fotos');
+    return;
+  }
+  toast('Preparando '+ids.length+' foto'+(ids.length===1?'':'s')+'…');
+  var out=[], falta=ids.length;
+  ids.forEach(function(id){
+    fotoLeer(id, function(b){
+      if(!b) return listo();
+      blobADataUrl(b, function(u){
+        if(u) out.push({id:id, data:u, thumb:(thumbs[id]||{}).t||''});
+        listo();
+      });
+    });
+  });
+  function listo(){
+    if(--falta > 0) return;
+    base.fotos=out;
+    bajar(nombre, JSON.stringify(base));
+  }
+}
+function importarFotos(arr, cb){
+  var pend=(arr||[]).filter(function(f){ return f && f.id && f.data && !thumbs[f.id]; });
+  if(!pend.length) return cb(0);
+  var falta=pend.length, ok=0;
+  pend.forEach(function(f){
+    var b;
+    try{ b=dataUrlABlob(f.data); }catch(e){ b=null; }
+    if(!b){ if(!--falta) cb(ok); return; }
+    fotoGuardar(f.id, b, f.thumb||f.data, function(bien){
+      if(bien) ok++;
+      if(!--falta) cb(ok);
+    });
+  });
+}
 function bajar(nombre, txt){
   var b=new Blob([txt],{type:'text/plain;charset=utf-8'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nombre;
@@ -914,7 +1268,15 @@ function bajar(nombre, txt){
 
 /* ================= Eventos ================= */
 document.addEventListener('click', function(e){
+  if(e.target && e.target.dataset && e.target.dataset.quitar){ quitarDelForm(e.target.dataset.quitar); return; }
   var t=e.target.closest('button'); if(!t) return;
+
+  if(t.dataset.verform!=null){ abrirVisor(sel.fotos, +t.dataset.verform, sel.edit); return; }
+  if(t.dataset.vernota){
+    var nv=notas.find(function(x){ return x.id===t.dataset.vernota; });
+    if(nv) abrirVisor(nv.fotos||[], +t.dataset.idx||0, nv.id);
+    return;
+  }
 
   if(t.dataset.tab){
     document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b===t); });
@@ -976,6 +1338,30 @@ document.addEventListener('click', function(e){
   switch(t.id){
     case 'btnGuardar': guardar(); break;
     case 'btnCancelar': resetForm(); break;
+    case 'btnCam': $('#fCam').click(); break;
+    case 'btnGal': $('#fGal').click(); break;
+    case 'fotoPrev': if(visor.i>0){ visor.i--; pintarVisor(); } break;
+    case 'fotoNext': if(visor.i<visor.ids.length-1){ visor.i++; pintarVisor(); } break;
+    case 'fotoClose': cerrarVisor(); break;
+    case 'fotoDel': quitarFotoVisor(); break;
+    case 'fotoDown':
+      fotoActual(function(b){
+        if(!b) return toast('No se encontró la foto');
+        var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nombreFoto();
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(a.href); },2000);
+      });
+      break;
+    case 'fotoShare':
+      fotoActual(function(b){
+        if(!b) return toast('No se encontró la foto');
+        var f;
+        try{ f=new File([b], nombreFoto(), {type:'image/jpeg'}); }catch(err){ f=null; }
+        if(f && navigator.canShare && navigator.canShare({files:[f]})){
+          navigator.share({files:[f], title:'Evidencia François'}).catch(function(){});
+        } else toast('Este dispositivo no comparte imágenes: usa «Guardar»');
+      });
+      break;
     case 'btnTheme': prefs.dark=!prefs.dark; savePrefs(); aplicaTema(); break;
     case 'btnCopiar':
       if(!notasDelPeriodo().length && !confirm('No hay notas en el período. ¿Copiar igual?')) break;
@@ -997,11 +1383,23 @@ document.addEventListener('click', function(e){
       $('#rTexto').value=''; refrescarInf(); toast('Cuadro limpio');
       break;
     case 'btnTxt': bajar('informe-francois-'+gen.modo.toLowerCase()+'-'+hoyISO()+'.txt', construirPrompt()); break;
-    case 'btnExport': bajar('informe-francois-'+hoyISO()+'.json', JSON.stringify({notas:notas, informes:informes},null,2)); break;
+    case 'btnExport': exportar(); break;
     case 'btnImport': $('#fileImport').click(); break;
     case 'btnBorrarTodo':
-      if(confirm('Esto borra las '+notas.length+' notas guardadas en este dispositivo. ¿Seguro?')){
-        notas=[]; save(); renderLista(); renderPreview(); stats(); toast('Notas borradas');
+      if(confirm('Esto borra las '+notas.length+' notas guardadas en este dispositivo'+
+                 (Object.keys(thumbs).length?', con sus fotos':'')+'. ¿Seguro?')){
+        notas.forEach(function(n){ (n.fotos||[]).forEach(function(f){ fotoBorrar(f); }); });
+        notas=[]; save(); resetForm(); renderLista(); renderPreview(); stats(); toast('Notas borradas');
+      }
+      break;
+    case 'btnBorrarFotos':
+      var kf=Object.keys(thumbs).length;
+      if(!kf){ toast('No hay fotos guardadas'); break; }
+      if(confirm('Esto borra las '+kf+' fotos guardadas. Las notas se mantienen. ¿Seguro?')){
+        Object.keys(thumbs).forEach(function(id){ fotoBorrar(id); });
+        notas.forEach(function(n){ n.fotos=[]; });
+        sel.fotos=[]; save();
+        renderThumbsForm(); renderLista(); renderPreview(); stats(); toast('Fotos borradas');
       }
       break;
     case 'btnBorrarInf':
@@ -1034,9 +1432,13 @@ document.addEventListener('click', function(e){
 /* Cerrar la ficha de instalación al tocar fuera o con Escape */
 document.addEventListener('click', function(e){
   if(e.target.id==='ovlInstall') cerrarInstalar();
+  if(e.target.id==='ovlFoto') cerrarVisor();
 });
 document.addEventListener('keydown', function(e){
-  if(e.key==='Escape') cerrarInstalar();
+  if(e.key==='Escape'){ cerrarInstalar(); cerrarVisor(); }
+  if($('#ovlFoto').classList.contains('hide')) return;
+  if(e.key==='ArrowLeft' && visor.i>0){ visor.i--; pintarVisor(); }
+  if(e.key==='ArrowRight' && visor.i<visor.ids.length-1){ visor.i++; pintarVisor(); }
 });
 
 document.addEventListener('input', function(e){
@@ -1056,6 +1458,9 @@ document.addEventListener('paste', function(e){
 document.addEventListener('change', function(e){
   if(e.target.id==='fFiltro') renderLista();
   if(e.target.id==='gTodos') renderPreview();
+  if(e.target.id==='fCam'||e.target.id==='fGal'){
+    agregarFotos(e.target.files); e.target.value='';
+  }
   if(e.target.id==='fileImport'){
     var f=e.target.files[0]; if(!f) return;
     var r=new FileReader();
@@ -1074,6 +1479,11 @@ document.addEventListener('change', function(e){
         renderLista(); renderPreview(); renderInformes(); stats();
         toast(nuevas.length+' nota'+(nuevas.length===1?'':'s')+
               (nuevosI.length?' y '+nuevosI.length+' informe'+(nuevosI.length===1?'':'s'):'')+' · importado');
+        importarFotos(d && d.fotos, function(k){
+          if(!k) return;
+          renderLista(); stats();
+          toast(k+' foto'+(k===1?'':'s')+' importada'+(k===1?'':'s'));
+        });
       }catch(err){ toast('Archivo no válido'); }
       e.target.value='';
     };
@@ -1087,8 +1497,15 @@ document.addEventListener('keydown', function(e){
 function stats(){
   var dias={}; notas.forEach(function(n){ dias[n.fecha]=1; });
   var d=Object.keys(dias).length;
+  var ids=Object.keys(thumbs), peso=0;
+  ids.forEach(function(id){ peso+=(thumbs[id].tam||0); });
   $('#statTxt').textContent = notas.length+' nota'+(notas.length===1?'':'s')+' en '+d+' día'+(d===1?'':'s')+
-    ' · '+informes.length+' informe'+(informes.length===1?'':'s')+' guardado'+(informes.length===1?'':'s')+'.';
+    ' · '+informes.length+' informe'+(informes.length===1?'':'s')+' guardado'+(informes.length===1?'':'s')+
+    (ids.length ? ' · '+ids.length+' foto'+(ids.length===1?'':'s')+' ('+pesoTxt(peso)+')' : '')+'.';
+}
+function pesoTxt(b){
+  if(b>=1048576) return (b/1048576).toFixed(1).replace('.',',')+' MB';
+  return Math.max(1,Math.round(b/1024))+' KB';
 }
 function aplicaTema(){
   document.body.classList.toggle('dark', !!prefs.dark);
@@ -1112,6 +1529,7 @@ function aplicaTema(){
   stats();
   estadoInstal();
   if(yaInstalada()) $('#btnInstall').style.display='none';
+  thumbsCargar(function(){ limpiarHuerfanas(); renderLista(); renderThumbsForm(); stats(); });
 })();
 
 window.addEventListener('beforeinstallprompt', function(e){
