@@ -186,7 +186,7 @@ body.dark .pill{color:var(--acc2)}
 body.dark .pasos li:before{color:var(--acc2)}
 .ovlCard .nota{font-size:13px; color:var(--tx3); margin:10px 0 0}
 
-/* Fotos de evidencia */
+/* Fotos */
 .thumbs{display:flex; flex-wrap:wrap; gap:8px; margin-top:9px}
 .th{
   position:relative; width:76px; height:76px; border:1px solid var(--line); border-radius:11px;
@@ -273,7 +273,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <textarea id="fMedida" style="min-height:56px" placeholder="Qué hiciste ahí mismo. Ej: se hizo arqueo ciego de nuevo y se dejó la diferencia anotada"></textarea>
       </div>
       <div class="mt">
-        <label class="f">Fotos de evidencia <span style="text-transform:none;font-weight:600">(opcional)</span></label>
+        <label class="f">Fotos <span style="text-transform:none;font-weight:600">(opcional)</span></label>
         <div class="btns">
           <button class="btn sec sm" id="btnCam">📷 Tomar foto</button>
           <button class="btn sec sm" id="btnGal">🖼️ Desde la galería</button>
@@ -500,7 +500,7 @@ function corta(iso){ var d=dObj(iso); return p2(d.getDate())+'-'+p2(d.getMonth()
 function lunesDe(d){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); var dw=(x.getDay()+6)%7; x.setDate(x.getDate()-dw); return x; }
 function sumaDias(d,n){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()+n); return x; }
 
-/* ================= Fotos de evidencia (IndexedDB) =================
+/* ================= Fotos (IndexedDB) =================
    La nota (en localStorage) guarda solo los id de sus fotos.
    La imagen comprimida vive en IndexedDB (almacén "fotos") y su
    miniatura en el almacén "thumbs", que se carga entero en memoria. */
@@ -1358,7 +1358,7 @@ document.addEventListener('click', function(e){
         var f;
         try{ f=new File([b], nombreFoto(), {type:'image/jpeg'}); }catch(err){ f=null; }
         if(f && navigator.canShare && navigator.canShare({files:[f]})){
-          navigator.share({files:[f], title:'Evidencia François'}).catch(function(){});
+          navigator.share({files:[f], title:'Foto François'}).catch(function(){});
         } else toast('Este dispositivo no comparte imágenes: usa «Guardar»');
       });
       break;
