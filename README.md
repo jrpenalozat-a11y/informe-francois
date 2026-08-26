@@ -27,7 +27,11 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
    Las notas del período se insertan en el bloque `NOTAS DEL PERÍODO` con el formato acordado:
    `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo → MEDIDA: se hizo arqueo ciego de nuevo`, en orden cronológico.
 
-   Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
+   Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**, y una fila para
+   **abrir el chat con el prompt ya copiado**: 🤖 Claude · ✨ Gemini · 🐋 DeepSeek. Solo Claude
+   admite recibir el texto por enlace (`claude.ai/new?q=…`) y la app lo usa cuando el prompt no
+   pasa de 4.000 caracteres; sobre eso, y siempre en Gemini y DeepSeek, el prompt queda copiado y
+   basta con pegarlo. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
 3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude, **lo corriges y lo mandas**. Incluye:
 
    - **Vista «cómo llega al grupo»**: una burbuja tipo WhatsApp con las negritas y viñetas ya renderizadas, para revisar antes de enviar.
