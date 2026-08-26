@@ -59,7 +59,7 @@ No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Im
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v6`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v8`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
 - `vercel.json` / `netlify.toml` — deploy estático sin build; `/sw.js` se sirve con `Cache-Control: no-cache`.
