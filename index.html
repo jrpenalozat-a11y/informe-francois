@@ -313,6 +313,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <button class="btn sec ia" data-ia="claude">🤖 Claude</button>
         <button class="btn sec ia" data-ia="gemini">✨ Gemini</button>
         <button class="btn sec ia" data-ia="deepseek">🐋 DeepSeek</button>
+        <button class="btn sec ia" data-ia="copilot">🪟 Copilot</button>
       </div>
       <p class="hint">Copia el prompt y abre el chat en otra pestaña. En Claude queda escrito solo cuando el prompt es corto; en el resto pégalo tú (Ctrl + V, o mantener pulsado → Pegar en el teléfono).</p>
       <pre class="out mt" id="preview"></pre>
@@ -823,7 +824,8 @@ function infPorId(id){ return informes.find(function(i){ return i.id===id; }); }
 var IAS={
   claude:   { nombre:'Claude',   url:'https://claude.ai/new', param:'q' },
   gemini:   { nombre:'Gemini',   url:'https://gemini.google.com/app' },
-  deepseek: { nombre:'DeepSeek', url:'https://chat.deepseek.com/' }
+  deepseek: { nombre:'DeepSeek', url:'https://chat.deepseek.com/' },
+  copilot:  { nombre:'Copilot',  url:'https://copilot.microsoft.com/' }
 };
 function abrirIA(id){
   var ia=IAS[id]; if(!ia) return;

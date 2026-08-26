@@ -28,9 +28,9 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
    `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo → MEDIDA: se hizo arqueo ciego de nuevo`, en orden cronológico.
 
    Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**, y una fila para
-   **abrir el chat con el prompt ya copiado**: 🤖 Claude · ✨ Gemini · 🐋 DeepSeek. Solo Claude
+   **abrir el chat con el prompt ya copiado**: 🤖 Claude · ✨ Gemini · 🐋 DeepSeek · 🪟 Copilot. Solo Claude
    admite recibir el texto por enlace (`claude.ai/new?q=…`) y la app lo usa cuando el prompt no
-   pasa de 4.000 caracteres; sobre eso, y siempre en Gemini y DeepSeek, el prompt queda copiado y
+   pasa de 4.000 caracteres; sobre eso, y siempre en Gemini, DeepSeek y Copilot, el prompt queda copiado y
    basta con pegarlo. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
 3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude, **lo corriges y lo mandas**. Incluye:
 
@@ -59,7 +59,7 @@ No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Im
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v8`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v9`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
 - `vercel.json` / `netlify.toml` — deploy estático sin build; `/sw.js` se sirve con `Cache-Control: no-cache`.
