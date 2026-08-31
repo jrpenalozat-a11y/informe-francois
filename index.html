@@ -7,6 +7,7 @@
 <meta name="description" content="Notas del turno y generador del prompt maestro de bitácora (diario, semanal y cierre).">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#7a4a22">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -69,7 +70,7 @@ nav.tabs button.on{background:var(--acc); border-color:var(--acc); color:#fff}
 .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh); padding:16px; margin-bottom:14px}
 .card h2{margin:0 0 12px; font-size:15px; letter-spacing:.4px; text-transform:uppercase; color:var(--tx2)}
 label.f{display:block; font-size:12px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:var(--tx2); margin:0 0 5px}
-input[type=text],input[type=date],input[type=time],textarea,select{
+input[type=text],input[type=date],input[type=time],input[type=email],input[type=password],textarea,select{
   width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:11px;
   background:var(--bg2); color:var(--tx); font:inherit; font-size:15px;
 }
@@ -249,6 +250,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p>Notas del turno → prompt listo para pegar</p>
     </div>
     <div class="topbtns">
+      <button class="iconbtn" id="btnNube" title="Sincronía">☁️</button>
       <button class="iconbtn" id="btnTheme" title="Modo claro / oscuro">🌙</button>
       <button class="iconbtn" id="btnInstall" title="Instalar en el teléfono">📲</button>
     </div>
@@ -420,6 +422,30 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   <!-- ============ DATOS ============ -->
   <section id="tab-datos" class="hide">
     <div class="card">
+      <h2>Mi cuenta · sincronía</h2>
+      <p class="hint" style="margin-top:0" id="syncEstado">Cargando…</p>
+      <div id="syncLogin" class="hide">
+        <div class="row">
+          <div style="flex:2 1 220px"><label class="f" for="syEmail">Correo</label>
+            <input type="email" id="syEmail" autocomplete="username" placeholder="tu@correo.cl"></div>
+          <div style="flex:1 1 160px"><label class="f" for="syPass">Clave</label>
+            <input type="password" id="syPass" autocomplete="current-password" placeholder="••••••••"></div>
+        </div>
+        <div class="btns mt">
+          <button class="btn" id="btnEntrar">Entrar</button>
+        </div>
+        <p class="hint">Es tu cuenta y solo tuya: nadie más ve estas notas. Entra una vez en el teléfono y otra en el computador, y los dos muestran lo mismo.</p>
+      </div>
+      <div id="syncOn" class="hide">
+        <label class="chk"><input type="checkbox" id="sySyncFotos" checked> Sincronizar también las fotos</label>
+        <div class="btns mt">
+          <button class="btn" id="btnSync">🔄 Sincronizar ahora</button>
+          <button class="btn sec" id="btnSalir">Cerrar sesión</button>
+        </div>
+        <p class="hint">Se sincroniza sola al abrir la app y cada vez que agregas o cambias algo. Sin internet sigues anotando igual: sube cuando vuelva la señal.</p>
+      </div>
+    </div>
+    <div class="card">
       <h2>Respaldo</h2>
       <p class="hint" style="margin-top:0" id="statTxt"></p>
       <label class="chk"><input type="checkbox" id="gFotos" checked> Incluir las fotos en el respaldo <span style="color:var(--tx3)">(archivo mucho más pesado)</span></label>
@@ -494,13 +520,16 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
 <script>
 /* ================= Estado ================= */
-var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1', BORR='if_borrador_v1';
+var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1', BORR='if_borrador_v1', TOMB='if_borrados_v1';
 var AREAS=['SALA','COCINA','CAJA','PERSONAL','PROVEEDORES','EQUIPOS','PRODUCTO','OTRO'];
 var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
 
 var notas=load(KEY,[]);
 var informes=load(INF,[]);
 var prefs=load(PREF,{dark:false, wa:''});
+/* Borrados: id → cuándo se borró. Sin esto, al sincronizar la nube
+   devolvería la nota borrada y reviviría. */
+var borrados=load(TOMB,{n:{},i:{}});
 var sel={area:'SALA', edit:null, fotos:[]};
 var gen={modo:'DIARIO'};
 
@@ -508,6 +537,9 @@ function load(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v)
 function save(){ localStorage.setItem(KEY,JSON.stringify(notas)); }
 function saveInf(){ localStorage.setItem(INF,JSON.stringify(informes)); }
 function savePrefs(){ localStorage.setItem(PREF,JSON.stringify(prefs)); }
+function saveTomb(){ localStorage.setItem(TOMB,JSON.stringify(borrados)); }
+function ahora(){ return new Date().toISOString(); }
+function ms(x){ return x ? (Date.parse(x)||0) : 0; }
 function $(s){ return document.querySelector(s); }
 function toast(m){ var t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('on');},1900); }
 
@@ -723,7 +755,7 @@ function quitarFotoVisor(){
   var id=visor.ids[visor.i];
   if(!confirm('¿Borrar esta foto? No se puede recuperar.')) return;
   var n=notaDeFoto(id);
-  if(n){ n.fotos=(n.fotos||[]).filter(function(x){return x!==id;}); save(); }
+  if(n){ n.fotos=(n.fotos||[]).filter(function(x){return x!==id;}); n.act=ahora(); save(); syncPronto(); }
   sel.fotos=sel.fotos.filter(function(x){return x!==id;});
   delete selInf[id];
   fotoBorrar(id);
@@ -938,7 +970,7 @@ function guardar(){
           fecha: $('#fFecha').value || hoyISO(),
           hora: $('#fHora').value || '',
           area: sel.area, texto: txt, medida: $('#fMedida').value.trim(),
-          fotos: sel.fotos.slice() };
+          fotos: sel.fotos.slice(), act: ahora() };
   if(sel.edit){
     var i=notas.findIndex(function(x){return x.id===sel.edit;});
     if(i>=0) notas[i]=n;
@@ -947,7 +979,7 @@ function guardar(){
     notas.push(n);
     toast('Nota agregada');
   }
-  save(); resetForm(); renderLista(); renderPreview();
+  save(); resetForm(); renderLista(); renderPreview(); syncPronto();
 }
 
 function editar(id){
@@ -968,8 +1000,9 @@ function borrar(id){
   if(!confirm('¿Borrar esta nota'+(k?' y su'+(k>1?'s '+k+' fotos':' foto'):'')+'?\n\n'+n.texto)) return;
   (n.fotos||[]).forEach(function(f){ fotoBorrar(f); });
   notas=notas.filter(function(x){return x.id!==id;});
+  borrados.n[id]=ahora(); saveTomb();
   if(sel.edit===id) resetForm();
-  save(); renderLista(); renderPreview(); stats(); toast('Nota borrada');
+  save(); renderLista(); renderPreview(); stats(); syncPronto(); toast('Nota borrada');
 }
 
 function ordenadas(arr){
@@ -1264,8 +1297,8 @@ function guardarInforme(silencioso){
   if(ya){ if(!silencioso) toast('Ese informe ya estaba guardado'); return ya; }
   var inf={ id:Date.now()+'-'+Math.random().toString(36).slice(2,7),
             modo:gen.modo, rango:$('#gRango').value.trim(),
-            creado:new Date().toISOString(), texto:txt };
-  informes.unshift(inf); saveInf(); renderInformes();
+            creado:new Date().toISOString(), texto:txt, act:ahora() };
+  informes.unshift(inf); saveInf(); renderInformes(); syncPronto();
   if(!silencioso) toast('Informe guardado');
   return inf;
 }
@@ -1438,6 +1471,296 @@ function bajar(nombre, txt){
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
 }
 
+/* ================= Sincronía (Supabase) =================
+   Las notas siguen viviendo en este aparato: la nube es solo una copia
+   común para que el teléfono y el computador muestren lo mismo.
+   Cada nota y cada informe llevan "act" (cuándo se tocaron) y gana la
+   versión más nueva. Los borrados quedan anotados para que no revivan.
+   Las fotos van a un cajón privado del bucket, una carpeta por usuario. */
+var SB_URL='https://zmpiqkbvmjvfvxyvcdhi.supabase.co';
+var SB_KEY='sb_publishable_wk2KPYx1W--YcsrbRrEPxw_ORy1fati';
+var BUCKET='if-fotos';
+var EPOCA='1970-01-01T00:00:00.000Z';
+var SBC=null, syncOcupado=false, syncTimer=0;
+
+function getSB(){
+  if(SBC) return SBC;
+  if(!window.supabase) return null;
+  try{ SBC=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){ SBC=null; }
+  return SBC;
+}
+/* supabase-js carga con defer (y puede venir de la caché sin conexión) */
+function esperaLib(tope){
+  return new Promise(function(res){
+    var t0=Date.now();
+    (function ver(){
+      if(window.supabase || Date.now()-t0>=tope) return res(!!window.supabase);
+      setTimeout(ver,120);
+    })();
+  });
+}
+function sesion(){
+  var c=getSB();
+  if(!c) return Promise.resolve(null);
+  return c.auth.getSession()
+    .then(function(r){ return (r && r.data && r.data.session) || null; })
+    .catch(function(){ return null; });
+}
+function nube(icono, titulo){
+  var b=$('#btnNube'); if(!b) return;
+  b.textContent=icono; b.title=titulo;
+}
+function haceRato(iso){
+  var s=Math.round((Date.now()-ms(iso))/1000);
+  if(s<90) return 'recién';
+  if(s<3600) return 'hace '+Math.round(s/60)+' min';
+  if(s<86400) return 'hace '+Math.round(s/3600)+' h';
+  return 'el '+etiqueta(hoyISO(new Date(ms(iso))));
+}
+function traduceErr(m){
+  m=String(m||'');
+  if(/Invalid login/i.test(m)) return 'Correo o clave incorrectos';
+  if(/Email not confirmed/i.test(m)) return 'Falta confirmar el correo en Supabase';
+  if(/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión';
+  return m;
+}
+
+/* --- Entrar / salir --- */
+function entrar(){
+  var em=($('#syEmail').value||'').trim(), pw=$('#syPass').value||'';
+  if(!em || !pw){ toast('Pon el correo y la clave'); return; }
+  esperaLib(5000).then(function(hay){
+    var c=hay ? getSB() : null;
+    if(!c){ toast('No se pudo cargar la sincronía. ¿Hay internet?'); return; }
+    nube('🔄','Entrando');
+    c.auth.signInWithPassword({email:em, password:pw}).then(function(r){
+      if(r.error){ nube('⚠️','No entró'); toast(traduceErr(r.error.message)); pintarSync(); return; }
+      $('#syPass').value='';
+      prefs.email=em; savePrefs();
+      toast('Listo, cuenta conectada');
+      pintarSync();
+      sincronizar('manual');
+    });
+  });
+}
+function salir(){
+  var c=getSB(); if(!c) return;
+  if(!confirm('Cerrar sesión en este aparato.\n\nLas notas que ya están acá se quedan; solo deja de sincronizar.')) return;
+  c.auth.signOut().then(function(){ nube('☁️','Sin cuenta'); toast('Sesión cerrada'); pintarSync(); });
+}
+
+/* --- Estado en pantalla --- */
+function pintarSync(){
+  if(!$('#syncEstado')) return;
+  var hay=!!window.supabase;
+  sesion().then(function(s){
+    $('#syncLogin').classList.toggle('hide', !!s);
+    $('#syncOn').classList.toggle('hide', !s);
+    $('#sySyncFotos').checked = prefs.syncFotos!==false;
+    if(!hay){
+      $('#syncEstado').textContent='La sincronía no cargó (parece que estás sin internet). Puedes seguir anotando: se guarda en este aparato.';
+      nube('⚠️','Sincronía no disponible');
+      return;
+    }
+    if(!s){
+      $('#syncEstado').textContent='Sin cuenta en este aparato: lo que anotes acá no se ve en el otro. Entra con tu correo y clave.';
+      nube('☁️','Sin cuenta — toca para configurar');
+      return;
+    }
+    $('#syncEstado').textContent='Conectado como '+s.user.email+
+      (prefs.lastSync ? ' · última sincronía '+haceRato(prefs.lastSync) : ' · sin sincronizar todavía')+'.';
+    if(!syncOcupado) nube('☁️','Sincronizado '+(prefs.lastSync?haceRato(prefs.lastSync):''));
+  });
+}
+
+/* --- Traer, fusionar, subir --- */
+function filaNota(n, uid){
+  return { id:n.id, uid:uid, fecha:n.fecha, hora:n.hora||'', area:n.area||'OTRO',
+           texto:n.texto, medida:n.medida||'', fotos:(n.fotos||[]),
+           borrada:false, act:n.act||EPOCA };
+}
+function deFilaNota(r){
+  return { id:r.id, fecha:r.fecha, hora:r.hora||'', area:r.area||'OTRO',
+           texto:r.texto||'', medida:r.medida||'', fotos:(r.fotos||[]), act:r.act };
+}
+function filaInf(i, uid){
+  return { id:i.id, uid:uid, modo:i.modo||'DIARIO', rango:i.rango||'',
+           creado:i.creado||'', texto:i.texto, borrada:false, act:i.act||EPOCA };
+}
+function deFilaInf(r){
+  return { id:r.id, modo:r.modo||'DIARIO', rango:r.rango||'', creado:r.creado||'',
+           texto:r.texto||'', act:r.act };
+}
+
+function fusionar(remN, remI){
+  var k={n:0, i:0};
+
+  var locN={}; notas.forEach(function(n){ locN[n.id]=n; });
+  Object.keys(remN).forEach(function(id){
+    var r=remN[id], l=locN[id], t=borrados.n[id];
+    if(r.borrada){
+      if(l && ms(r.act)>ms(l.act)){
+        (l.fotos||[]).forEach(function(f){ fotoBorrar(f); });
+        delete locN[id]; borrados.n[id]=r.act; k.n++;
+      } else if(!l && !t) borrados.n[id]=r.act;
+      return;
+    }
+    if(l){ if(ms(r.act)>ms(l.act)){ locN[id]=deFilaNota(r); k.n++; } }
+    else if(!t || ms(r.act)>ms(t)){ locN[id]=deFilaNota(r); delete borrados.n[id]; k.n++; }
+  });
+  if(k.n) notas=Object.keys(locN).map(function(id){ return locN[id]; });
+
+  var locI={}; informes.forEach(function(i){ locI[i.id]=i; });
+  Object.keys(remI).forEach(function(id){
+    var r=remI[id], l=locI[id], t=borrados.i[id];
+    if(r.borrada){
+      if(l && ms(r.act)>ms(l.act)){ delete locI[id]; borrados.i[id]=r.act; k.i++; }
+      else if(!l && !t) borrados.i[id]=r.act;
+      return;
+    }
+    if(l){ if(ms(r.act)>ms(l.act)){ locI[id]=deFilaInf(r); k.i++; } }
+    else if(!t || ms(r.act)>ms(t)){ locI[id]=deFilaInf(r); delete borrados.i[id]; k.i++; }
+  });
+  if(k.i){
+    informes=Object.keys(locI).map(function(id){ return locI[id]; })
+      .sort(function(a,b){ return ms(b.creado)-ms(a.creado); });
+  }
+
+  if(k.n||k.i){ save(); saveInf(); }
+  saveTomb();
+  return k;
+}
+
+/* --- Fotos --- */
+function fotoLeerP(id){ return new Promise(function(res){ fotoLeer(id, res); }); }
+function guardarBajada(id, blob){
+  return new Promise(function(res){
+    cargarImg(blob, function(img){
+      var th = img ? lienzo(img,LTH).toDataURL('image/jpeg',0.6) : '';
+      if(img && img.close) img.close();
+      fotoGuardar(id, blob, th, function(){ res(); });
+    });
+  });
+}
+async function sincroFotos(c, uid){
+  var out={sube:0, baja:0};
+  var necesarias={};
+  notas.forEach(function(n){ (n.fotos||[]).forEach(function(f){ necesarias[f]=1; }); });
+
+  var enNube={}, desde=0, lote;
+  do{
+    var l=await c.storage.from(BUCKET).list(uid, {limit:100, offset:desde});
+    if(l.error) throw l.error;
+    lote=l.data||[];
+    lote.forEach(function(o){ enNube[o.name.replace(/\.jpg$/,'')]=1; });
+    desde+=lote.length;
+  } while(lote.length===100);
+
+  var subir=Object.keys(necesarias).filter(function(id){ return thumbs[id] && !enNube[id]; });
+  for(var a=0; a<subir.length; a++){
+    nube('🔄','Subiendo fotos '+(a+1)+'/'+subir.length);
+    var b=await fotoLeerP(subir[a]);
+    if(!b) continue;
+    var u=await c.storage.from(BUCKET).upload(uid+'/'+subir[a]+'.jpg', b, {contentType:'image/jpeg', upsert:true});
+    if(!u.error){ out.sube++; enNube[subir[a]]=1; }
+  }
+
+  var bajar=Object.keys(necesarias).filter(function(id){ return !thumbs[id] && enNube[id]; });
+  for(var d=0; d<bajar.length; d++){
+    nube('🔄','Bajando fotos '+(d+1)+'/'+bajar.length);
+    var g=await c.storage.from(BUCKET).download(uid+'/'+bajar[d]+'.jpg');
+    if(g.error || !g.data) continue;
+    await guardarBajada(bajar[d], g.data);
+    out.baja++;
+  }
+
+  var sobran=Object.keys(enNube).filter(function(id){ return !necesarias[id]; });
+  if(sobran.length){
+    await c.storage.from(BUCKET).remove(sobran.map(function(id){ return uid+'/'+id+'.jpg'; }));
+  }
+  return out;
+}
+
+/* --- La sincronía ---
+   modo: 'manual' (la pide el usuario, avisa por pantalla)
+         'cambio' (acabas de anotar o borrar algo: sube sí o sí)
+         'auto'   (abrir la app, volver a ella, recuperar señal: sin insistir) */
+async function sincronizar(modo){
+  if(modo===true) modo='manual';
+  var manual = modo==='manual';
+  if(syncOcupado){ if(modo!=='auto') syncPronto(); return; }   // ocupada: reintenta en un rato
+  if(!window.supabase){ if(manual) toast('La sincronía no cargó. ¿Hay internet?'); return; }
+  if(navigator.onLine===false){ if(manual) toast('Sin internet: se sube cuando vuelva'); return; }
+  if(modo==='auto' && prefs.lastSync && Date.now()-ms(prefs.lastSync) < 15000) return;
+
+  var s=await sesion();
+  if(!s){ if(manual) toast('Primero entra con tu correo en ⚙️ Datos'); pintarSync(); return; }
+
+  var c=getSB(), uid=s.user.id;
+  syncOcupado=true; nube('🔄','Sincronizando');
+  try{
+    var rn=await c.from('if_notas').select('*');       if(rn.error) throw rn.error;
+    var ri=await c.from('if_informes').select('*');    if(ri.error) throw ri.error;
+    var remN={}, remI={};
+    (rn.data||[]).forEach(function(r){ remN[r.id]=r; });
+    (ri.data||[]).forEach(function(r){ remI[r.id]=r; });
+
+    var k=fusionar(remN, remI);
+
+    /* Las filas de un mismo upsert tienen que llevar las mismas columnas,
+       así que las notas y las marcas de borrado van en viajes separados. */
+    var subeN=[], subeI=[], tumbaN=[], tumbaI=[];
+    notas.forEach(function(n){
+      var r=remN[n.id];
+      if(!r || ms(n.act)>ms(r.act)) subeN.push(filaNota(n, uid));
+    });
+    Object.keys(borrados.n).forEach(function(id){
+      var r=remN[id];
+      if(!r || ms(borrados.n[id])>ms(r.act)) tumbaN.push({id:id, uid:uid, borrada:true, act:borrados.n[id]});
+    });
+    informes.forEach(function(i){
+      var r=remI[i.id];
+      if(!r || ms(i.act)>ms(r.act)) subeI.push(filaInf(i, uid));
+    });
+    Object.keys(borrados.i).forEach(function(id){
+      var r=remI[id];
+      if(!r || ms(borrados.i[id])>ms(r.act)) tumbaI.push({id:id, uid:uid, borrada:true, act:borrados.i[id]});
+    });
+
+    if(subeN.length){  var un=await c.from('if_notas').upsert(subeN);       if(un.error) throw un.error; }
+    if(tumbaN.length){ var tn=await c.from('if_notas').upsert(tumbaN);      if(tn.error) throw tn.error; }
+    if(subeI.length){  var ui=await c.from('if_informes').upsert(subeI);    if(ui.error) throw ui.error; }
+    if(tumbaI.length){ var ti=await c.from('if_informes').upsert(tumbaI);   if(ti.error) throw ti.error; }
+
+    var f={sube:0, baja:0};
+    if(prefs.syncFotos!==false) f=await sincroFotos(c, uid);
+
+    prefs.lastSync=ahora(); savePrefs();
+    syncOcupado=false;
+    nube('☁️','Sincronizado recién');
+
+    if(k.n||k.i||f.baja){ renderLista(); renderPreview(); renderInformes(); stats(); }
+    pintarSync();
+
+    if(manual){
+      var p=[];
+      if(k.n) p.push(k.n+' nota'+(k.n===1?'':'s')+' que faltaban acá');
+      if(k.i) p.push(k.i+' informe'+(k.i===1?'':'s'));
+      if(f.baja) p.push(f.baja+' foto'+(f.baja===1?'':'s'));
+      toast(p.length ? 'Al día: llegaron '+p.join(', ') : 'Al día, no había nada nuevo');
+    }
+  }catch(e){
+    syncOcupado=false;
+    nube('⚠️','No pudo sincronizar');
+    pintarSync();
+    if(manual) toast('No se pudo sincronizar: '+traduceErr(e && e.message));
+  }
+}
+function syncPronto(){
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(function(){ sincronizar('cambio'); }, 2500);
+}
+
 /* ================= Eventos ================= */
 document.addEventListener('click', function(e){
   if(e.target && e.target.dataset && e.target.dataset.quitar){ quitarDelForm(e.target.dataset.quitar); return; }
@@ -1469,7 +1792,7 @@ document.addEventListener('click', function(e){
     });
     if(t.dataset.tab==='generar') renderPreview();
     if(t.dataset.tab==='informes') renderInformes();
-    if(t.dataset.tab==='datos') stats();
+    if(t.dataset.tab==='datos'){ stats(); pintarSync(); }
     window.scrollTo({top:0});
     return;
   }
@@ -1505,7 +1828,8 @@ document.addEventListener('click', function(e){
   if(t.dataset.delinf){
     if(confirm('¿Borrar este informe guardado?')){
       informes=informes.filter(function(i){ return i.id!==t.dataset.delinf; });
-      saveInf(); renderInformes(); stats(); toast('Informe borrado');
+      borrados.i[t.dataset.delinf]=ahora(); saveTomb();
+      saveInf(); renderInformes(); stats(); syncPronto(); toast('Informe borrado');
     }
     return;
   }
@@ -1573,11 +1897,27 @@ document.addEventListener('click', function(e){
     case 'btnTxt': bajar('informe-francois-'+gen.modo.toLowerCase()+'-'+hoyISO()+'.txt', construirPrompt()); break;
     case 'btnExport': exportar(); break;
     case 'btnImport': $('#fileImport').click(); break;
+    case 'btnEntrar': entrar(); break;
+    case 'btnSalir': salir(); break;
+    case 'btnSync': sincronizar('manual'); break;
+    case 'btnNube':
+      sesion().then(function(s){
+        if(s) return sincronizar('manual');
+        var bd=document.querySelector('nav.tabs button[data-tab="datos"]');
+        if(bd) bd.click();
+        toast('Entra con tu correo para sincronizar');
+      });
+      break;
     case 'btnBorrarTodo':
       if(confirm('Esto borra las '+notas.length+' notas guardadas en este dispositivo'+
                  (Object.keys(thumbs).length?', con sus fotos':'')+'. ¿Seguro?')){
-        notas.forEach(function(n){ (n.fotos||[]).forEach(function(f){ fotoBorrar(f); }); });
-        notas=[]; save(); resetForm(); renderLista(); renderPreview(); stats(); toast('Notas borradas');
+        var cuando=ahora();
+        notas.forEach(function(n){
+          (n.fotos||[]).forEach(function(f){ fotoBorrar(f); });
+          borrados.n[n.id]=cuando;
+        });
+        saveTomb();
+        notas=[]; save(); resetForm(); renderLista(); renderPreview(); stats(); syncPronto(); toast('Notas borradas');
       }
       break;
     case 'btnBorrarFotos':
@@ -1585,14 +1925,16 @@ document.addEventListener('click', function(e){
       if(!kf){ toast('No hay fotos guardadas'); break; }
       if(confirm('Esto borra las '+kf+' fotos guardadas. Las notas se mantienen. ¿Seguro?')){
         Object.keys(thumbs).forEach(function(id){ fotoBorrar(id); });
-        notas.forEach(function(n){ n.fotos=[]; });
+        notas.forEach(function(n){ if((n.fotos||[]).length){ n.fotos=[]; n.act=ahora(); } });
         sel.fotos=[]; save();
-        renderThumbsForm(); renderLista(); renderPreview(); stats(); toast('Fotos borradas');
+        renderThumbsForm(); renderLista(); renderPreview(); stats(); syncPronto(); toast('Fotos borradas');
       }
       break;
     case 'btnBorrarInf':
       if(confirm('Esto borra los '+informes.length+' informes guardados. ¿Seguro?')){
-        informes=[]; saveInf(); renderInformes(); stats(); toast('Informes borrados');
+        var cuandoI=ahora();
+        informes.forEach(function(i){ borrados.i[i.id]=cuandoI; }); saveTomb();
+        informes=[]; saveInf(); renderInformes(); stats(); syncPronto(); toast('Informes borrados');
       }
       break;
     case 'btnInstall': case 'btnInstall2': abrirInstalar(); break;
@@ -1644,6 +1986,11 @@ document.addEventListener('paste', function(e){
   setTimeout(function(){ aplicarSolo(true); refrescarInf(); }, 0);
 });
 document.addEventListener('change', function(e){
+  if(e.target.id==='sySyncFotos'){
+    prefs.syncFotos=e.target.checked; savePrefs();
+    if(e.target.checked) sincronizar('manual');
+    else toast('Las fotos se quedan solo en este aparato');
+  }
   if(e.target.id==='fFiltro') renderLista();
   if(e.target.id==='gTodos') renderPreview();
   if(e.target.id==='fCam'||e.target.id==='fGal'){
@@ -1664,7 +2011,7 @@ document.addEventListener('change', function(e){
         var idsI={}; informes.forEach(function(i){ idsI[i.id]=1; });
         var nuevosI=di.filter(function(i){ return i && i.texto && !idsI[i.id]; });
         informes=nuevosI.concat(informes); saveInf();
-        renderLista(); renderPreview(); renderInformes(); stats();
+        renderLista(); renderPreview(); renderInformes(); stats(); syncPronto();
         toast(nuevas.length+' nota'+(nuevas.length===1?'':'s')+
               (nuevosI.length?' y '+nuevosI.length+' informe'+(nuevosI.length===1?'':'s'):'')+' · importado');
         importarFotos(d && d.fotos, function(k){
@@ -1680,6 +2027,7 @@ document.addEventListener('change', function(e){
 });
 document.addEventListener('keydown', function(e){
   if((e.ctrlKey||e.metaKey) && e.key==='Enter' && !$('#tab-notas').classList.contains('hide')) guardar();
+  if(e.key==='Enter' && (e.target.id==='syPass'||e.target.id==='syEmail')){ e.preventDefault(); entrar(); }
 });
 
 function stats(){
@@ -1702,6 +2050,14 @@ function aplicaTema(){
 
 /* ================= Init ================= */
 (function init(){
+  /* Notas de antes de la sincronía: sin "act". Se les pone la fecha más
+     vieja posible para que suban a la nube, pero nunca pisen una versión
+     más nueva que pueda haber en el otro aparato. */
+  var faltaba=false;
+  notas.forEach(function(n){ if(!n.act){ n.act=EPOCA; faltaba=true; } });
+  informes.forEach(function(i){ if(!i.act){ i.act=i.creado||EPOCA; faltaba=true; } });
+  if(faltaba){ save(); saveInf(); }
+
   aplicaTema();
   resetForm();
   renderLista();
@@ -1718,7 +2074,17 @@ function aplicaTema(){
   estadoInstal();
   if(yaInstalada()) $('#btnInstall').style.display='none';
   thumbsCargar(function(){ limpiarHuerfanas(); renderLista(); renderThumbsForm(); renderPreview(); stats(); });
+
+  esperaLib(8000).then(function(hay){
+    pintarSync();
+    if(hay) sincronizar('cambio');   // al abrir, sube lo que quedó pendiente y baja lo nuevo
+  });
 })();
+
+/* Al volver a la app (cambiar de pestaña, desbloquear el teléfono) y al
+   recuperar la señal, vuelve a mirar la nube. */
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) sincronizar('auto'); });
+window.addEventListener('online', function(){ sincronizar('cambio'); });
 
 window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault(); window._ip=e;

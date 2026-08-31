@@ -12,7 +12,7 @@ Abre la URL y toca el botón **📲** (arriba a la derecha, o en la pestaña *Da
 - **iPhone (Safari):** *Compartir* → *Agregar a inicio*. Si estás en Chrome iOS te avisa que abras en Safari y te copia la dirección.
 - **Computador:** te deja copiar o compartir el enlace para abrirlo en el teléfono (y el navegador también puede instalarla ahí).
 
-Queda con ícono propio, a pantalla completa y **funciona sin señal** (service worker). Las notas viven en ese teléfono: si instalas la app en dos aparatos, cada uno tiene las suyas.
+Queda con ícono propio, a pantalla completa y **funciona sin señal** (service worker). Las notas viven en ese aparato; para que el teléfono y el computador muestren lo mismo, entra con tu cuenta en los dos (ver **[Sincronía](#sincronía-entre-el-teléfono-y-el-computador)**).
 
 ## Qué hace
 
@@ -47,7 +47,7 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
 
    **Al pegar deja solo el informe**: si viene dentro de ``` ``` usa el bloque, y si trae texto antes o comentarios después, los recorta (empieza en `*Bitácora François*` o en `RESUMEN DE LA SEMANA`; en modo CIERRE no toca la cola porque termina en prosa). El botón **✂️ Dejar solo el informe** repite esa limpieza a mano. Lo que se envía es exactamente lo que quede en el cuadro: el prompt y las notas nunca salen. Botones: **📲 Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
 4. **📤 Informes** — los informes guardados con su modo, período y fecha; desde cada uno: WhatsApp, copiar, descargar `.txt` o borrar.
-5. **⚙️ Datos** — exportar / importar JSON de respaldo (notas + informes y, si marcas la casilla, **las fotos**), glosario interno (86, 101, arqueo ciego) y borrado (notas, informes o solo las fotos).
+5. **⚙️ Datos** — **cuenta y sincronía** (ver más abajo), exportar / importar JSON de respaldo (notas + informes y, si marcas la casilla, **las fotos**), glosario interno (86, 101, arqueo ciego) y borrado (notas, informes o solo las fotos).
 
 El texto del período (`lun 17-08`, `17-08 al 23-08`) se calcula solo, pero es editable a mano.
 
@@ -62,12 +62,36 @@ Todo en el navegador del dispositivo:
 
 Las **fotos** no caben en `localStorage`, así que van en IndexedDB (base `if_fotos_v1`): el almacén `fotos` guarda la imagen comprimida y `thumbs` la miniatura y el peso; la nota solo lleva los `id` de sus fotos. Las fotos que quedaron sin nota (la app se cerró antes de guardarla) se limpian solas al abrir.
 
-No hay servidor ni cuenta: si cambias de teléfono, usa **Exportar JSON** e **Importar JSON**. La importación no duplica (compara por `id`). El respaldo incluye las fotos en base64 si dejas marcada la casilla — pesa bastante más, así que para mover solo el texto, desmárcala.
+Sin cuenta, la app funciona igual pero cada aparato tiene lo suyo: para mover las notas a mano usa **Exportar JSON** e **Importar JSON**. La importación no duplica (compara por `id`). El respaldo incluye las fotos en base64 si dejas marcada la casilla — pesa bastante más, así que para mover solo el texto, desmárcala.
+
+## Sincronía entre el teléfono y el computador
+
+Opcional: si entras con tu correo en ⚙️ Datos, las notas, los informes y las fotos suben a
+**Supabase** y los dos aparatos muestran lo mismo. El dispositivo sigue mandando —todo se guarda
+primero en local y sin señal se anota igual—; la nube es solo la copia común.
+
+- **Proyecto:** el mismo de François (`zmpiqkbvmjvfvxyvcdhi`), compartido con el *Checklist de Turno*.
+  Tablas propias con prefijo `if_`, así que no se pisan. La llave pública va en el `index.html`:
+  lo que protege los datos son las políticas RLS, que solo dejan ver las filas de tu `uid`.
+- **Puesta en marcha (una vez):** correr [`supabase.sql`](supabase.sql) en el SQL Editor y crear el
+  usuario en *Authentication → Users → Add user* con **Auto Confirm** marcado.
+- **Cómo resuelve los choques:** cada nota e informe llevan `act` (cuándo se tocaron) y gana la
+  versión más nueva. Los borrados quedan anotados en `if_borrados_v1` y se suben como
+  `borrada = true`, para que la nube no los reviva en el otro aparato.
+- **Fotos:** bucket privado `if-fotos`, una carpeta por cuenta (`<uid>/<idFoto>.jpg`). Suben las que
+  el otro aparato no tiene y bajan las que faltan acá (la miniatura se rehace al bajarlas). Se puede
+  apagar con la casilla *«Sincronizar también las fotos»*. Las fotos que ya no usa ninguna nota se
+  borran de la nube.
+- **Cuándo sincroniza:** al abrir la app, al volver a ella, al recuperar la señal, 2,5 s después de
+  cualquier cambio y a mano con **🔄 Sincronizar ahora** o el botón ☁️ del encabezado.
+- ⚠️ **No toques la configuración de Auth del proyecto** (por ejemplo, apagar los registros):
+  el Checklist de Turno entra con **sesiones anónimas** y se quedaría afuera.
 
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v10`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v11`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
+- `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
 - `vercel.json` / `netlify.toml` — deploy estático sin build; `/sw.js` se sirve con `Cache-Control: no-cache`.
@@ -100,4 +124,5 @@ El botón **Copiar prompt** de la app sigue siendo útil para pegarlo donde no e
 - Producción: https://informe-francois.vercel.app — proyecto Vercel `informe-francois`, **conectado al repo**: cada `git push` a `master` redespliega solo. Sin build, sin variables de entorno.
 - Deploy manual, si hiciera falta: `npx vercel --prod --yes` desde la carpeta.
 
-No lleva claves ni datos: las notas nunca salen del dispositivo.
+Sin variables de entorno: la URL y la llave pública de Supabase van en el `index.html` (es su diseño;
+lo que protege los datos son las políticas RLS). Sin cuenta, las notas no salen del dispositivo.
