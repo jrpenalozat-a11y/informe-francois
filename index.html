@@ -424,10 +424,13 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     <div class="card">
       <h2>Mi cuenta · sincronía</h2>
       <p class="hint" style="margin-top:0" id="syncEstado">Cargando…</p>
+      <p class="hint hide" id="syncErr" style="color:var(--danger); font-weight:600"></p>
+      <div class="btns hide" id="syncErrBtns"><button class="btn sec sm" id="btnCopiarErr">📋 Copiar el detalle</button></div>
       <div id="syncLogin" class="hide">
         <div class="row">
           <div style="flex:2 1 220px"><label class="f" for="syEmail">Correo</label>
-            <input type="email" id="syEmail" autocomplete="username" placeholder="tu@correo.cl"></div>
+            <input type="email" id="syEmail" autocomplete="username" inputmode="email"
+                   autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="tu@correo.cl"></div>
           <div style="flex:1 1 160px"><label class="f" for="syPass">Clave</label>
             <input type="password" id="syPass" autocomplete="current-password" placeholder="••••••••"></div>
         </div>
@@ -1527,7 +1530,8 @@ function traduceErr(m){
 
 /* --- Entrar / salir --- */
 function entrar(){
-  var em=($('#syEmail').value||'').trim(), pw=$('#syPass').value||'';
+  /* En el teléfono es fácil que se cuele un espacio o una mayúscula */
+  var em=($('#syEmail').value||'').trim().toLowerCase(), pw=$('#syPass').value||'';
   if(!em || !pw){ toast('Pon el correo y la clave'); return; }
   esperaLib(5000).then(function(hay){
     var c=hay ? getSB() : null;
@@ -1549,9 +1553,35 @@ function salir(){
   c.auth.signOut().then(function(){ nube('☁️','Sin cuenta'); toast('Sesión cerrada'); pintarSync(); });
 }
 
-/* --- Estado en pantalla --- */
+/* --- Estado en pantalla ---
+   El aviso flotante dura dos segundos: si algo falla, el detalle queda
+   escrito en la tarjeta hasta que la sincronía vuelva a funcionar. */
+function anotaFalla(paso, e){
+  var d=[];
+  if(e && e.message) d.push(e.message);
+  if(e && e.code) d.push('código '+e.code);
+  if(e && e.hint) d.push(e.hint);
+  if(e && e.details) d.push(e.details);
+  if(e && (e.statusCode||e.status)) d.push('estado '+(e.statusCode||e.status));
+  if(!d.length) d.push(String(e));
+  prefs.ultimaFalla={ paso:paso, texto:d.join(' · '), cuando:ahora() };
+  savePrefs();
+  try{ console.error('[sincronía] '+paso, e); }catch(_){}
+}
+function limpiaFalla(){
+  if(!prefs.ultimaFalla) return;
+  delete prefs.ultimaFalla; savePrefs();
+}
+function pintarFalla(){
+  var p=$('#syncErr'), b=$('#syncErrBtns'); if(!p) return;
+  var f=prefs.ultimaFalla;
+  p.classList.toggle('hide', !f);
+  b.classList.toggle('hide', !f);
+  if(f) p.textContent='⚠️ Falló en «'+f.paso+'»: '+f.texto;
+}
 function pintarSync(){
   if(!$('#syncEstado')) return;
+  pintarFalla();
   var hay=!!window.supabase;
   sesion().then(function(s){
     $('#syncLogin').classList.toggle('hide', !!s);
@@ -1656,23 +1686,28 @@ async function sincroFotos(c, uid){
     desde+=lote.length;
   } while(lote.length===100);
 
+  /* Si una foto falla, las demás siguen: las notas ya están sincronizadas
+     y no vale la pena botar todo por una imagen. Queda anotado el motivo. */
+  var falla=null;
   var subir=Object.keys(necesarias).filter(function(id){ return thumbs[id] && !enNube[id]; });
   for(var a=0; a<subir.length; a++){
     nube('🔄','Subiendo fotos '+(a+1)+'/'+subir.length);
     var b=await fotoLeerP(subir[a]);
     if(!b) continue;
     var u=await c.storage.from(BUCKET).upload(uid+'/'+subir[a]+'.jpg', b, {contentType:'image/jpeg', upsert:true});
-    if(!u.error){ out.sube++; enNube[subir[a]]=1; }
+    if(u.error){ falla=falla||{paso:'subir una foto', e:u.error}; }
+    else { out.sube++; enNube[subir[a]]=1; }
   }
 
   var bajar=Object.keys(necesarias).filter(function(id){ return !thumbs[id] && enNube[id]; });
   for(var d=0; d<bajar.length; d++){
     nube('🔄','Bajando fotos '+(d+1)+'/'+bajar.length);
     var g=await c.storage.from(BUCKET).download(uid+'/'+bajar[d]+'.jpg');
-    if(g.error || !g.data) continue;
+    if(g.error || !g.data){ falla=falla||{paso:'bajar una foto', e:g.error||{message:'llegó vacía'}}; continue; }
     await guardarBajada(bajar[d], g.data);
     out.baja++;
   }
+  out.falla=falla;
 
   var sobran=Object.keys(enNube).filter(function(id){ return !necesarias[id]; });
   if(sobran.length){
@@ -1696,15 +1731,18 @@ async function sincronizar(modo){
   var s=await sesion();
   if(!s){ if(manual) toast('Primero entra con tu correo en ⚙️ Datos'); pintarSync(); return; }
 
-  var c=getSB(), uid=s.user.id;
+  var c=getSB(), uid=s.user.id, paso='empezar';
   syncOcupado=true; nube('🔄','Sincronizando');
   try{
+    paso='traer las notas';
     var rn=await c.from('if_notas').select('*');       if(rn.error) throw rn.error;
+    paso='traer los informes';
     var ri=await c.from('if_informes').select('*');    if(ri.error) throw ri.error;
     var remN={}, remI={};
     (rn.data||[]).forEach(function(r){ remN[r.id]=r; });
     (ri.data||[]).forEach(function(r){ remI[r.id]=r; });
 
+    paso='juntar lo de acá con lo de la nube';
     var k=fusionar(remN, remI);
 
     /* Las filas de un mismo upsert tienen que llevar las mismas columnas,
@@ -1727,15 +1765,23 @@ async function sincronizar(modo){
       if(!r || ms(borrados.i[id])>ms(r.act)) tumbaI.push({id:id, uid:uid, borrada:true, act:borrados.i[id]});
     });
 
+    paso='subir '+subeN.length+' nota(s)';
     if(subeN.length){  var un=await c.from('if_notas').upsert(subeN);       if(un.error) throw un.error; }
+    paso='subir '+tumbaN.length+' nota(s) borrada(s)';
     if(tumbaN.length){ var tn=await c.from('if_notas').upsert(tumbaN);      if(tn.error) throw tn.error; }
+    paso='subir '+subeI.length+' informe(s)';
     if(subeI.length){  var ui=await c.from('if_informes').upsert(subeI);    if(ui.error) throw ui.error; }
+    paso='subir '+tumbaI.length+' informe(s) borrado(s)';
     if(tumbaI.length){ var ti=await c.from('if_informes').upsert(tumbaI);   if(ti.error) throw ti.error; }
 
     var f={sube:0, baja:0};
-    if(prefs.syncFotos!==false) f=await sincroFotos(c, uid);
+    if(prefs.syncFotos!==false){
+      paso='las fotos';
+      f=await sincroFotos(c, uid);
+    }
 
     prefs.lastSync=ahora(); savePrefs();
+    if(f.falla) anotaFalla(f.falla.paso, f.falla.e); else limpiaFalla();
     syncOcupado=false;
     nube('☁️','Sincronizado recién');
 
@@ -1751,9 +1797,10 @@ async function sincronizar(modo){
     }
   }catch(e){
     syncOcupado=false;
+    anotaFalla(paso, e);
     nube('⚠️','No pudo sincronizar');
     pintarSync();
-    if(manual) toast('No se pudo sincronizar: '+traduceErr(e && e.message));
+    toast('Falló la sincronía. El detalle quedó en ⚙️ Datos');
   }
 }
 function syncPronto(){
@@ -1898,6 +1945,10 @@ document.addEventListener('click', function(e){
     case 'btnExport': exportar(); break;
     case 'btnImport': $('#fileImport').click(); break;
     case 'btnEntrar': entrar(); break;
+    case 'btnCopiarErr':
+      var uf=prefs.ultimaFalla;
+      if(uf) copiar('Informe François · falló en «'+uf.paso+'»: '+uf.texto+' ('+uf.cuando+')', 'Detalle copiado');
+      break;
     case 'btnSalir': salir(); break;
     case 'btnSync': sincronizar('manual'); break;
     case 'btnNube':
