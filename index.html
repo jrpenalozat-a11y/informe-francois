@@ -430,6 +430,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint" style="margin-top:0" id="syncEstado">Cargando…</p>
       <p class="hint hide" id="syncErr" style="color:var(--danger); font-weight:600"></p>
       <div class="btns hide" id="syncErrBtns"><button class="btn sec sm" id="btnCopiarErr">📋 Copiar el detalle</button></div>
+      <p class="hint hide" id="syncResumen" style="font-weight:600"></p>
       <div id="syncLogin" class="hide">
         <div class="row">
           <div style="flex:2 1 220px"><label class="f" for="syEmail">Correo</label>
@@ -1716,12 +1717,27 @@ function pintarFalla(){
   var p=$('#syncErr'), b=$('#syncErrBtns'); if(!p) return;
   var f=prefs.ultimaFalla;
   p.classList.toggle('hide', !f);
-  b.classList.toggle('hide', !f);
+  b.classList.toggle('hide', !f && !prefs.ultimoResumen);
   if(f) p.textContent='⚠️ Falló en «'+f.paso+'»: '+f.texto;
+}
+/* Qué movió la última sincronía. Sin esto, «al día» no distingue entre
+   «no había nada que traer» y «no subió nada de lo mío». */
+function pintarResumen(){
+  var p=$('#syncResumen'); if(!p) return;
+  var r=prefs.ultimoResumen;
+  p.classList.toggle('hide', !r);
+  if(!r) return;
+  function trozo(k, uno, varios){ return k ? k+' '+(k===1?uno:varios) : ''; }
+  var sub=[trozo(r.subeN,'nota','notas'), trozo(r.subeI,'informe','informes'), trozo(r.subeF,'foto','fotos')].filter(Boolean);
+  var baj=[trozo(r.bajaN,'nota','notas'), trozo(r.bajaI,'informe','informes'), trozo(r.bajaF,'foto','fotos')].filter(Boolean);
+  p.textContent='Último viaje: '+
+    (sub.length ? 'subieron '+sub.join(', ') : 'no subió nada')+' · '+
+    (baj.length ? 'bajaron '+baj.join(', ') : 'no bajó nada')+
+    ' · en la nube hay '+r.enNube+' nota'+(r.enNube===1?'':'s')+'.';
 }
 function pintarSync(){
   if(!$('#syncEstado')) return;
-  pintarFalla();
+  pintarFalla(); pintarResumen();
   var hay=!!window.supabase;
   sesion().then(function(s){
     $('#syncLogin').classList.toggle('hide', !!s);
@@ -1934,7 +1950,13 @@ async function sincronizar(modo){
       f=await sincroFotos(c, uid);
     }
 
-    prefs.lastSync=ahora(); savePrefs();
+    var vivas=Object.keys(remN).filter(function(id){ return !remN[id].borrada; }).length;
+    var nuevas=subeN.filter(function(x){ return !remN[x.id]; }).length;
+    prefs.lastSync=ahora();
+    prefs.ultimoResumen={ subeN:subeN.length, subeI:subeI.length, subeF:f.sube||0,
+                          bajaN:k.n, bajaI:k.i, bajaF:f.baja||0,
+                          enNube:vivas+nuevas, cuando:ahora() };
+    savePrefs();
     if(f.falla) anotaFalla(f.falla.paso, f.falla.e); else limpiaFalla();
     syncOcupado=false;
     nube('☁️','Sincronizado recién');
@@ -1944,10 +1966,12 @@ async function sincronizar(modo){
 
     if(manual){
       var p=[];
-      if(k.n) p.push(k.n+' nota'+(k.n===1?'':'s')+' que faltaban acá');
-      if(k.i) p.push(k.i+' informe'+(k.i===1?'':'s'));
-      if(f.baja) p.push(f.baja+' foto'+(f.baja===1?'':'s'));
-      toast(p.length ? 'Al día: llegaron '+p.join(', ') : 'Al día, no había nada nuevo');
+      if(k.n) p.push('bajaron '+k.n+' nota'+(k.n===1?'':'s'));
+      if(k.i) p.push('bajaron '+k.i+' informe'+(k.i===1?'':'s'));
+      if(f.baja) p.push('bajaron '+f.baja+' foto'+(f.baja===1?'':'s'));
+      if(subeN.length) p.unshift('subieron '+subeN.length+' nota'+(subeN.length===1?'':'s'));
+      if(f.sube) p.push('subieron '+f.sube+' foto'+(f.sube===1?'':'s'));
+      toast(p.length ? 'Al día: '+p.join(', ') : 'Al día · el detalle, en ⚙️ Datos');
     }
   }catch(e){
     syncOcupado=false;
@@ -2105,8 +2129,11 @@ document.addEventListener('click', function(e){
     case 'btnImport': $('#fileImport').click(); break;
     case 'btnEntrar': entrar(); break;
     case 'btnCopiarErr':
-      var uf=prefs.ultimaFalla;
-      if(uf) copiar('Informe François · falló en «'+uf.paso+'»: '+uf.texto+' ('+uf.cuando+')', 'Detalle copiado');
+      var uf=prefs.ultimaFalla, ur=prefs.ultimoResumen, det=[];
+      if(uf) det.push('falló en «'+uf.paso+'»: '+uf.texto+' ('+uf.cuando+')');
+      if(ur) det.push('último viaje: '+JSON.stringify(ur));
+      det.push('notas acá: '+notas.length+' · informes: '+informes.length);
+      copiar('Informe François · '+det.join(' · '), 'Detalle copiado');
       break;
     case 'btnSalir': salir(); break;
     case 'btnSync': sincronizar('manual'); break;
