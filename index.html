@@ -393,7 +393,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
       <div id="boxFotosInf" class="hide">
         <label class="f mt" style="margin-top:14px">Fotos del período <span id="fotosInfSub" style="text-transform:none;font-weight:600"></span></label>
-        <p class="hint" style="margin:0 0 2px">Tócalas para incluirlas o dejarlas fuera. Con 🔍 las ves grandes. Van aparte, justo después del informe, y también dentro del PDF.</p>
+        <p class="hint" style="margin:0 0 2px">Tócalas para incluirlas o dejarlas fuera. Con 🔍 las ves grandes. Por WhatsApp van aparte, justo después del informe; en el PDF cada una queda bajo el punto que la menciona.</p>
         <div class="thumbs" id="thumbsInf"></div>
       </div>
 
@@ -410,7 +410,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <button class="btn sec" id="btnSoloInf">✂️ Dejar solo el informe</button>
         <button class="btn sec" id="btnLimpiarInf">Limpiar</button>
       </div>
-      <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes. <b>📎 Enviar fotos</b> las manda aparte (el enlace de WhatsApp solo lleva texto) y <b>🖨️ PDF</b> arma una hoja con el informe y las fotos dentro: en el teléfono elige «Guardar como PDF».</p>
+      <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes. <b>📎 Enviar fotos</b> las manda aparte (el enlace de WhatsApp solo lleva texto) y <b>🖨️ PDF</b> arma una hoja con el informe y cada foto bajo el punto que le corresponde: en el teléfono elige «Guardar como PDF».</p>
     </div>
   </section>
 
@@ -851,6 +851,9 @@ function pdfInforme(){
       if(!b) return listo();
       blobADataUrl(b, function(u){
         if(u) datos.push({orden:i, u:u,
+          nid: f.nota.id,
+          area: f.nota.area,
+          busca: f.nota.texto+' '+(f.nota.medida||''),
           pie: etiqueta(f.nota.fecha)+(f.nota.hora?' · '+f.nota.hora:'')+' · '+cap(f.nota.area),
           txt: f.nota.texto});
         listo();
@@ -863,10 +866,96 @@ function pdfInforme(){
     hojaPDF(txt, datos);
   }
 }
+/* --- ¿Bajo qué línea del informe va cada foto? ---
+   El informe lo redacta la IA con sus propias palabras, así que la foto se
+   pega a la línea que más se parece a la nota de donde salió: palabras en
+   común, el "(hay foto)" que pide la regla 10 y el título del bloque. */
+var VACIAS=' desde hasta cuando donde sobre entre para porque pero como esta este esto estos estas esos esas aquel aquella todo toda todos todas otro otra otros otras cada tambien solo hubo hizo hace hacer haber sido siendo estan estaba estuvo tiene tienen tenia mismo misma varios varias segun luego antes despues ahora ademas nota notas ';
+function pdfNorm(s){
+  return (s||'').toLowerCase()
+    .replace(/[áàäâ]/g,'a').replace(/[éèëê]/g,'e').replace(/[íìïî]/g,'i')
+    .replace(/[óòöô]/g,'o').replace(/[úùüû]/g,'u')
+    .replace(/[^a-z0-9ñ]+/g,' ').trim();
+}
+function pdfClaves(s){
+  var out={}, w=pdfNorm(s).split(' ');
+  for(var i=0;i<w.length;i++){
+    var p=w[i];
+    if(!p) continue;
+    if(p.length<4 && !/^\d{2,}$/.test(p)) continue;
+    if(VACIAS.indexOf(' '+p+' ')>=0) continue;
+    out[p]=1;
+  }
+  return out;
+}
+function pdfComunes(kn, linea){
+  var kl=pdfClaves(linea), n=0, tot=0, k;
+  for(k in kn){ tot++; if(kl[k]) n++; }
+  return {n:n, tot:tot};
+}
+function pdfTitulo(l){
+  var t=l.trim();
+  if(!t) return true;                                   // línea en blanco: tampoco recibe fotos
+  if(/^\*[^*]+\*$/.test(t)) return true;                // *SALA*
+  return t.length<44 && t===t.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(t);
+}
+function ubicarFotos(txt, fotos){
+  var lineas=txt.split('\n'), cand=[], titulo='', i;
+  for(i=0;i<lineas.length;i++){
+    if(pdfTitulo(lineas[i])){ if(lineas[i].trim()) titulo=pdfNorm(lineas[i]); continue; }
+    cand.push({i:i, l:lineas[i], titulo:titulo, foto:/hay\s+fotos?/i.test(lineas[i]), usada:false});
+  }
+  var grupos=[], porNota={};                            // las fotos de una misma nota viajan juntas
+  fotos.forEach(function(f){
+    var g=porNota[f.nid];
+    if(!g){ g=porNota[f.nid]={area:pdfNorm(f.area), busca:f.busca, fotos:[]}; grupos.push(g); }
+    g.fotos.push(f);
+  });
+  var pares=[];
+  grupos.forEach(function(g, gi){
+    var kn=pdfClaves(g.busca);
+    cand.forEach(function(c, ci){
+      var r=pdfComunes(kn, c.l);
+      if(!((c.foto && r.n>=1) || r.n>=2)) return;        // sin parecido suficiente, no se arriesga
+      var p=r.n + r.n/(r.tot||1) + (c.foto?2:0) + (g.area && c.titulo.indexOf(g.area)>=0 ? 1 : 0);
+      pares.push({gi:gi, ci:ci, p:p});
+    });
+  });
+  pares.sort(function(a,b){ return b.p-a.p || a.ci-b.ci; });
+  var dest={}, puesto={}, vuelta;
+  for(vuelta=0; vuelta<2; vuelta++){                     // 1ª vuelta: una línea por nota. 2ª: se puede compartir
+    pares.forEach(function(par){
+      if(puesto[par.gi]) return;
+      var c=cand[par.ci];
+      if(vuelta===0 && c.usada) return;
+      c.usada=true; puesto[par.gi]=true;
+      dest[c.i]=(dest[c.i]||[]).concat(grupos[par.gi].fotos);
+    });
+  }
+  var sueltas=[];
+  grupos.forEach(function(g, gi){ if(!puesto[gi]) sueltas=sueltas.concat(g.fotos); });
+  return {lineas:lineas, dest:dest, sueltas:sueltas};
+}
+function tiraFotos(fs){
+  return '<div class="fotos">'+fs.map(function(f){
+    return '<figure><img src="'+f.u+'"><figcaption>'+esc(f.pie)+'</figcaption></figure>';
+  }).join('')+'</div>';
+}
+
 function hojaPDF(txt, fotos){
   var rango=$('#gRango').value.trim();
   var titulo='Bitácora François · '+gen.modo+(rango?' — '+rango:'');
   var hoy=new Date();
+  var u=ubicarFotos(txt, fotos), cuerpo='', buf=[];
+  u.lineas.forEach(function(l, i){
+    buf.push(l);
+    if(u.dest[i]){
+      cuerpo+='<div class="cuerpo">'+waHTML(buf.join('\n'))+'</div>'+tiraFotos(u.dest[i]);
+      buf=[];
+    }
+  });
+  if(buf.length) cuerpo+='<div class="cuerpo">'+waHTML(buf.join('\n'))+'</div>';
+  var colocadas=fotos.length-u.sueltas.length;
   var html='<!doctype html><html lang="es"><head><meta charset="utf-8"><title>'+esc(titulo)+'</title><style>'+
     '@page{margin:14mm}'+
     'body{font:12pt/1.5 -apple-system,"Segoe UI",Roboto,Arial,sans-serif; color:#222; margin:0}'+
@@ -875,18 +964,23 @@ function hojaPDF(txt, fotos){
     '.cuerpo{white-space:pre-wrap; word-break:break-word; font-size:11.5pt}'+
     '.cuerpo b{color:#000}'+
     'h2{font-size:12pt; color:#7a4a22; margin:20px 0 8px; border-top:1px solid #ddd; padding-top:10px}'+
-    '.grid{display:flex; flex-wrap:wrap; gap:10px}'+
-    'figure{width:48%; margin:0 0 10px; page-break-inside:avoid; break-inside:avoid}'+
-    'figure img{width:100%; max-height:78mm; object-fit:contain; background:#f2ede8; border:1px solid #ddd; border-radius:4px}'+
+    'figure{margin:0; page-break-inside:avoid; break-inside:avoid}'+
+    'figure img{width:100%; object-fit:contain; background:#f2ede8; border:1px solid #ddd; border-radius:4px}'+
     'figcaption{font-size:8.5pt; color:#555; margin-top:3px; line-height:1.35}'+
     'figcaption b{color:#7a4a22}'+
-    '@media print{ .grid{display:block} figure{width:100%; max-width:150mm} }'+
+    '.fotos{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 12px; padding-left:9px; border-left:2px solid #e3d8cc}'+
+    '.fotos figure{width:64mm}'+
+    '.fotos figure img{max-height:52mm}'+
+    '.grid{display:flex; flex-wrap:wrap; gap:10px}'+
+    '.grid figure{width:48%; margin:0 0 10px}'+
+    '.grid figure img{max-height:78mm}'+
+    '@media print{ .grid{display:block} .grid figure{width:100%; max-width:150mm} }'+
     '</style></head><body>'+
     '<h1>'+esc(titulo)+'</h1>'+
     '<p class="sub">Generado el '+etiqueta(hoyISO(hoy))+' · '+p2(hoy.getHours())+':'+p2(hoy.getMinutes())+'</p>'+
-    '<div class="cuerpo">'+waHTML(txt)+'</div>'+
-    (fotos.length
-      ? '<h2>Fotos ('+fotos.length+')</h2><div class="grid">'+fotos.map(function(f){
+    cuerpo+
+    (u.sueltas.length
+      ? '<h2>'+(colocadas?'Otras fotos':'Fotos')+' ('+u.sueltas.length+')</h2><div class="grid">'+u.sueltas.map(function(f){
           return '<figure><img src="'+f.u+'"><figcaption><b>'+esc(f.pie)+'</b><br>'+esc(f.txt)+'</figcaption></figure>';
         }).join('')+'</div>'
       : '')+
