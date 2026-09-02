@@ -2433,6 +2433,16 @@ document.addEventListener('click', function(e){
       if(uf) det.push('falló en «'+uf.paso+'»: '+uf.texto+' ('+uf.cuando+')');
       if(ur) det.push('último viaje: '+JSON.stringify(ur));
       det.push('notas acá: '+notas.length+' · informes: '+informes.length);
+      /* quién es quién en este aparato: nombres y roles, nunca las claves */
+      det.push('yo: '+(yo?yo.nombre+(yo.admin?' (administra)':''):'nadie entró'));
+      det.push('personas: '+(perfilesVivos().map(function(p){
+        return p.nombre+(p.admin?' [admin]':'')+(p.clave?' [con clave]':' [SIN CLAVE]');
+      }).join(', ')||'ninguna'));
+      var firmas={};
+      notas.forEach(function(n){ var q=n.quien||'(sin firma)'; firmas[q]=(firmas[q]||0)+1; });
+      det.push('firmas: '+(Object.keys(firmas).map(function(q){ return q+'='+firmas[q]; }).join(', ')||'—'));
+      if(sinPerfiles) det.push('OJO: falta la tabla if_perfiles');
+      if(sinQuien) det.push('OJO: falta la columna quien');
       copiar('Informe François · '+det.join(' · '), 'Detalle copiado');
       break;
     case 'btnSalir': salir(); break;
