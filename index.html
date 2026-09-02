@@ -1575,6 +1575,10 @@ function formNuevoPerfil(){
   $('#quienClave').classList.add('hide');
   $('#qNuevoNombre').value=''; $('#qNuevaClave').value='';
   $('#qAdmin').checked = !perfilesVivos().length;      // el primero administra
+  /* Si ya hay quien administre, solo esa persona puede nombrar a otra: si no,
+     el que abriera la app en un teléfono nuevo se haría administrador solo. */
+  var hayAdmin=perfilesVivos().some(function(p){ return p.admin; });
+  $('#qAdmin').parentNode.classList.toggle('hide', hayAdmin && !soyAdmin());
   $('#quienNuevo').classList.remove('hide');
   $('#ovlQuien').classList.remove('hide');
   setTimeout(function(){ $('#qNuevoNombre').focus(); }, 60);
@@ -1591,15 +1595,22 @@ async function crearPerfil(){
           nombre:nom, sal:s, clave: cla ? await cifrar(cla, s) : '',
           admin: $('#qAdmin').checked, borrado:false, act:ahora() };
   perfiles.push(p); savePerf(); syncPronto();
-  /* Lo anotado antes de que existieran los perfiles pasa a ser del primero */
   if(p.admin && perfilesVivos().length===1) adoptarViejas(p);
   entrarComo(p);
 }
+/* Lo anotado antes de que existieran los perfiles queda sin dueño. Se lo
+   ofrecemos al primero, pero preguntando: si el primero en crear su perfil
+   fuera el otro teléfono, se llevaría notas que no son suyas. */
 function adoptarViejas(p){
-  var k=0, cuando=ahora();
-  notas.forEach(function(n){ if(!n.quien){ n.quien=p.nombre; n.act=cuando; k++; } });
+  var sinDuenio=notas.filter(function(n){ return !n.quien; });
+  if(!sinDuenio.length) return;
+  if(!confirm('Hay '+sinDuenio.length+' nota'+(sinDuenio.length===1?'':'s')+' de antes, sin firma.\n\n'+
+              '¿Son tuyas? Quedarán a nombre de '+p.nombre+'.\n'+
+              'Si son de otra persona, di que no: se quedan sin firma y las verá quien administre la app.')) return;
+  var cuando=ahora();
+  sinDuenio.forEach(function(n){ n.quien=p.nombre; n.act=cuando; });
   informes.forEach(function(i){ if(!i.quien){ i.quien=p.nombre; i.act=cuando; } });
-  if(k){ save(); saveInf(); syncPronto(); }
+  save(); saveInf(); syncPronto();
 }
 function borrarPerfil(id){
   var p=perfilPorId(id); if(!p) return;

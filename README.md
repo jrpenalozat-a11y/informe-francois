@@ -92,7 +92,10 @@ por perfil**, cada una con su propia clave de app. Al abrir, la app pregunta qui
   con el nombre de otro.
 - **Si se olvida una clave:** se borra esa persona (🗑️ en la ficha) y se crea de nuevo. Sus notas no
   se tocan: quedan firmadas con su nombre.
-- **Lo anotado antes** de que existieran los perfiles pasa a quien crea el primer perfil.
+- **Nombrar administrador:** si ya hay quien administre, la casilla solo aparece para esa persona.
+  Así nadie se hace administrador solo por abrir la app en un teléfono recién instalado.
+- **Lo anotado antes** de que existieran los perfiles se le ofrece al primer perfil, preguntando:
+  si el primero en crearse fuera el otro teléfono, se llevaría notas que no son suyas.
 - **Puesta en marcha:** el bloque `if_perfiles` de [`supabase.sql`](supabase.sql). Si no se corre, los
   perfiles funcionan igual pero solo en ese aparato, y la app lo avisa en ⚙️ Datos en vez de caerse.
 
@@ -129,7 +132,7 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v18`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v19`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
