@@ -15,7 +15,8 @@ create table if not exists public.if_notas (
   area    text,
   texto   text,
   medida  text,
-  fotos   jsonb   not null default '[]'::jsonb,   -- ids de las fotos de la nota
+  quien   text,                                   -- quién la registró (cuenta compartida)
+  fotos   jsonb   not null default '[]'::jsonb,   -- ids: lista, o {h:[…], m:[…]} si hay fotos de la medida
   borrada boolean not null default false,         -- borrada: se guarda la marca para que no reviva
   act     timestamptz not null default now()      -- cuándo se tocó: gana la versión más nueva
 );
@@ -31,6 +32,10 @@ create table if not exists public.if_informes (
   borrada boolean not null default false,
   act     timestamptz not null default now()
 );
+
+-- ---------- Quién anotó (si dos personas comparten la cuenta) ----------
+-- Se puede correr sola, sobre una tabla que ya existe: no toca los datos.
+alter table public.if_notas add column if not exists quien text;
 
 create index if not exists if_notas_uid_idx    on public.if_notas(uid);
 create index if not exists if_informes_uid_idx on public.if_informes(uid);

@@ -454,6 +454,14 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       </div>
     </div>
     <div class="card">
+      <h2>Quién anota</h2>
+      <p class="hint" style="margin-top:0">Si dos personas usan la misma cuenta, esto dice quién registró cada nota: pon tu nombre acá y el suyo en el otro teléfono. La firma queda en la nota y viaja al prompt, para saber a quién preguntarle. Déjalo vacío si trabajas solo.</p>
+      <label class="f" for="syQuien">Nombre en este aparato</label>
+      <input type="text" id="syQuien" placeholder="Tu nombre" autocomplete="off" maxlength="24">
+      <p class="hint" id="quienAviso" style="color:var(--danger); font-weight:600"></p>
+    </div>
+
+    <div class="card">
       <h2>Respaldo</h2>
       <p class="hint" style="margin-top:0" id="statTxt"></p>
       <label class="chk"><input type="checkbox" id="gFotos" checked> Incluir las fotos en el respaldo <span style="color:var(--tx3)">(archivo mucho más pesado)</span></label>
@@ -1102,11 +1110,15 @@ function guardar(){
     return;
   }
   pararEspera();
+  var previa = sel.edit ? notas.find(function(x){return x.id===sel.edit;}) : null;
   var n={ id: sel.edit || (Date.now()+'-'+Math.random().toString(36).slice(2,7)),
           fecha: $('#fFecha').value || hoyISO(),
           hora: $('#fHora').value || '',
           area: sel.area, texto: txt, medida: $('#fMedida').value.trim(),
-          fotos: sel.fotos.slice(), fotosm: (sel.fotosm||[]).slice(), act: ahora() };
+          fotos: sel.fotos.slice(), fotosm: (sel.fotosm||[]).slice(),
+          /* la firma es de quien la registró: editarla no cambia al autor */
+          quien: (previa && previa.quien) || prefs.quien || '',
+          act: ahora() };
   if(sel.edit){
     var i=notas.findIndex(function(x){return x.id===sel.edit;});
     if(i>=0) notas[i]=n;
@@ -1179,6 +1191,7 @@ function renderLista(){
     }
     html+='<div class="note"><div class="body">'+
       '<div class="meta">'+(n.hora||'—')+' · <b>'+cap(n.area)+'</b>'+
+        (n.quien?' · '+esc(n.quien):'')+
         (fs.length+fm.length?' · <i>📷 '+(fs.length+fm.length)+'</i>':'')+'</div>'+
       '<div class="txt">'+esc(n.texto)+'</div>'+
       tira(fs,'')+
@@ -1203,7 +1216,8 @@ var REGLAS =
 '7. Los nombres de personas van tal como aparecen en las notas. Si una nota apunta a alguien de forma crítica, redáctala sobre el hecho y no sobre la persona.\n'+
 '8. Nunca cierres con preguntas al lector ni con ofrecimientos.\n'+
 '9. Algunas notas traen, después de "→ MEDIDA:", lo que se hizo en el momento. Eso ya está hecho: menciónalo en el mismo punto y en pasado ("se hizo X"), y no lo pongas como pendiente. Si la medida deja el tema cerrado, trátalo como resuelto; si solo lo parcha, dilo y deja el pendiente de fondo. Si una nota no trae medida, no supongas que se hizo algo.\n'+
-'10. La marca "[con foto]" o "[con N fotos]" significa que hay respaldo fotográfico guardado en el teléfono. Va pegada a lo que respalda: si aparece después del hecho, la foto respalda el hecho; si aparece después de la medida, respalda la medida. No describas la foto ni supongas lo que muestra: solo, si ese punto llega al informe, cierra la línea con "(hay foto)".';
+'10. La marca "[con foto]" o "[con N fotos]" significa que hay respaldo fotográfico guardado en el teléfono. Va pegada a lo que respalda: si aparece después del hecho, la foto respalda el hecho; si aparece después de la medida, respalda la medida. No describas la foto ni supongas lo que muestra: solo, si ese punto llega al informe, cierra la línea con "(hay foto)".\n'+
+'11. Algunas notas terminan en "— anotó X": ese es quien registró la nota, no necesariamente quien protagonizó el hecho. Nunca lo trates como responsable ni lo menciones por mencionarlo. Úsalo solo cuando sirva: si dos notas del mismo tema se contradicen, di quién anotó cada una; y en el modo CIERRE, cuando un tema quede con dudas, agrega entre paréntesis a quién preguntarle ("preguntar a X").';
 
 function bloqueDiario(rango){ return (
 'SI EL MODO ES "DIARIO"\n\n'+
@@ -1246,6 +1260,7 @@ function lineaNota(n){
   var t='['+etiqueta(n.fecha)+(n.hora?' · '+n.hora:'')+'] ('+cap(n.area)+') '+
         n.texto.replace(/\s*\n\s*/g,' ')+marcaFoto(kh);
   if(n.medida) t+=' → MEDIDA: '+n.medida.replace(/\s*\n\s*/g,' ')+marcaFoto(km);
+  if(n.quien) t+=' — anotó '+n.quien;
   return t;
 }
 
@@ -1738,6 +1753,10 @@ function pintarResumen(){
 function pintarSync(){
   if(!$('#syncEstado')) return;
   pintarFalla(); pintarResumen();
+  var q=$('#quienAviso');
+  if(q) q.textContent = sinQuien
+    ? '⚠️ La firma se ve en este aparato, pero no viaja al otro hasta correr la línea de SQL de supabase.sql.'
+    : '';
   var hay=!!window.supabase;
   sesion().then(function(s){
     $('#syncLogin').classList.toggle('hide', !!s);
@@ -1772,16 +1791,36 @@ function fotosDeFila(f){
   if(f && typeof f==='object') return {fotos:f.h||[], fotosm:f.m||[]};
   return {fotos:[], fotosm:[]};
 }
+/* La firma vive en la columna "quien". Si el proyecto todavía no la tiene,
+   la app no se cae: sube las notas sin firma y lo avisa en ⚙️ Datos. */
+var sinQuien=false;
+function faltaColumnaQuien(e){
+  if(!e) return false;
+  var t=(e.message||'')+' '+(e.details||'')+' '+(e.hint||'');
+  return /quien/i.test(t) && /column|columna|schema/i.test(t);
+}
 function filaNota(n, uid){
-  return { id:n.id, uid:uid, fecha:n.fecha, hora:n.hora||'', area:n.area||'OTRO',
-           texto:n.texto, medida:n.medida||'', fotos:fotosASubir(n),
-           borrada:false, act:n.act||EPOCA };
+  var f={ id:n.id, uid:uid, fecha:n.fecha, hora:n.hora||'', area:n.area||'OTRO',
+          texto:n.texto, medida:n.medida||'', fotos:fotosASubir(n),
+          borrada:false, act:n.act||EPOCA };
+  if(!sinQuien) f.quien=n.quien||'';
+  return f;
 }
 function deFilaNota(r){
   var f=fotosDeFila(r.fotos);
   return { id:r.id, fecha:r.fecha, hora:r.hora||'', area:r.area||'OTRO',
-           texto:r.texto||'', medida:r.medida||'',
+           texto:r.texto||'', medida:r.medida||'', quien:r.quien||'',
            fotos:f.fotos, fotosm:f.fotosm, act:r.act };
+}
+async function subirNotas(c, filas){
+  if(!filas.length) return;
+  var r=await c.from('if_notas').upsert(filas);
+  if(r.error && faltaColumnaQuien(r.error)){
+    sinQuien=true;
+    filas.forEach(function(f){ delete f.quien; });
+    r=await c.from('if_notas').upsert(filas);
+  }
+  if(r.error) throw r.error;
 }
 function filaInf(i, uid){
   return { id:i.id, uid:uid, modo:i.modo||'DIARIO', rango:i.rango||'',
@@ -1902,6 +1941,7 @@ async function sincronizar(modo){
   if(!s){ if(manual) toast('Primero entra con tu correo en ⚙️ Datos'); pintarSync(); return; }
 
   var c=getSB(), uid=s.user.id, paso='empezar';
+  if(manual) sinQuien=false;      // a mano se reintenta con firma, por si ya corrieron el SQL
   syncOcupado=true; nube('🔄','Sincronizando');
   try{
     paso='traer las notas';
@@ -1936,7 +1976,7 @@ async function sincronizar(modo){
     });
 
     paso='subir '+subeN.length+' nota(s)';
-    if(subeN.length){  var un=await c.from('if_notas').upsert(subeN);       if(un.error) throw un.error; }
+    await subirNotas(c, subeN);
     paso='subir '+tumbaN.length+' nota(s) borrada(s)';
     if(tumbaN.length){ var tn=await c.from('if_notas').upsert(tumbaN);      if(tn.error) throw tn.error; }
     paso='subir '+subeI.length+' informe(s)';
@@ -2214,6 +2254,7 @@ document.addEventListener('input', function(e){
   if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); }
   if(id==='gRango'||id==='gPend') renderPreview();
   if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
+  if(id==='syQuien'){ prefs.quien=e.target.value.trim().slice(0,24); savePrefs(); renderPreview(); }
   if(id==='rTexto') refrescarInf();
 });
 
@@ -2300,6 +2341,7 @@ function aplicaTema(){
   renderLista();
   renderInformes();
   $('#rNum').value = prefs.wa || '';
+  $('#syQuien').value = prefs.quien || '';
   try{ $('#rTexto').value = localStorage.getItem(BORR) || ''; }catch(e){}
   refrescarInf();
   var h=new Date();

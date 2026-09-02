@@ -18,6 +18,14 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
 
 1. **📝 Notas** — agregas la nota al paso: fecha, hora, área (Sala · Cocina · Caja · Personal · Proveedores · Equipos · Producto · Otro), **qué pasó** y, opcional, la **medida tomada en el momento**. Se pueden editar y borrar; se agrupan por día. `Ctrl + Enter` guarda rápido.
 
+   **✍️ Quién anota** — si dos personas comparten la cuenta, cada una pone su nombre una vez en
+   ⚙️ Datos → *Quién anota*. La nota queda firmada por el aparato donde se registró (editarla no
+   cambia al autor), la firma se ve en la lista y viaja al prompt como `— anotó Ángel`. La regla 11
+   le dice a Claude que esa persona es quien **registró** la nota, no la responsable del hecho: que
+   la use solo cuando aporte —notas del mismo tema que se contradicen, o a quién preguntarle en el
+   CIERRE—. Vive en la columna `quien` de `if_notas`; si el proyecto todavía no la tiene, la app
+   sube las notas sin firma y lo avisa en ⚙️ Datos en vez de caerse.
+
    La medida viaja al prompt en la misma línea, después de `→ MEDIDA:`, y la regla 9 le dice a Claude que eso ya está hecho: lo reporta en pasado dentro del mismo punto, no lo repite como pendiente, y si la medida cierra el tema lo trata como resuelto (si solo lo parcha, lo dice y deja el pendiente de fondo).
 
    **📷 Fotos** — la nota tiene **dos juegos de fotos**: las de **Foto del hecho**, bajo «Qué pasó», respaldan lo que ocurrió; las de **Foto de la medida**, bajo «Medida tomada en el momento», respaldan lo que se hizo. Cada botón abre la cámara del teléfono y su **Galería** toma una ya sacada (varias a la vez). Se comprimen a 1600 px / JPEG antes de guardarlas (una foto de teléfono queda en ~100-250 KB), aparecen como miniaturas en el formulario y en la nota, y se abren en el visor: pasar entre fotos, **Compartir** (mandarla por WhatsApp desde el teléfono), **Guardar** en el dispositivo o **Borrar**. Si aprietas «Agregar nota» mientras la foto se está guardando, la nota se guarda sola apenas termina.
@@ -97,7 +105,7 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v15`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v16`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
