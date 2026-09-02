@@ -18,15 +18,14 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
 
 1. **📝 Notas** — agregas la nota al paso: fecha, hora, área (Sala · Cocina · Caja · Personal · Proveedores · Equipos · Producto · Otro), **qué pasó** y, opcional, la **medida tomada en el momento**. Se pueden editar y borrar; se agrupan por día. `Ctrl + Enter` guarda rápido.
 
-   **✍️ Quién anota** — si dos personas comparten la cuenta, cada una pone su nombre una vez en
-   ⚙️ Datos → *Quién anota*. La firma se pone **al crear** la nota y no se toca más: editar una nota
-   ajena —o una vieja sin firma— no te convierte en su autor. Se ve en la lista y viaja al prompt
-   como `— anotó Ángel`. Es una **etiqueta, no una credencial**: quien tenga el aparato puede
-   escribir cualquier nombre ahí, así que sirve para organizarse, no para acreditar nada. La regla 11
-   le dice a Claude que esa persona es quien **registró** la nota, no la responsable del hecho: que
-   la use solo cuando aporte —notas del mismo tema que se contradicen, o a quién preguntarle en el
-   CIERRE—. Vive en la columna `quien` de `if_notas`; si el proyecto todavía no la tiene, la app
-   sube las notas sin firma y lo avisa en ⚙️ Datos en vez de caerse.
+   **✍️ Quién anota** — la nota queda firmada por la persona que está usando la app (ver
+   **[Varias personas](#varias-personas-en-la-misma-cuenta)**). La firma se pone **al crear** la nota
+   y no se toca más: editar una nota ajena —o una vieja sin firma— no te convierte en su autor. Se ve
+   en la lista y viaja al prompt como `— anotó Ángel`. La regla 11 le dice a Claude que esa persona es
+   quien **registró** la nota, no la responsable del hecho: que la use solo cuando aporte —notas del
+   mismo tema que se contradicen, o a quién preguntarle en el CIERRE—. Vive en la columna `quien` de
+   `if_notas`; si el proyecto todavía no la tiene, la app sube las notas sin firma y lo avisa en
+   ⚙️ Datos en vez de caerse.
 
    La medida viaja al prompt en la misma línea, después de `→ MEDIDA:`, y la regla 9 le dice a Claude que eso ya está hecho: lo reporta en pasado dentro del mismo punto, no lo repite como pendiente, y si la medida cierra el tema lo trata como resuelto (si solo lo parcha, lo dice y deja el pendiente de fondo).
 
@@ -68,11 +67,34 @@ Todo en el navegador del dispositivo:
 - `if_notas_v1` — las notas.
 - `if_informes_v1` — los informes que pegaste de vuelta.
 - `if_borrador_v1` — el informe que estás redactando (borrador).
-- `if_prefs_v1` — modo claro/oscuro y número de WhatsApp.
+- `if_prefs_v1` — modo claro/oscuro, número de WhatsApp, quién entró en este aparato.
+- `if_perfiles_v1` — las personas que usan la app (con la clave **cifrada**, nunca en texto).
 
 Las **fotos** no caben en `localStorage`, así que van en IndexedDB (base `if_fotos_v1`): el almacén `fotos` guarda la imagen comprimida y `thumbs` la miniatura y el peso; la nota solo lleva los `id` de sus fotos, en dos listas: `fotos` (respaldan el hecho) y `fotosm` (respaldan la medida). Las fotos que quedaron sin nota (la app se cerró antes de guardarla) se limpian solas al abrir.
 
 Sin cuenta, la app funciona igual pero cada aparato tiene lo suyo: para mover las notas a mano usa **Exportar JSON** e **Importar JSON**. La importación no duplica (compara por `id`). El respaldo incluye las fotos en base64 si dejas marcada la casilla — pesa bastante más, así que para mover solo el texto, desmárcala.
+
+## Varias personas en la misma cuenta
+
+Una sola cuenta de Supabase para todos —eso es lo que guarda y sincroniza— y adentro, **una persona
+por perfil**, cada una con su propia clave de app. Al abrir, la app pregunta quién eres.
+
+- **Quién ve qué:** quien **administra la app** ve todo junto (para armar el informe del turno
+  completo) y puede apagarlo con *«Ver también las notas de los demás»*; los demás ven solo lo suyo.
+  Filtra las notas, el prompt, las fotos del período, los informes guardados y los botones de borrado
+  —nadie borra lo del otro sin querer—.
+- **Las claves van cifradas:** `sha-256` de una sal aleatoria + la clave, calculado con Web Crypto.
+  En la tabla queda el hash; la clave en texto no existe en ninguna parte. Sin ella no se entra como
+  otra persona, ni siquiera compartiendo la cuenta.
+- **Hasta dónde llega:** es la chapa de la puerta de una casa donde viven los dos, no una caja
+  fuerte. La app corre entera en el teléfono de cada uno y comparten la cuenta de Supabase, así que
+  alguien con conocimientos técnicos puede saltársela. Frena lo que tiene que frenar: que se anote
+  con el nombre de otro.
+- **Si se olvida una clave:** se borra esa persona (🗑️ en la ficha) y se crea de nuevo. Sus notas no
+  se tocan: quedan firmadas con su nombre.
+- **Lo anotado antes** de que existieran los perfiles pasa a quien crea el primer perfil.
+- **Puesta en marcha:** el bloque `if_perfiles` de [`supabase.sql`](supabase.sql). Si no se corre, los
+  perfiles funcionan igual pero solo en ese aparato, y la app lo avisa en ⚙️ Datos en vez de caerse.
 
 ## Sincronía entre el teléfono y el computador
 
@@ -107,7 +129,7 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v17`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v18`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.

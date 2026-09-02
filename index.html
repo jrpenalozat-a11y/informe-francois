@@ -454,11 +454,16 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       </div>
     </div>
     <div class="card">
-      <h2>Quién anota</h2>
-      <p class="hint" style="margin-top:0">Si dos personas usan la misma cuenta, esto dice quién registró cada nota: pon tu nombre acá y el suyo en el otro teléfono. La firma queda en la nota y viaja al prompt, para saber a quién preguntarle. Déjalo vacío si trabajas solo.</p>
-      <label class="f" for="syQuien">Nombre en este aparato</label>
-      <input type="text" id="syQuien" placeholder="Tu nombre" autocomplete="off" maxlength="24">
+      <h2>Quién usa la app</h2>
+      <p class="hint" style="margin-top:0" id="perfilEstado"></p>
+      <div id="listaPerfiles"></div>
+      <div class="btns mt">
+        <button class="btn sec" id="btnNuevoPerfil">➕ Agregar persona</button>
+        <button class="btn sec hide" id="btnCambiarPerfil">🔁 Cambiar de usuario</button>
+      </div>
+      <label class="chk mt hide" id="boxVerTodo"><input type="checkbox" id="syVerTodo"> Ver también las notas de los demás</label>
       <p class="hint" id="quienAviso" style="color:var(--danger); font-weight:600"></p>
+      <p class="hint">Una sola cuenta para todos, pero cada persona con su clave de app: así nadie anota con el nombre de otro. Quien <b>administra la app</b> puede ver todo junto para armar el informe del turno; los demás ven solo lo suyo. La clave se guarda cifrada, nunca en texto.</p>
     </div>
 
     <div class="card">
@@ -514,6 +519,35 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   </div>
 </div>
 
+<!-- ============ QUIÉN ENTRA ============ -->
+<div id="ovlQuien" class="ovl hide">
+  <div class="ovlCard">
+    <h2 id="quienTitulo">¿Quién eres?</h2>
+    <p class="hint" id="quienPaso" style="margin-top:0"></p>
+    <div id="quienLista"></div>
+    <div id="quienClave" class="hide">
+      <label class="f" for="qClave">Clave de <span id="qNombre"></span></label>
+      <input type="password" id="qClave" autocomplete="current-password" placeholder="••••••">
+      <div class="btns mt">
+        <button class="btn" id="btnEntrarPerfil">Entrar</button>
+        <button class="btn sec" id="btnVolverPerfil">← Volver</button>
+      </div>
+    </div>
+    <div id="quienNuevo" class="hide">
+      <label class="f" for="qNuevoNombre">Nombre</label>
+      <input type="text" id="qNuevoNombre" maxlength="24" autocomplete="off" placeholder="Ángel">
+      <label class="f mt" for="qNuevaClave">Clave de la app</label>
+      <input type="password" id="qNuevaClave" autocomplete="new-password" placeholder="mínimo 4 caracteres">
+      <label class="chk mt"><input type="checkbox" id="qAdmin"> Administra la app (puede ver las notas de todos)</label>
+      <div class="btns mt">
+        <button class="btn" id="btnCrearPerfil">Crear</button>
+        <button class="btn sec" id="btnCancelarPerfil">Cancelar</button>
+      </div>
+      <p class="hint">Esta clave es solo de la app y no tiene nada que ver con la del correo. Si se olvida, se borra la persona y se crea de nuevo: las notas no se tocan.</p>
+    </div>
+  </div>
+</div>
+
 <!-- ============ VISOR DE FOTOS ============ -->
 <div id="ovlFoto" class="ovl hide">
   <div class="fotoBox">
@@ -536,7 +570,8 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
 <script>
 /* ================= Estado ================= */
-var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1', BORR='if_borrador_v1', TOMB='if_borrados_v1';
+var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1', BORR='if_borrador_v1', TOMB='if_borrados_v1',
+    PERF='if_perfiles_v1';
 var AREAS=['SALA','COCINA','CAJA','PERSONAL','PROVEEDORES','EQUIPOS','PRODUCTO','OTRO'];
 var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
 
@@ -552,11 +587,55 @@ function fotosDe(n){ return (n.fotos||[]).concat(n.fotosm||[]); }
 function cajon(donde){ return donde==='m' ? 'fotosm' : 'fotos'; }
 var gen={modo:'DIARIO'};
 
+/* ================= Quién usa la app =================
+   Una sola cuenta de Supabase para todos; adentro, una persona por perfil,
+   cada una con su clave. La clave se guarda cifrada (sha-256 con sal), así
+   que ni compartiendo la cuenta se puede leer la del otro y firmar por él.
+   No es una caja fuerte —la app corre en el teléfono de cada uno— pero
+   cierra la puerta: sin la clave no se entra como otra persona. */
+var perfiles=load(PERF,[]);
+var yo=null;                                  // perfil activo en este aparato
+
+function perfilesVivos(){ return perfiles.filter(function(p){ return !p.borrado; }); }
+function perfilPorId(id){ return perfiles.find(function(p){ return p.id===id && !p.borrado; }) || null; }
+function perfilPorNombre(nom){
+  var n=(nom||'').trim().toLowerCase();
+  return perfilesVivos().find(function(p){ return p.nombre.toLowerCase()===n; }) || null;
+}
+function soyAdmin(){ return !!(yo && yo.admin); }
+/* Qué notas/informes le tocan a quien está usando la app */
+function verTodo(){ return !perfilesVivos().length || (soyAdmin() && prefs.verTodo!==false); }
+function esMio(x){
+  if(verTodo()) return true;
+  if(!yo) return true;
+  var q=(x.quien||'').trim();
+  return q ? q.toLowerCase()===yo.nombre.toLowerCase() : soyAdmin();  // lo viejo sin firma queda con el administrador
+}
+function mias(arr){ return arr.filter(esMio); }
+
+function sal(){
+  var a=new Uint8Array(8);
+  (window.crypto||{}).getRandomValues ? crypto.getRandomValues(a) : a.forEach(function(_,i){ a[i]=Math.floor(Math.random()*256); });
+  return Array.prototype.map.call(a, function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+}
+function hayCripto(){ return !!(window.crypto && crypto.subtle && crypto.subtle.digest); }
+async function cifrar(clave, s){
+  var datos=new TextEncoder().encode(s+'·'+clave);
+  var buf=await crypto.subtle.digest('SHA-256', datos);
+  return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+}
+async function claveCalza(p, clave){
+  if(!p.clave) return true;                   // perfil sin clave: entra directo
+  if(!hayCripto()) return false;
+  return (await cifrar(clave, p.sal||'')) === p.clave;
+}
+
 function load(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
 function save(){ localStorage.setItem(KEY,JSON.stringify(notas)); }
 function saveInf(){ localStorage.setItem(INF,JSON.stringify(informes)); }
 function savePrefs(){ localStorage.setItem(PREF,JSON.stringify(prefs)); }
 function saveTomb(){ localStorage.setItem(TOMB,JSON.stringify(borrados)); }
+function savePerf(){ localStorage.setItem(PERF,JSON.stringify(perfiles)); }
 function ahora(){ return new Date().toISOString(); }
 function ms(x){ return x ? (Date.parse(x)||0) : 0; }
 function $(s){ return document.querySelector(s); }
@@ -1118,7 +1197,7 @@ function guardar(){
           fotos: sel.fotos.slice(), fotosm: (sel.fotosm||[]).slice(),
           /* la firma se pone al crear la nota y no se toca más: editar una
              nota ajena —o una vieja sin firma— no te convierte en su autor */
-          quien: previa ? (previa.quien||'') : (prefs.quien||''),
+          quien: previa ? (previa.quien||'') : (yo ? yo.nombre : ''),
           act: ahora() };
   if(sel.edit){
     var i=notas.findIndex(function(x){return x.id===sel.edit;});
@@ -1165,7 +1244,7 @@ function renderLista(){
   var q=$('#fBuscar').value.trim().toLowerCase();
   var dias=+$('#fFiltro').value;
   var limite = dias ? hoyISO(sumaDias(new Date(), -(dias-1))) : '';
-  var arr=notas.filter(function(n){
+  var arr=mias(notas).filter(function(n){
     if(limite && n.fecha < limite) return false;
     if(q && (n.texto+' '+n.area+' '+(n.medida||'')).toLowerCase().indexOf(q)<0) return false;
     return true;
@@ -1266,13 +1345,13 @@ function lineaNota(n){
 }
 
 function notasDelPeriodo(){
-  var arr;
+  var arr, base=mias(notas);
   if(gen.modo==='DIARIO'){
     var d=$('#gDia').value;
-    arr=notas.filter(function(n){ return n.fecha===d; });
+    arr=base.filter(function(n){ return n.fecha===d; });
   } else {
     var a=$('#gDesde').value, b=$('#gHasta').value;
-    arr=notas.filter(function(n){ return (!a||n.fecha>=a) && (!b||n.fecha<=b); });
+    arr=base.filter(function(n){ return (!a||n.fecha>=a) && (!b||n.fecha<=b); });
   }
   return ordenadas(arr);
 }
@@ -1450,6 +1529,107 @@ function refrescarInf(){
   try{ localStorage.setItem(BORR, $('#rTexto').value); }catch(e){}
 }
 
+/* --- Pantalla de entrada y administración de personas --- */
+var qSel=null;
+function abrirQuien(forzado){
+  qSel=null;
+  $('#quienClave').classList.add('hide');
+  $('#quienNuevo').classList.add('hide');
+  $('#quienLista').classList.remove('hide');
+  $('#quienTitulo').textContent = perfilesVivos().length ? '¿Quién eres?' : 'Empecemos';
+  $('#quienPaso').textContent = perfilesVivos().length
+    ? 'Elige tu nombre y escribe tu clave de la app.'
+    : 'Crea tu usuario para que las notas queden a tu nombre.';
+  $('#quienLista').innerHTML = perfilesVivos().map(function(p){
+    return '<button class="btn sec" style="width:100%; margin-bottom:8px" data-perfil="'+p.id+'">'+
+           esc(p.nombre)+(p.admin?' · administra la app':'')+'</button>';
+  }).join('') + '<button class="btn sec" style="width:100%" id="btnNuevoPerfil2">➕ Agregar persona</button>' +
+    (forzado ? '' : '<div class="btns mt"><button class="btn sec" id="btnCerrarQuien">Cerrar</button></div>');
+  $('#ovlQuien').classList.remove('hide');
+}
+function cerrarQuien(){ $('#ovlQuien').classList.add('hide'); }
+function pedirClave(id){
+  var p=perfilPorId(id); if(!p) return;
+  qSel=p;
+  if(!p.clave){ entrarComo(p); return; }
+  $('#quienLista').classList.add('hide');
+  $('#quienNuevo').classList.add('hide');
+  $('#qNombre').textContent=p.nombre;
+  $('#qClave').value='';
+  $('#quienClave').classList.remove('hide');
+  setTimeout(function(){ $('#qClave').focus(); }, 60);
+}
+async function probarClave(){
+  if(!qSel) return;
+  if(await claveCalza(qSel, $('#qClave').value)) entrarComo(qSel);
+  else { toast('Esa clave no es'); $('#qClave').value=''; $('#qClave').focus(); }
+}
+function entrarComo(p){
+  yo=p; prefs.perfil=p.id; savePrefs();
+  cerrarQuien();
+  refrescarTodo();
+  toast('Hola, '+p.nombre);
+}
+function formNuevoPerfil(){
+  $('#quienLista').classList.add('hide');
+  $('#quienClave').classList.add('hide');
+  $('#qNuevoNombre').value=''; $('#qNuevaClave').value='';
+  $('#qAdmin').checked = !perfilesVivos().length;      // el primero administra
+  $('#quienNuevo').classList.remove('hide');
+  $('#ovlQuien').classList.remove('hide');
+  setTimeout(function(){ $('#qNuevoNombre').focus(); }, 60);
+}
+async function crearPerfil(){
+  var nom=$('#qNuevoNombre').value.trim().slice(0,24);
+  var cla=$('#qNuevaClave').value;
+  if(!nom){ toast('Escribe el nombre'); return; }
+  if(perfilPorNombre(nom)){ toast('Ya hay alguien con ese nombre'); return; }
+  if(cla && cla.length<4){ toast('La clave necesita 4 caracteres o más'); return; }
+  if(cla && !hayCripto()){ toast('Este navegador no puede guardar la clave cifrada'); return; }
+  var s=cla?sal():'';
+  var p={ id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+          nombre:nom, sal:s, clave: cla ? await cifrar(cla, s) : '',
+          admin: $('#qAdmin').checked, borrado:false, act:ahora() };
+  perfiles.push(p); savePerf(); syncPronto();
+  /* Lo anotado antes de que existieran los perfiles pasa a ser del primero */
+  if(p.admin && perfilesVivos().length===1) adoptarViejas(p);
+  entrarComo(p);
+}
+function adoptarViejas(p){
+  var k=0, cuando=ahora();
+  notas.forEach(function(n){ if(!n.quien){ n.quien=p.nombre; n.act=cuando; k++; } });
+  informes.forEach(function(i){ if(!i.quien){ i.quien=p.nombre; i.act=cuando; } });
+  if(k){ save(); saveInf(); syncPronto(); }
+}
+function borrarPerfil(id){
+  var p=perfilPorId(id); if(!p) return;
+  if(!confirm('¿Borrar a '+p.nombre+'?\n\nSus notas NO se borran: quedan firmadas con su nombre. '+
+              'Sirve para volver a crearlo si se le olvidó la clave.')) return;
+  p.borrado=true; p.act=ahora(); savePerf(); syncPronto();
+  if(yo && yo.id===id){ yo=null; delete prefs.perfil; savePrefs(); abrirQuien(true); }
+  pintarPerfiles(); refrescarTodo();
+}
+function pintarPerfiles(){
+  var c=$('#listaPerfiles'); if(!c) return;
+  var vivos=perfilesVivos();
+  $('#perfilEstado').textContent = !vivos.length
+    ? 'Todavía no hay nadie: agrega tu nombre para que las notas queden firmadas.'
+    : (yo ? 'Estás usando la app como '+yo.nombre+(yo.admin?' · administras la app':'')+'.'
+          : 'Nadie ha entrado en este aparato.');
+  c.innerHTML = vivos.map(function(p){
+    return '<div class="note"><div class="body"><div class="txt">'+esc(p.nombre)+
+      (p.admin?' <span class="hint" style="font-weight:600">· administra la app</span>':'')+
+      (p.clave?'':' <span class="hint">· sin clave</span>')+'</div></div>'+
+      '<div class="acts"><button data-delperfil="'+p.id+'" title="Borrar">🗑️</button></div></div>';
+  }).join('');
+  $('#btnCambiarPerfil').classList.toggle('hide', !vivos.length);
+  $('#boxVerTodo').classList.toggle('hide', !soyAdmin());
+  $('#syVerTodo').checked = prefs.verTodo!==false;
+}
+function refrescarTodo(){
+  pintarPerfiles(); renderLista(); renderPreview(); renderInformes(); stats();
+}
+
 function guardarInforme(silencioso){
   var txt=$('#rTexto').value.trim();
   if(!txt){ if(!silencioso) toast('Pega primero el informe'); return null; }
@@ -1457,7 +1637,8 @@ function guardarInforme(silencioso){
   if(ya){ if(!silencioso) toast('Ese informe ya estaba guardado'); return ya; }
   var inf={ id:Date.now()+'-'+Math.random().toString(36).slice(2,7),
             modo:gen.modo, rango:$('#gRango').value.trim(),
-            creado:new Date().toISOString(), texto:txt, act:ahora() };
+            creado:new Date().toISOString(), texto:txt,
+            quien: yo ? yo.nombre : '', act:ahora() };
   informes.unshift(inf); saveInf(); renderInformes(); syncPronto();
   if(!silencioso) toast('Informe guardado');
   return inf;
@@ -1476,14 +1657,15 @@ function enviarWA(txt){
 }
 
 function renderInformes(){
-  if(!informes.length){
+  var lista=mias(informes);
+  if(!lista.length){
     $('#listaInf').innerHTML='<div class="empty">Todavía no guardas informes.<br>Pega en «Generar» el texto que te devuelva Claude y mándalo desde ahí. 📄</div>';
     return;
   }
-  $('#listaInf').innerHTML = informes.map(function(i){
+  $('#listaInf').innerHTML = lista.map(function(i){
     var f=new Date(i.creado);
     return '<div class="card">'+
-      '<div class="metaInf"><b>'+i.modo+'</b> · '+esc(i.rango||'sin período')+
+      '<div class="metaInf"><b>'+i.modo+'</b> · '+esc(i.rango||'sin período')+(i.quien?' · '+esc(i.quien):'')+
       '<span>guardado '+etiqueta(hoyISO(f))+' · '+p2(f.getHours())+':'+p2(f.getMinutes())+'</span></div>'+
       '<pre class="out" style="max-height:210px">'+esc(i.texto)+'</pre>'+
       '<div class="btns mt">'+
@@ -1755,9 +1937,9 @@ function pintarSync(){
   if(!$('#syncEstado')) return;
   pintarFalla(); pintarResumen();
   var q=$('#quienAviso');
-  if(q) q.textContent = sinQuien
-    ? '⚠️ La firma se ve en este aparato, pero no viaja al otro hasta correr la línea de SQL de supabase.sql.'
-    : '';
+  if(q) q.textContent = sinPerfiles
+    ? '⚠️ Las personas viven solo en este aparato: falta correr el bloque de if_perfiles de supabase.sql. Hasta entonces, el otro teléfono no las ve.'
+    : (sinQuien ? '⚠️ La firma se ve acá, pero no viaja al otro aparato hasta correr la línea de la columna «quien» de supabase.sql.' : '');
   var hay=!!window.supabase;
   sesion().then(function(s){
     $('#syncLogin').classList.toggle('hide', !!s);
@@ -1813,6 +1995,50 @@ function deFilaNota(r){
            texto:r.texto||'', medida:r.medida||'', quien:r.quien||'',
            fotos:f.fotos, fotosm:f.fotosm, act:r.act };
 }
+function filaPerfil(p, uid){
+  return { id:p.id, uid:uid, nombre:p.nombre, clave:p.clave||'', sal:p.sal||'',
+           admin:!!p.admin, borrado:!!p.borrado, act:p.act||EPOCA };
+}
+/* Los perfiles viajan enteros: gana el más nuevo, y el borrado también viaja
+   como marca para que no reviva en el otro aparato. */
+function faltaTablaPerfiles(e){
+  if(!e) return false;
+  var t=(e.message||'')+' '+(e.details||'')+' '+(e.hint||'')+' '+(e.code||'');
+  return /if_perfiles/.test(t) || /42P01|PGRST205/.test(t);
+}
+var sinPerfiles=false;
+async function sincroPerfiles(c, uid){
+  var r=await c.from('if_perfiles').select('*');
+  if(r.error && faltaTablaPerfiles(r.error)){ sinPerfiles=true; return false; }
+  if(r.error) throw r.error;
+  sinPerfiles=false;
+  var rem={}; (r.data||[]).forEach(function(p){ rem[p.id]=p; });
+  var loc={}; perfiles.forEach(function(p){ loc[p.id]=p; });
+  var cambio=false;
+  Object.keys(rem).forEach(function(id){
+    var a=rem[id], b=loc[id];
+    if(!b || ms(a.act)>ms(b.act)){
+      loc[id]={ id:a.id, nombre:a.nombre, clave:a.clave||'', sal:a.sal||'',
+                admin:!!a.admin, borrado:!!a.borrado, act:a.act };
+      cambio=true;
+    }
+  });
+  if(cambio) perfiles=Object.keys(loc).map(function(id){ return loc[id]; });
+  var sube=perfiles.filter(function(p){
+    var a=rem[p.id];
+    return !a || ms(p.act)>ms(a.act);
+  }).map(function(p){ return filaPerfil(p, uid); });
+  if(sube.length){
+    var u=await c.from('if_perfiles').upsert(sube);
+    if(u.error && faltaTablaPerfiles(u.error)){ sinPerfiles=true; return cambio; }
+    if(u.error) throw u.error;
+  }
+  if(cambio){
+    savePerf();
+    if(yo){ var v=perfilPorId(yo.id); yo=v; if(!v){ delete prefs.perfil; savePrefs(); } }
+  }
+  return cambio;
+}
 async function subirNotas(c, filas){
   if(!filas.length) return;
   var r=await c.from('if_notas').upsert(filas);
@@ -1824,12 +2050,14 @@ async function subirNotas(c, filas){
   if(r.error) throw r.error;
 }
 function filaInf(i, uid){
-  return { id:i.id, uid:uid, modo:i.modo||'DIARIO', rango:i.rango||'',
-           creado:i.creado||'', texto:i.texto, borrada:false, act:i.act||EPOCA };
+  var f={ id:i.id, uid:uid, modo:i.modo||'DIARIO', rango:i.rango||'',
+          creado:i.creado||'', texto:i.texto, borrada:false, act:i.act||EPOCA };
+  if(!sinQuien) f.quien=i.quien||'';
+  return f;
 }
 function deFilaInf(r){
   return { id:r.id, modo:r.modo||'DIARIO', rango:r.rango||'', creado:r.creado||'',
-           texto:r.texto||'', act:r.act };
+           texto:r.texto||'', quien:r.quien||'', act:r.act };
 }
 
 function fusionar(remN, remI){
@@ -1942,9 +2170,11 @@ async function sincronizar(modo){
   if(!s){ if(manual) toast('Primero entra con tu correo en ⚙️ Datos'); pintarSync(); return; }
 
   var c=getSB(), uid=s.user.id, paso='empezar';
-  if(manual) sinQuien=false;      // a mano se reintenta con firma, por si ya corrieron el SQL
+  if(manual){ sinQuien=false; sinPerfiles=false; }   // a mano se reintenta, por si ya corrieron el SQL
   syncOcupado=true; nube('🔄','Sincronizando');
   try{
+    paso='traer las personas';
+    var cambioP=await sincroPerfiles(c, uid);
     paso='traer las notas';
     var rn=await c.from('if_notas').select('*');       if(rn.error) throw rn.error;
     paso='traer los informes';
@@ -1981,7 +2211,15 @@ async function sincronizar(modo){
     paso='subir '+tumbaN.length+' nota(s) borrada(s)';
     if(tumbaN.length){ var tn=await c.from('if_notas').upsert(tumbaN);      if(tn.error) throw tn.error; }
     paso='subir '+subeI.length+' informe(s)';
-    if(subeI.length){  var ui=await c.from('if_informes').upsert(subeI);    if(ui.error) throw ui.error; }
+    if(subeI.length){
+      var ui=await c.from('if_informes').upsert(subeI);
+      if(ui.error && faltaColumnaQuien(ui.error)){
+        sinQuien=true;
+        subeI.forEach(function(x){ delete x.quien; });
+        ui=await c.from('if_informes').upsert(subeI);
+      }
+      if(ui.error) throw ui.error;
+    }
     paso='subir '+tumbaI.length+' informe(s) borrado(s)';
     if(tumbaI.length){ var ti=await c.from('if_informes').upsert(tumbaI);   if(ti.error) throw ti.error; }
 
@@ -2002,7 +2240,7 @@ async function sincronizar(modo){
     syncOcupado=false;
     nube('☁️','Sincronizado recién');
 
-    if(k.n||k.i||f.baja){ renderLista(); renderPreview(); renderInformes(); stats(); }
+    if(k.n||k.i||f.baja||cambioP) refrescarTodo();
     pintarSync();
 
     if(manual){
@@ -2043,6 +2281,9 @@ document.addEventListener('click', function(e){
     renderFotosInf();
     return;
   }
+
+  if(t.dataset.perfil){ pedirClave(t.dataset.perfil); return; }
+  if(t.dataset.delperfil){ borrarPerfil(t.dataset.delperfil); return; }
 
   if(t.dataset.verform!=null){
     abrirVisor(sel[cajon(t.dataset.lote)]||[], +t.dataset.verform, sel.edit);
@@ -2115,6 +2356,13 @@ document.addEventListener('click', function(e){
   switch(t.id){
     case 'btnGuardar': guardar(); break;
     case 'btnCancelar': resetForm(); break;
+    case 'btnNuevoPerfil': case 'btnNuevoPerfil2': formNuevoPerfil(); break;
+    case 'btnCrearPerfil': crearPerfil(); break;
+    case 'btnCancelarPerfil': perfilesVivos().length ? abrirQuien(!yo) : cerrarQuien(); break;
+    case 'btnCambiarPerfil': abrirQuien(false); break;
+    case 'btnCerrarQuien': cerrarQuien(); break;
+    case 'btnEntrarPerfil': probarClave(); break;
+    case 'btnVolverPerfil': abrirQuien(!yo); break;
     case 'btnCam': $('#fCam').click(); break;
     case 'btnGal': $('#fGal').click(); break;
     case 'btnCamM': $('#fCamM').click(); break;
@@ -2187,15 +2435,19 @@ document.addEventListener('click', function(e){
       });
       break;
     case 'btnBorrarTodo':
-      if(confirm('Esto borra las '+notas.length+' notas guardadas en este dispositivo'+
-                 (Object.keys(thumbs).length?', con sus fotos':'')+'. ¿Seguro?')){
-        var cuando=ahora();
-        notas.forEach(function(n){
+      /* solo lo que estás viendo: nadie borra las notas de otro sin querer */
+      var quitar=mias(notas);
+      if(!quitar.length){ toast('No hay notas tuyas que borrar'); break; }
+      if(confirm('Esto borra las '+quitar.length+' notas que estás viendo'+
+                 (verTodo()?'':' (las tuyas)')+'. ¿Seguro?')){
+        var cuando=ahora(), fuera={};
+        quitar.forEach(function(n){
           fotosDe(n).forEach(function(f){ fotoBorrar(f); });
-          borrados.n[n.id]=cuando;
+          borrados.n[n.id]=cuando; fuera[n.id]=1;
         });
         saveTomb();
-        notas=[]; save(); resetForm(); renderLista(); renderPreview(); stats(); syncPronto(); toast('Notas borradas');
+        notas=notas.filter(function(n){ return !fuera[n.id]; });
+        save(); resetForm(); renderLista(); renderPreview(); stats(); syncPronto(); toast('Notas borradas');
       }
       break;
     case 'btnBorrarFotos':
@@ -2209,10 +2461,13 @@ document.addEventListener('click', function(e){
       }
       break;
     case 'btnBorrarInf':
-      if(confirm('Esto borra los '+informes.length+' informes guardados. ¿Seguro?')){
-        var cuandoI=ahora();
-        informes.forEach(function(i){ borrados.i[i.id]=cuandoI; }); saveTomb();
-        informes=[]; saveInf(); renderInformes(); stats(); syncPronto(); toast('Informes borrados');
+      var quitarI=mias(informes);
+      if(!quitarI.length){ toast('No hay informes tuyos que borrar'); break; }
+      if(confirm('Esto borra los '+quitarI.length+' informes que estás viendo. ¿Seguro?')){
+        var cuandoI=ahora(), fueraI={};
+        quitarI.forEach(function(i){ borrados.i[i.id]=cuandoI; fueraI[i.id]=1; }); saveTomb();
+        informes=informes.filter(function(i){ return !fueraI[i.id]; });
+        saveInf(); renderInformes(); stats(); syncPronto(); toast('Informes borrados');
       }
       break;
     case 'btnInstall': case 'btnInstall2': abrirInstalar(); break;
@@ -2255,7 +2510,6 @@ document.addEventListener('input', function(e){
   if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); }
   if(id==='gRango'||id==='gPend') renderPreview();
   if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
-  if(id==='syQuien'){ prefs.quien=e.target.value.trim().slice(0,24); savePrefs(); renderPreview(); }
   if(id==='rTexto') refrescarInf();
 });
 
@@ -2265,6 +2519,9 @@ document.addEventListener('paste', function(e){
   setTimeout(function(){ aplicarSolo(true); refrescarInf(); }, 0);
 });
 document.addEventListener('change', function(e){
+  if(e.target.id==='syVerTodo'){
+    prefs.verTodo=e.target.checked; savePrefs(); refrescarTodo();
+  }
   if(e.target.id==='sySyncFotos'){
     prefs.syncFotos=e.target.checked; savePrefs();
     if(e.target.checked) sincronizar('manual');
@@ -2307,6 +2564,8 @@ document.addEventListener('change', function(e){
 document.addEventListener('keydown', function(e){
   if((e.ctrlKey||e.metaKey) && e.key==='Enter' && !$('#tab-notas').classList.contains('hide')) guardar();
   if(e.key==='Enter' && (e.target.id==='syPass'||e.target.id==='syEmail')){ e.preventDefault(); entrar(); }
+  if(e.key==='Enter' && e.target.id==='qClave'){ e.preventDefault(); probarClave(); }
+  if(e.key==='Enter' && (e.target.id==='qNuevoNombre'||e.target.id==='qNuevaClave')){ e.preventDefault(); crearPerfil(); }
 });
 
 function stats(){
@@ -2337,12 +2596,17 @@ function aplicaTema(){
   informes.forEach(function(i){ if(!i.act){ i.act=i.creado||EPOCA; faltaba=true; } });
   if(faltaba){ save(); saveInf(); }
 
+  /* ¿Quién está usando la app en este aparato? */
+  yo = prefs.perfil ? perfilPorId(prefs.perfil) : null;
+  if(!yo && prefs.perfil){ delete prefs.perfil; savePrefs(); }
+
   aplicaTema();
   resetForm();
   renderLista();
   renderInformes();
+  pintarPerfiles();
+  if(perfilesVivos().length && !yo) abrirQuien(true);
   $('#rNum').value = prefs.wa || '';
-  $('#syQuien').value = prefs.quien || '';
   try{ $('#rTexto').value = localStorage.getItem(BORR) || ''; }catch(e){}
   refrescarInf();
   var h=new Date();
