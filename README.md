@@ -41,10 +41,10 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
    `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo [con foto] → MEDIDA: se hizo arqueo ciego de nuevo [con foto]`, en orden cronológico.
 
    Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**, y una fila para
-   **abrir el chat con el prompt ya copiado**: 🤖 Claude · ✨ Gemini · 🐋 DeepSeek · 🪟 Copilot. Solo Claude
-   admite recibir el texto por enlace (`claude.ai/new?q=…`) y la app lo usa cuando el prompt no
-   pasa de 4.000 caracteres; sobre eso, y siempre en Gemini, DeepSeek y Copilot, el prompt queda copiado y
-   basta con pegarlo. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
+   **abrir el chat con el prompt ya copiado**: 🤖 Claude · 💬 ChatGPT · ✨ Gemini · 🐋 DeepSeek · 🪟 Copilot.
+   Claude y ChatGPT aceptan el texto por enlace (`?q=…`) y la app lo usa cuando el prompt no pasa de
+   4.000 caracteres; si ChatGPT no lo toma —depende de su versión— abre igual y el prompt ya está
+   copiado. Sobre esos 4.000, y siempre en Gemini, DeepSeek y Copilot, se copia y basta con pegarlo. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
 3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude, **lo corriges y lo mandas**. Incluye:
 
    - **Vista «cómo llega al grupo»**: una burbuja tipo WhatsApp con las negritas y viñetas ya renderizadas, para revisar antes de enviar.
@@ -132,7 +132,7 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
 ## Archivos
 
 - `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v21`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v22`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.

@@ -370,6 +370,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <label class="f mt" style="margin-top:14px">Abrir el chat con el prompt copiado</label>
       <div class="btns">
         <button class="btn sec ia" data-ia="claude">🤖 Claude</button>
+        <button class="btn sec ia" data-ia="chatgpt">💬 ChatGPT</button>
         <button class="btn sec ia" data-ia="gemini">✨ Gemini</button>
         <button class="btn sec ia" data-ia="deepseek">🐋 DeepSeek</button>
         <button class="btn sec ia" data-ia="copilot">🪟 Copilot</button>
@@ -1694,6 +1695,7 @@ function infPorId(id){ return informes.find(function(i){ return i.id===id; }); }
    Para las demás, y para los prompts largos, el camino seguro es copiar y pegar. */
 var IAS={
   claude:   { nombre:'Claude',   url:'https://claude.ai/new', param:'q' },
+  chatgpt:  { nombre:'ChatGPT',  url:'https://chatgpt.com/', param:'q' },
   gemini:   { nombre:'Gemini',   url:'https://gemini.google.com/app' },
   deepseek: { nombre:'DeepSeek', url:'https://chat.deepseek.com/' },
   copilot:  { nombre:'Copilot',  url:'https://copilot.microsoft.com/' }
