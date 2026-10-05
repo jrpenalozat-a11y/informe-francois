@@ -71,6 +71,10 @@ y respeta lo que dicen.
 10. El área la puso el supervisor al vuelo y a veces no calza (un pelo en un churrasco anotado en
     Proveedores). Respeta el área anotada y hazlo notar fuera del informe, para que la corrija en
     la app.
+11. Salud, licencias, accidentes y temas contractuales o disciplinarios: van en el tema PERSONAL
+    con el detalle administrativo que traiga la nota (fechas, trámite, qué falta resolver). Del
+    estado de salud, solo lo que la nota dice y lo que afecta la operación; no agregues
+    diagnósticos, causas ni juicios.
 
 ## MODO DIARIO
 
