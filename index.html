@@ -279,6 +279,13 @@ details.plegable > summary h2{margin:0}
 details.plegable[open] > summary{margin-bottom:12px}
 details.plegable .flecha{color:var(--tx2); transition:transform .2s}
 details.plegable[open] .flecha{transform:rotate(180deg)}
+/* Las notas que entran al informe */
+details.verNotas{margin-top:8px}
+details.verNotas > summary{list-style:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--acc)}
+details.verNotas > summary::-webkit-details-marker{display:none}
+details.verNotas .flecha{transition:transform .2s}
+details.verNotas[open] .flecha{transform:rotate(180deg)}
+#conteo .solo{color:var(--warn)}
 
 /* Toast */
 #toast{
@@ -441,6 +448,11 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <input type="text" id="gRango" placeholder="lun 18-08">
       </div>
       <p class="hint" id="conteo"></p>
+      <details class="verNotas" id="verNotas">
+        <summary><svg class="i flecha"><use href="#i-abajo"/></svg> <span id="verNotasTit">Ver las notas que entran</span></summary>
+        <p class="hint" style="margin:6px 0 8px">Son exactamente las líneas que van a DeepSeek o a Claude, en orden.</p>
+        <pre class="out" id="listaPeriodo"></pre>
+      </details>
     </div>
 
     <div class="card hide" id="boxPend">
@@ -449,10 +461,12 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
 
     <div class="card cardIA" id="cardPre">
-      <h2><svg class="i"><use href="#i-chispa"/></svg> Pre-informe con DeepSeek</h2>
-      <p class="hint" style="margin-top:0">DeepSeek lee las notas del período con las reglas de la bitácora y deja el borrador abajo, en «Informe». Tú lo revisas, lo corriges si hace falta y lo mandas.</p>
+      <h2><svg class="i"><use href="#i-chispa"/></svg> Pre-informe</h2>
+      <p class="hint" style="margin-top:0"><b>Armar pre-informe</b>: DeepSeek lee todas las notas del período con las reglas de la bitácora y deja el borrador abajo, en «Informe». <b>Copiar para Claude</b>: copia las notas y las reglas —y el pre-informe, si ya está armado— para pegarlo en Claude y que te devuelva la versión final.</p>
       <div class="btns mt">
         <button class="btn" id="btnPre"><svg class="i"><use href="#i-chispa"/></svg> <span>Armar pre-informe</span></button>
+        <button class="btn sec" id="btnClaude"><svg class="i"><use href="#i-copiar"/></svg> Copiar para Claude</button>
+        <button class="btn sec" id="btnAbrirClaude">Abrir Claude <svg class="i"><use href="#i-externo"/></svg></button>
       </div>
       <div id="preEstado"></div>
     </div>
@@ -1428,23 +1442,37 @@ function marcaFoto(k){ return k ? ' [con '+(k===1?'foto':k+' fotos')+']' : ''; }
 function lineaNota(n){
   var kh=(n.fotos||[]).length, km=(n.fotosm||[]).length;
   if(!n.medida){ kh+=km; km=0; }                 // sin medida escrita, la foto respalda el hecho
-  var t='['+etiqueta(n.fecha)+(n.hora?' · '+n.hora:'')+'] ('+cap(n.area)+') '+
-        n.texto.replace(/\s*\n\s*/g,' ')+marcaFoto(kh);
+  var t='['+etiqueta(diaDe(n))+(n.hora?' · '+n.hora:'')+'] ('+cap(n.area)+') '+
+        (n.texto||'').replace(/\s*\n\s*/g,' ')+marcaFoto(kh);
   if(n.medida) t+=' → MEDIDA: '+n.medida.replace(/\s*\n\s*/g,' ')+marcaFoto(km);
   if(n.quien) t+=' — anotó '+n.quien;
   return t;
 }
 
-function notasDelPeriodo(){
-  var arr, base=mias(notas);
+/* El período elegido, siempre cerrado: un día (diario) o desde–hasta, ambos incluidos.
+   Antes, con «hasta» vacío entraba todo lo que viniera después de «desde». */
+function periodo(){
   if(gen.modo==='DIARIO'){
     var d=$('#gDia').value;
-    arr=base.filter(function(n){ return n.fecha===d; });
-  } else {
-    var a=$('#gDesde').value, b=$('#gHasta').value;
-    arr=base.filter(function(n){ return (!a||n.fecha>=a) && (!b||n.fecha<=b); });
+    return d ? {ok:true, desde:d, hasta:d, dias:1, texto:etiqueta(d)} : {ok:false, msg:'Elige el día del informe.'};
   }
-  return ordenadas(arr);
+  var a=$('#gDesde').value, b=$('#gHasta').value;
+  if(!a || !b) return {ok:false, msg:'Elige las dos fechas: desde y hasta.'};
+  return {ok:true, desde:a, hasta:b, dias:Math.round((dObj(b)-dObj(a))/864e5)+1,
+          texto:'del '+etiqueta(a)+' al '+etiqueta(b)};
+}
+function clavePeriodo(){ var p=periodo(); return gen.modo+'|'+(p.desde||'')+'|'+(p.hasta||''); }
+function diaDe(n){ return String(n.fecha||'').slice(0,10); }
+/* Todas las notas del período que le tocan a quien usa la app (ver esMio) */
+function notasDelPeriodo(){
+  var p=periodo();
+  if(!p.ok) return [];
+  return ordenadas(mias(notas).filter(function(n){ var f=diaDe(n); return f>=p.desde && f<=p.hasta; }));
+}
+/* Si «desde» quedó después de «hasta», se dan vuelta en vez de dejar el período vacío */
+function ordenarFechas(){
+  var a=$('#gDesde').value, b=$('#gHasta').value;
+  if(a && b && a>b){ $('#gDesde').value=b; $('#gHasta').value=a; toast('Di vuelta las fechas: «desde» va primero'); }
 }
 
 function textoNotas(){
@@ -1463,14 +1491,31 @@ function pedidoInforme(){
 function construirPrompt(){ return PROMPT_FR.armar(pedidoInforme()); }
 
 function renderPreview(){
-  var arr=notasDelPeriodo();
+  var arr=notasDelPeriodo(), p=periodo();
   var kf=0; arr.forEach(function(n){ kf+=fotosDe(n).length; });
-  $('#conteo').textContent = arr.length
-    ? arr.length+' nota'+(arr.length>1?'s':'')+' en el período · '+areasDe(arr)+
-      (kf?' · '+kf+' foto'+(kf===1?'':'s'):'')
-    : 'No hay notas en el período elegido.';
+  var h;
+  if(!p.ok) h=esc(p.msg);
+  else {
+    h='<b>'+p.texto.charAt(0).toUpperCase()+p.texto.slice(1)+'</b>'+(p.dias>1?' ('+p.dias+' días)':'')+': ';
+    h+= arr.length
+      ? arr.length+' nota'+(arr.length>1?'s':'')+' · '+esc(areasDe(arr))+(kf?' · '+kf+' foto'+(kf===1?'':'s'):'')+
+        (quienesDe(arr)?'<br>Anotaron: '+esc(quienesDe(arr)):'')
+      : 'no hay notas en esas fechas.';
+  }
+  if(!verTodo() && yo)
+    h+='<br><span class="solo">Solo entran las notas de '+esc(yo.nombre)+
+       (soyAdmin()?': para sumar las de todos, en Datos activa «Ver también las notas de los demás».':'.')+'</span>';
+  $('#conteo').innerHTML=h;
+  $('#verNotas').classList.toggle('hide', !arr.length);
+  $('#verNotasTit').textContent='Ver '+(arr.length===1?'la nota que entra':'las '+arr.length+' notas que entran');
+  $('#listaPeriodo').textContent=arr.map(lineaNota).join('\n');
   $('#preview').textContent=construirPrompt();
   renderFotosInf();
+}
+function quienesDe(arr){
+  var c={}, orden=[];
+  arr.forEach(function(n){ var q=(n.quien||'').trim(); if(!q) return; if(!c[q]){ c[q]=0; orden.push(q); } c[q]++; });
+  return orden.map(function(q){ return q+' ('+c[q]+')'; }).join(', ');
 }
 function areasDe(arr){
   var s={}; arr.forEach(function(n){ s[n.area]=1; });
@@ -1494,8 +1539,8 @@ function setModo(m){
   $('#boxPend').classList.toggle('hide', m!=='CIERRE');
   $('#modoHint').textContent = m==='DIARIO'
     ? 'Resumen del día para mandar al grupo al cierre del turno.'
-    : (m==='SEMANAL' ? 'Resumen de la semana para mandar al grupo (domingo).'
-                     : 'Informe de cierre: insumo para la reunión del lunes. No va al grupo.');
+    : (m==='SEMANAL' ? 'Resumen para mandar al grupo (domingo). Elige las fechas que quieras: una semana, quince días o un mes.'
+                     : 'Informe de cierre: insumo para la reunión del lunes. No va al grupo. Elige las fechas que quieras.');
   autoRango(); renderPreview(); preLimpiar();
 }
 
@@ -1794,7 +1839,7 @@ function abrirIA(id){
    Manda las notas del período —las mismas líneas del prompt— a api/preinforme,
    que guarda la clave de DeepSeek en Vercel: la clave nunca pasa por el teléfono.
    Pide la sesión de la cuenta de la app, para que nadie de afuera gaste el saldo. */
-var pre={ocupado:false, revisado:false};
+var pre={ocupado:false, revisado:false, clave:''};
 function preEstado(html){ $('#preEstado').innerHTML=html||''; }
 function preAviso(tipo, icono, html){
   return '<div class="aviso'+(tipo?' '+tipo:'')+'">'+ico(icono)+'<span>'+html+'</span></div>';
@@ -1810,21 +1855,37 @@ function preRevisar(){
       preEstado(preAviso('', 'alerta', 'DeepSeek todavía no está conectado: falta la clave <b>DEEPSEEK_API_KEY</b> en Vercel (proyecto informe-francois). Mientras tanto puedes usar «Usar otra IA».'));
   }).catch(function(){});
 }
+/* Antes de armar, baja lo que el otro teléfono haya anotado: si la sincronía
+   está corriendo se espera a que termine. Sin cuenta o sin internet, sigue con lo de acá. */
+async function alDia(){
+  if(navigator.onLine===false || !window.supabase || !(await sesion())) return;
+  var t=Date.now();
+  while(syncOcupado && Date.now()-t<20000) await new Promise(function(r){ setTimeout(r,300); });
+  if(!syncOcupado) await sincronizar('auto');
+}
+var MAX_NOTAS_IA=200000;                     // el mismo tope de api/preinforme.js
 async function armarPreinforme(){
   if(pre.ocupado) return;
-  var arr=notasDelPeriodo();
-  if(!arr.length){ preEstado(preAviso('', 'info', 'No hay notas en el período elegido: cambia el día o las fechas.')); return; }
-  if(navigator.onLine===false){ preEstado(preAviso('', 'alerta', 'Sin internet: DeepSeek necesita conexión. Las notas siguen guardadas en el aparato.')); return; }
+  var p=periodo();
+  if(!p.ok){ preEstado(preAviso('', 'info', esc(p.msg))); return; }
+  if(navigator.onLine===false){ preEstado(preAviso('', 'alerta', 'Sin internet: DeepSeek necesita conexión. Las notas siguen guardadas en el aparato; mientras tanto puedes usar «Copiar para Claude».')); return; }
   var s=await sesion();
   if(!s){ preEstado(preAviso('', 'alerta', 'Para usar DeepSeek entra con la cuenta de la app.')+preIrDatos()); return; }
   if($('#rTexto').value.trim() &&
      !confirm('Ya hay un informe en el cuadro «Informe».\n\n¿Reemplazarlo por el pre-informe nuevo? Lo que está ahora se pierde si no lo guardaste.')) return;
 
-  var pedido=pedidoInforme(), t0=Date.now(), btn=$('#btnPre');
+  var t0=Date.now(), btn=$('#btnPre'), clave=clavePeriodo();
   pre.ocupado=true; btn.disabled=true; btn.querySelector('span').textContent='Armando…';
-  preEstado('<div class="preCarga"><span class="rueda"></span><span>DeepSeek está leyendo '+arr.length+' nota'+(arr.length===1?'':'s')+
-            '. Suele tardar entre 10 y 40 segundos.</span></div>');
   try{
+    preEstado('<div class="preCarga"><span class="rueda"></span><span>Trayendo las notas nuevas de la nube…</span></div>');
+    await alDia();
+    var arr=notasDelPeriodo();
+    if(!arr.length) throw {error:'No hay notas '+p.texto+': cambia el día o las fechas.'};
+    var pedido=pedidoInforme();
+    if(pedido.notas.length>MAX_NOTAS_IA)
+      throw {error:'Son demasiadas notas para DeepSeek de una vez ('+arr.length+'). Acorta el período, o usa «Copiar para Claude».'};
+    preEstado('<div class="preCarga"><span class="rueda"></span><span>DeepSeek está leyendo '+arr.length+' nota'+(arr.length===1?'':'s')+' '+esc(p.texto)+
+              '. Suele tardar menos de un minuto; con muchas notas, un poco más.</span></div>');
     var r=await fetch('api/preinforme', { method:'POST',
       headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+s.access_token },
       body:JSON.stringify({ modo:pedido.modo, rango:pedido.rango, notas:pedido.notas, pendientes:pedido.pendientes }) });
@@ -1833,9 +1894,12 @@ async function armarPreinforme(){
 
     var txt=d.informe;
     if(problemasWA(txt).length) txt=arreglarWA(txt);   // sin ** ni guiones; en el cierre respeta las filas «N° | …»
-    $('#rTexto').value=txt; refrescarInf();
-    var seg=Math.max(1, Math.round((Date.now()-t0)/1000));
-    var h=preAviso('ok', 'check', 'Pre-informe listo en '+seg+' s'+(d.modelo?' · '+esc(d.modelo):'')+'. Revísalo abajo antes de enviarlo.');
+    $('#rTexto').value=txt; refrescarInf(); pre.clave=clave;
+    var seg=Math.max(1, Math.round((Date.now()-t0)/1000)), leidas=d.recibidas||arr.length;
+    var h=preAviso('ok', 'check', 'Pre-informe listo en '+seg+' s: DeepSeek leyó '+leidas+' nota'+(leidas===1?'':'s')+' '+esc(p.texto)+
+                   (d.modelo?' · '+esc(d.modelo):'')+'. Revísalo abajo antes de enviarlo.');
+    if(d.recibidas && d.recibidas!==arr.length)
+      h+=preAviso('', 'alerta', 'Iban '+arr.length+' notas y DeepSeek recibió '+d.recibidas+': vuelve a armarlo.');
     if(d.cortado) h+=preAviso('', 'alerta', 'DeepSeek llegó a su largo máximo: revisa que el final no haya quedado cortado.');
     if(d.observaciones && d.observaciones.length){
       h+='<label class="f" style="margin-top:14px">Para revisar · no va en el informe</label><ul class="obs">'+
@@ -1851,6 +1915,23 @@ async function armarPreinforme(){
   }finally{
     pre.ocupado=false; btn.disabled=false; btn.querySelector('span').textContent='Armar pre-informe';
   }
+}
+
+/* Copiar para Claude: el prompt completo (reglas + modo + todas las notas del período)
+   y, si el cuadro «Informe» ya tiene el pre-informe, ese texto como borrador a revisar.
+   Copia en el mismo toque, sin esperar a la nube: el teléfono solo deja copiar ahí. */
+function copiarParaClaude(){
+  var p=periodo();
+  if(!p.ok){ preEstado(preAviso('', 'info', esc(p.msg))); return; }
+  var arr=notasDelPeriodo();
+  if(!arr.length && !confirm('No hay notas '+p.texto+'. ¿Copiar igual?')) return;
+  var b=$('#rTexto').value.trim();
+  if(b && pre.clave!==clavePeriodo() &&
+     !confirm('El cuadro «Informe» ya tiene un texto.\n\n¿Lo mando a Claude como borrador para revisar?\n(Cancelar: van solo las notas y las reglas.)')) b='';
+  var txt=PROMPT_FR.paraClaude(pedidoInforme(), b);
+  copiar(txt, 'Copiado · pégalo en Claude');
+  preEstado(preAviso('ok', 'check', 'Copiaste '+(b?'el pre-informe, ':'')+'las '+arr.length+' nota'+(arr.length===1?'':'s')+' '+esc(p.texto)+
+            ' y las reglas ('+txt.length.toLocaleString('es-CL')+' caracteres). Abre Claude, pega y trae el informe final al cuadro «Informe».'));
 }
 
 /* ================= Instalación en el teléfono ================= */
@@ -2471,7 +2552,7 @@ document.addEventListener('click', function(e){
     ['notas','generar','informes','datos'].forEach(function(id){
       $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
     });
-    if(t.dataset.tab==='generar'){ renderPreview(); preRevisar(); }
+    if(t.dataset.tab==='generar'){ renderPreview(); preRevisar(); alDia(); }
     if(t.dataset.tab==='informes') renderInformes();
     if(t.dataset.tab==='datos'){ stats(); pintarSync(); }
     window.scrollTo({top:0});
@@ -2528,6 +2609,8 @@ document.addEventListener('click', function(e){
   switch(t.id){
     case 'btnGuardar': guardar(); break;
     case 'btnPre': armarPreinforme(); break;
+    case 'btnClaude': copiarParaClaude(); break;
+    case 'btnAbrirClaude': window.open(IAS.claude.url, '_blank', 'noopener'); break;
     case 'btnCancelar': resetForm(); break;
     case 'btnNuevoPerfil': case 'btnNuevoPerfil2': formNuevoPerfil(); break;
     case 'btnCrearPerfil': crearPerfil(); break;
@@ -2690,7 +2773,7 @@ document.addEventListener('keydown', function(e){
 document.addEventListener('input', function(e){
   var id=e.target.id;
   if(id==='fBuscar'||id==='fFiltro') renderLista();
-  if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); preLimpiar(); }
+  if(id==='gDia'||id==='gDesde'||id==='gHasta'){ if(id!=='gDia') ordenarFechas(); autoRango(); renderPreview(); preLimpiar(); }
   if(id==='gRango'||id==='gPend') renderPreview();
   if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
   if(id==='rTexto') refrescarInf();
@@ -2715,6 +2798,8 @@ document.addEventListener('change', function(e){
   }
   if(e.target.id==='fFiltro') renderLista();
   if(e.target.id==='gTodos') renderPreview();
+  /* Algunos Safari del iPhone avisan del calendario solo con «change» */
+  if(/^g(Dia|Desde|Hasta)$/.test(e.target.id)){ if(e.target.id!=='gDia') ordenarFechas(); autoRango(); renderPreview(); preLimpiar(); }
   if(e.target.id==='fCam'||e.target.id==='fGal'||e.target.id==='fCamM'||e.target.id==='fGalM'){
     agregarFotos(e.target.files, /M$/.test(e.target.id) ? 'm' : 'h'); e.target.value='';
   }

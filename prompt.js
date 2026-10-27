@@ -74,6 +74,17 @@ function armar(o){
   return partes.join('\n\n');
 }
 
+/* Para pegar en Claude: el prompt completo y, si el cuadro «Informe» ya tiene
+   el pre-informe, ese texto al final como borrador a revisar contra las notas. */
+function paraClaude(o, borrador){
+  var t=armar(o);
+  if(!borrador) return t;
+  return t+'\n\nBORRADOR PARA REVISAR\n'+
+    'Este pre-informe se armó con las mismas notas. Revísalo contra las notas y las reglas: corrige lo que no calce, '+
+    'agrega lo que falte y saca lo que las notas no digan. Entrega solo el informe final, listo para copiar, sin comentarios antes ni después.\n\n'+
+    borrador;
+}
+
 /* Para DeepSeek: las reglas y el modo van como instrucción del sistema, las
    notas como mensaje. Contesta en JSON para separar el informe (que se manda
    tal cual) de las observaciones para el supervisor (que no van al grupo). */
@@ -94,7 +105,7 @@ function mensajeIA(o){
 }
 
 var PROMPT_FR = { INTRO:INTRO, REGLAS:REGLAS, bloqueDiario:bloqueDiario, bloqueSemanal:bloqueSemanal,
-                  bloqueCierre:bloqueCierre, armar:armar, sistemaIA:sistemaIA, mensajeIA:mensajeIA };
+                  bloqueCierre:bloqueCierre, armar:armar, paraClaude:paraClaude, sistemaIA:sistemaIA, mensajeIA:mensajeIA };
 if(typeof module!=='undefined' && module.exports) module.exports=PROMPT_FR;
 else raiz.PROMPT_FR=PROMPT_FR;
 

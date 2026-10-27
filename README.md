@@ -34,19 +34,33 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
    Al prompt solo va la marca `[con foto]` / `[con N fotos]`, **pegada a lo que respalda**: después del hecho si la foto es del hecho, y después de `→ MEDIDA:` si es de la medida. **La imagen no viaja al chat**. La regla 10 le dice a Claude que no describa ni suponga lo que muestra, y que como mucho cierre ese punto con «(hay foto)».
 2. **Generar** — eliges **qué informe** (modo y período) y lo armas:
    - **DIARIO** → resumen del día para el grupo (elige un día).
-   - **SEMANAL** → resumen de la semana para el grupo (desde/hasta, con atajos «esta semana» / «semana pasada»).
-   - **CIERRE** → informe para la reunión del lunes; aparece el campo opcional **Pendientes de la reunión pasada**, que se cruza con las notas del período.
+   - **SEMANAL** → resumen para el grupo con las fechas que elijas (desde/hasta: una semana, quince días o un mes; atajos «esta semana» / «semana pasada»).
+   - **CIERRE** → informe para la reunión del lunes, también desde/hasta; aparece el campo opcional **Pendientes de la reunión pasada**, que se cruza con las notas del período.
+
+   **Qué notas entran:** todas las del período, con los dos extremos incluidos (`periodo()` / `notasDelPeriodo()`).
+   El período siempre es cerrado: sin «hasta» no arma nada (antes tomaba todo lo posterior a «desde»), y si
+   «desde» queda después de «hasta» las fechas se dan vuelta solas. Bajo las fechas se ve el período, cuántas
+   notas son, de qué áreas y quién las anotó, y **Ver las notas que entran** muestra las líneas exactas que van
+   a DeepSeek o a Claude. Si el perfil no ve las notas de todos (ver *Quién anota*), lo dice ahí mismo.
 
    Las notas del período van con el formato acordado, en orden cronológico:
    `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo [con foto] → MEDIDA: se hizo arqueo ciego de nuevo [con foto]`.
 
    **Pre-informe con DeepSeek** (el camino de siempre): **Armar pre-informe** manda esas líneas a
    `api/preinforme.js`, que le pide el informe a DeepSeek con las mismas reglas del prompt maestro
-   (`prompt.js`) y deja el borrador en el cuadro **Informe**, ya en formato WhatsApp. Lo que DeepSeek
+   (`prompt.js`) y deja el borrador en el cuadro **Informe**, ya en formato WhatsApp. Antes sincroniza, para
+   que entren las notas del otro teléfono, y al terminar dice cuántas notas leyó DeepSeek (la función las
+   cuenta: `recibidas`). Tope: 200.000 caracteres de notas, más de un mes. Lo que DeepSeek
    quiere que revises —una nota ambigua, un área que no calza con lo que dice la nota— sale aparte,
    en «Para revisar», y **no** va en el informe. Si el cuadro ya tenía texto, pregunta antes de
    reemplazarlo. Necesita internet y la cuenta de la app conectada en Datos (así nadie de afuera
    gasta el saldo de DeepSeek). Si falta la clave en Vercel, la app lo avisa al abrir Generar.
+
+   **Copiar para Claude** (en la misma tarjeta): copia el prompt completo —reglas, modo y todas las notas del
+   período— y, si el cuadro **Informe** ya tiene el pre-informe, lo agrega al final como *BORRADOR PARA
+   REVISAR* para que Claude lo corrija contra las notas (`PROMPT_FR.paraClaude`). Si el texto del cuadro no
+   salió de este período, pregunta antes de mandarlo. **Abrir Claude** abre claude.ai en otra pestaña
+   sin tocar lo copiado. No necesita cuenta ni DeepSeek.
 
    **Usar otra IA: copiar el prompt** (plegado al final): **Copiar prompt**, **Copiar solo las
    notas**, **Descargar .txt** y una fila para **abrir el chat con el prompt ya copiado** (Claude ·
@@ -146,11 +160,11 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
 - `index.html` — toda la app (datos, estilos, lógica). Los íconos son SVG de línea (sprite al inicio del `body`, función `ico()`), sin emojis.
 - `prompt.js` — el **prompt maestro**: reglas y los tres modos. Lo usan la página («Copiar prompt») y la función de DeepSeek: si cambias una regla, cámbiala aquí.
 - `api/preinforme.js` — función de Vercel que le pide el pre-informe a DeepSeek. Solo atiende a una sesión de Supabase de la app que no sea anónima; responde `{informe, observaciones, modelo}`. `GET` dice si la clave está cargada.
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v24`): **súbela** al cambiar assets del núcleo. HTML y JS propios network-first, el resto cache-first. Las llamadas a Supabase y a `/api/` **no pasan por la caché**.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v25`): **súbela** al cambiar assets del núcleo. HTML y JS propios network-first, el resto cache-first. Las llamadas a Supabase y a `/api/` **no pasan por la caché**.
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
-- `vercel.json` / `netlify.toml` — deploy sin build; `/sw.js` se sirve con `Cache-Control: no-cache` y la función tiene 60 s.
+- `vercel.json` / `netlify.toml` — deploy sin build; `/sw.js` se sirve con `Cache-Control: no-cache` y la función tiene 300 s (DeepSeek espera hasta 240 s).
 - `servir-local.cjs` — servidor para el computador (estático + `/api/`, como Vercel). No se publica (`.vercelignore`).
 
 ## Correr en local

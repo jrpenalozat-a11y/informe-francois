@@ -2,7 +2,7 @@
 
    POST /api/preinforme   { modo, rango, notas, pendientes }
      Authorization: Bearer <token de la sesión de Supabase de la app>
-     → { ok, informe, observaciones:[…], modelo, cortado }
+     → { ok, informe, observaciones:[…], modelo, cortado, recibidas (notas que llegaron) }
    GET  /api/preinforme   → { ok, deepseek } (si la clave está cargada)
 
    La clave de DeepSeek vive SOLO en Vercel, nunca en la página:
@@ -18,7 +18,7 @@ const SB_URL = "https://zmpiqkbvmjvfvxyvcdhi.supabase.co";
 const SB_KEY = "sb_publishable_wk2KPYx1W--YcsrbRrEPxw_ORy1fati";      // llave pública, la misma del index.html
 const DEEPSEEK_API = (process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/").replace(/\/?$/, "/");
 const MODOS = ["DIARIO", "SEMANAL", "CIERRE"];
-const MAX_NOTAS = 60000, MAX_PEND = 4000;
+const MAX_NOTAS = 200000, MAX_PEND = 4000;          // ~55 mil tokens: cabe un mes de notas
 /* Prueba en el computador sin cuenta (servir-local.cjs). En Vercel nunca aplica: allá VERCEL=1. */
 const PRUEBA_LOCAL = !process.env.VERCEL && process.env.PREINFORME_PRUEBA === "1";
 
@@ -50,14 +50,14 @@ async function pedir(modelo, sistema, mensaje) {
   let r;
   try {
     r = await fetch(DEEPSEEK_API + "chat/completions", {
-      signal: AbortSignal.timeout(55000),               // la función tiene 60 s (vercel.json)
+      signal: AbortSignal.timeout(240000),              // la función tiene 300 s (vercel.json)
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.DEEPSEEK_API_KEY },
       body: JSON.stringify({
         model: modelo,
         messages: [{ role: "system", content: sistema }, { role: "user", content: mensaje }],
         response_format: { type: "json_object" },
-        temperature: 0.7,
+        temperature: 0.5,                               // bajo: es un resumen fiel, no un texto creativo
         max_tokens: 8000
       })
     });
@@ -111,7 +111,7 @@ function leerSalida(s) {
 
 module.exports = async function handler(req, res) {
   const hayClave = !!process.env.DEEPSEEK_API_KEY;
-  if (req.method === "GET") return res.status(200).json({ ok: true, deepseek: hayClave });
+  if (req.method === "GET") return res.status(200).json({ ok: true, deepseek: hayClave, v: 2 });
   if (req.method !== "POST") return res.status(405).json({ error: "Solo GET o POST" });
 
   try {
@@ -134,13 +134,14 @@ module.exports = async function handler(req, res) {
   const o = { modo, rango: String(b.rango || "").slice(0, 80).trim(), notas,
               pendientes: modo === "CIERRE" ? String(b.pendientes || "").slice(0, MAX_PEND).trim() : "" };
 
+  const recibidas = notas.split(/\n/).filter(l => l.trim()).length;   // una nota por línea (lineaNota)
   const t0 = Date.now();
   try {
     const r = await conDeepseek(PROMPT.sistemaIA(modo, o.rango), PROMPT.mensajeIA(o));
     const s = leerSalida(r.texto);
     if (!s.informe) throw new Error("DeepSeek devolvió un informe vacío");
     return res.status(200).json({ ok: true, informe: s.informe, observaciones: s.observaciones,
-                                  modelo: r.modelo, cortado: r.cortado, ms: Date.now() - t0 });
+                                  modelo: r.modelo, cortado: r.cortado, recibidas, ms: Date.now() - t0 });
   } catch (e) {
     console.error("preinforme", modo, e && e.message);
     return res.status(502).json({ error: "DeepSeek no pudo armar el pre-informe: " + ((e && e.message) || "error") });
