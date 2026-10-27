@@ -23,6 +23,7 @@
   --ok:#2e7d4f; --okSoft:#e3f2e8;
   --warn:#b3541e; --danger:#b3261e; --dangerSoft:#fbe6e5;
   --sh:0 1px 2px rgba(44,30,20,.06), 0 8px 24px rgba(44,30,20,.06);
+  --onAcc:#fff;
   --r:14px;
 }
 body.dark{
@@ -32,6 +33,7 @@ body.dark{
   --ok:#6ec48e; --okSoft:#1e3527;
   --warn:#e0913f; --danger:#ef7a72; --dangerSoft:#3a1f1d;
   --sh:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  --onAcc:#1c1108;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -64,7 +66,32 @@ nav.tabs button{
   flex:1; padding:11px 8px; border-radius:12px; border:1px solid var(--line);
   background:var(--card); color:var(--tx2); font-size:14px; font-weight:600; cursor:pointer;
 }
-nav.tabs button.on{background:var(--acc); border-color:var(--acc); color:#fff}
+nav.tabs button.on{background:var(--acc); border-color:var(--acc); color:var(--onAcc)}
+
+/* Íconos de línea (sprite al inicio del body): toman el color del texto */
+svg.i{width:18px; height:18px; flex:0 0 auto; fill:none; stroke:currentColor; stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round; vertical-align:-3px; pointer-events:none}
+nav.tabs button, .btn, .fmtb{display:inline-flex; align-items:center; justify-content:center; gap:7px}
+.iconbtn{display:grid; place-items:center}
+.iconbtn svg.i{width:19px; height:19px}
+.logo svg.i{width:24px; height:24px}
+.gira svg.i, .rueda{animation:gira .9s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.rueda{display:inline-block; width:18px; height:18px; flex:0 0 auto; border:2px solid var(--line); border-top-color:var(--acc); border-radius:50%}
+.card h2 svg.i{color:var(--acc); margin-right:2px}
+body.dark .card h2 svg.i{color:var(--acc2)}
+@media (max-width:480px){
+  nav.tabs{gap:6px}
+  nav.tabs button{flex-direction:column; gap:3px; padding:8px 4px; font-size:12.5px}
+  header.top{padding:16px 16px 15px}
+  header.top .in{gap:10px}
+  header.top h1{font-size:17px; white-space:nowrap}
+  header.top p{font-size:12px}
+  .logo{width:38px; height:38px; border-radius:11px}
+  .topbtns{gap:6px}
+  .iconbtn{width:34px; height:34px; border-radius:10px}
+}
+body.dark header.top{background:linear-gradient(135deg,#3b2414,#62391a)}
 
 /* Cards */
 .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh); padding:16px; margin-bottom:14px}
@@ -92,7 +119,7 @@ body.dark .chip.on{color:var(--acc2)}
 /* Botones */
 .btn{
   border:0; border-radius:12px; padding:12px 16px; font:inherit; font-weight:700;
-  font-size:15px; cursor:pointer; background:var(--acc); color:#fff;
+  font-size:15px; cursor:pointer; background:var(--acc); color:var(--onAcc);
 }
 .btn:active{transform:scale(.98)}
 .btn.sec{background:var(--bg2); color:var(--tx); border:1px solid var(--line)}
@@ -158,7 +185,7 @@ body.dark .metaInf b{color:var(--acc2)}
 body.dark .pill{color:var(--acc2)}
 .seg{display:flex; gap:6px; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:4px}
 .seg button{flex:1; border:0; background:transparent; color:var(--tx2); font:inherit; font-weight:700; font-size:14px; padding:9px 6px; border-radius:9px; cursor:pointer}
-.seg button.on{background:var(--acc); color:#fff}
+.seg button.on{background:var(--acc); color:var(--onAcc)}
 .btn.ia{font-size:14px; padding:10px 14px}
 .chk{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--tx2); cursor:pointer}
 .chk input{width:18px;height:18px;accent-color:var(--acc)}
@@ -194,6 +221,9 @@ body.dark .pasos li:before{color:var(--acc2)}
   overflow:hidden; background:var(--bg2); padding:0; cursor:pointer; flex:0 0 auto;
 }
 .th img{width:100%; height:100%; object-fit:cover; display:block}
+/* las insignias de la miniatura llevan un ícono chico al centro */
+.th .x svg.i, .th .lupa svg.i, .th .tick svg.i{width:13px; height:13px}
+.th .x, .th .lupa, .th .tick{display:grid; place-items:center}
 .th .x{
   position:absolute; top:3px; right:3px; width:23px; height:23px; padding:0; border:0;
   border-radius:8px; background:rgba(0,0,0,.58); color:#fff; font-size:12px; line-height:23px; cursor:pointer;
@@ -214,6 +244,8 @@ body.dark .pasos li:before{color:var(--acc2)}
 .note .thumbs{margin-top:7px}
 .note .thumbs .th{width:60px; height:60px; border-radius:9px}
 .note .meta i{font-style:normal; color:var(--tx3)}
+.note .meta i svg.i{width:13px; height:13px; vertical-align:-2px}
+.note .acts button{display:grid; place-items:center}
 
 /* Visor de fotos */
 .fotoBox{width:100%; max-width:min(96vw,720px)}
@@ -230,6 +262,24 @@ body.dark .pasos li:before{color:var(--acc2)}
 }
 .navf:disabled{opacity:.3}
 
+/* Pre-informe con DeepSeek */
+.cardIA{border-color:var(--acc); background:linear-gradient(180deg,var(--accSoft),var(--card) 140px)}
+.preCarga{display:flex; gap:10px; align-items:center; font-size:14px; color:var(--tx2); margin-top:12px}
+#preEstado .aviso{margin-top:12px}
+.obs{margin:0; padding:0; list-style:none}
+.obs li{position:relative; padding-left:22px; font-size:13.5px; color:var(--tx2); margin-bottom:6px}
+.obs li svg.i{position:absolute; left:0; top:3px; width:15px; height:15px; color:var(--warn)}
+.btn:disabled{opacity:.65; cursor:default; transform:none}
+.aviso svg.i{margin-top:1px}
+
+/* Tarjeta plegable (otra IA) */
+details.plegable > summary{list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px}
+details.plegable > summary::-webkit-details-marker{display:none}
+details.plegable > summary h2{margin:0}
+details.plegable[open] > summary{margin-bottom:12px}
+details.plegable .flecha{color:var(--tx2); transition:transform .2s}
+details.plegable[open] .flecha{transform:rotate(180deg)}
+
 /* Toast */
 #toast{
   position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
@@ -241,18 +291,61 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 </style>
 </head>
 <body class="">
+<!-- ============ ÍCONOS (línea, se tiñen con el color del texto) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-libreta" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></symbol>
+  <symbol id="i-nota" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-generar" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-informes" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></symbol>
+  <symbol id="i-datos" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-nube" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9z"/></symbol>
+  <symbol id="i-nubeok" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9z"/><path d="m9.5 14 2 2 3.5-3.5"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5M3 12a9 9 0 0 0 15 6.7l3-2.7"/><path d="M16 16h5v5"/></symbol>
+  <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-luna" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-movil" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 7v7M9 11l3 3 3-3"/></symbol>
+  <symbol id="i-camara" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-galeria" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+  <symbol id="i-copiar" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-externo" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-formato" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></symbol>
+  <symbol id="i-chispa" viewBox="0 0 24 24"><path d="M11 3.5 12.9 8.6 18 10.5l-5.1 1.9L11 17.5l-1.9-5.1L4 10.5l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></symbol>
+  <symbol id="i-expandir" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+  <symbol id="i-contraer" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></symbol>
+  <symbol id="i-enviar" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></symbol>
+  <symbol id="i-imprimir" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+  <symbol id="i-guardar" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+  <symbol id="i-tijera" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-usuarios" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+  <symbol id="i-bajar" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-subir" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+  <symbol id="i-enlace" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+  <symbol id="i-compartir" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></symbol>
+  <symbol id="i-volver" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+  <symbol id="i-abajo" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-basura" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-lapiz" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+  <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</svg>
+
 
 <header class="top">
   <div class="in">
-    <div class="logo">📋</div>
+    <div class="logo"><svg class="i"><use href="#i-libreta"/></svg></div>
     <div>
       <h1>Informe François</h1>
-      <p>Notas del turno → prompt listo para pegar</p>
+      <p>Notas del turno y bitácora del día</p>
     </div>
     <div class="topbtns">
-      <button class="iconbtn" id="btnNube" title="Sincronía">☁️</button>
-      <button class="iconbtn" id="btnTheme" title="Modo claro / oscuro">🌙</button>
-      <button class="iconbtn" id="btnInstall" title="Instalar en el teléfono">📲</button>
+      <button class="iconbtn" id="btnNube" title="Sincronía" aria-label="Sincronía"><svg class="i"><use href="#i-nube"/></svg></button>
+      <button class="iconbtn" id="btnTheme" title="Modo claro / oscuro" aria-label="Modo claro / oscuro"><svg class="i"><use href="#i-luna"/></svg></button>
+      <button class="iconbtn" id="btnInstall" title="Instalar en el teléfono" aria-label="Instalar en el teléfono"><svg class="i"><use href="#i-movil"/></svg></button>
     </div>
   </div>
 </header>
@@ -260,10 +353,10 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 <div class="wrap">
 
   <nav class="tabs">
-    <button data-tab="notas" class="on">📝 Notas</button>
-    <button data-tab="generar">📄 Generar</button>
-    <button data-tab="informes">📤 Informes</button>
-    <button data-tab="datos">⚙️ Datos</button>
+    <button data-tab="notas" class="on"><svg class="i"><use href="#i-nota"/></svg><span>Notas</span></button>
+    <button data-tab="generar"><svg class="i"><use href="#i-generar"/></svg><span>Generar</span></button>
+    <button data-tab="informes"><svg class="i"><use href="#i-informes"/></svg><span>Informes</span></button>
+    <button data-tab="datos"><svg class="i"><use href="#i-datos"/></svg><span>Datos</span></button>
   </nav>
 
   <!-- ============ NOTAS ============ -->
@@ -282,8 +375,8 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <label class="f" for="fTexto">Qué pasó</label>
         <textarea id="fTexto" placeholder="Tal como la anotaste al paso. Ej: diferencia de 3.400 en el arqueo"></textarea>
         <div class="btns" style="margin-top:6px">
-          <button class="btn sec sm" id="btnCam">📷 Foto del hecho</button>
-          <button class="btn sec sm" id="btnGal">🖼️ Galería</button>
+          <button class="btn sec sm" id="btnCam"><svg class="i"><use href="#i-camara"/></svg> Foto del hecho</button>
+          <button class="btn sec sm" id="btnGal"><svg class="i"><use href="#i-galeria"/></svg> Galería</button>
         </div>
         <input type="file" id="fCam" accept="image/*" capture="environment" multiple class="hide">
         <input type="file" id="fGal" accept="image/*" multiple class="hide">
@@ -293,8 +386,8 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <label class="f" for="fMedida">Medida tomada en el momento <span style="text-transform:none;font-weight:600">(opcional)</span></label>
         <textarea id="fMedida" style="min-height:56px" placeholder="Qué hiciste ahí mismo. Ej: se hizo arqueo ciego de nuevo y se dejó la diferencia anotada"></textarea>
         <div class="btns" style="margin-top:6px">
-          <button class="btn sec sm" id="btnCamM">📷 Foto de la medida</button>
-          <button class="btn sec sm" id="btnGalM">🖼️ Galería</button>
+          <button class="btn sec sm" id="btnCamM"><svg class="i"><use href="#i-camara"/></svg> Foto de la medida</button>
+          <button class="btn sec sm" id="btnGalM"><svg class="i"><use href="#i-galeria"/></svg> Galería</button>
         </div>
         <input type="file" id="fCamM" accept="image/*" capture="environment" multiple class="hide">
         <input type="file" id="fGalM" accept="image/*" multiple class="hide">
@@ -327,28 +420,24 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   <!-- ============ GENERAR ============ -->
   <section id="tab-generar" class="hide">
     <div class="card">
-      <h2>Modo</h2>
+      <h2>Qué informe</h2>
       <div class="seg" id="segModo">
-        <button data-modo="DIARIO" class="on">DIARIO</button>
-        <button data-modo="SEMANAL">SEMANAL</button>
-        <button data-modo="CIERRE">CIERRE</button>
+        <button data-modo="DIARIO" class="on">Diario</button>
+        <button data-modo="SEMANAL">Semanal</button>
+        <button data-modo="CIERRE">Cierre</button>
       </div>
       <p class="hint" id="modoHint"></p>
-    </div>
-
-    <div class="card">
-      <h2>Período</h2>
-      <div id="boxDia" class="row">
+      <div id="boxDia" class="row mt">
         <div><label class="f" for="gDia">Día</label><input type="date" id="gDia"></div>
         <div style="flex:0 0 auto; align-self:flex-end"><button class="btn sec sm" data-atajo="hoy">Hoy</button> <button class="btn sec sm" data-atajo="ayer">Ayer</button></div>
       </div>
-      <div id="boxSemana" class="row hide">
+      <div id="boxSemana" class="row mt hide">
         <div><label class="f" for="gDesde">Desde</label><input type="date" id="gDesde"></div>
         <div><label class="f" for="gHasta">Hasta</label><input type="date" id="gHasta"></div>
         <div style="flex:0 0 auto; align-self:flex-end"><button class="btn sec sm" data-atajo="estaSem">Esta semana</button> <button class="btn sec sm" data-atajo="semPasada">Semana pasada</button></div>
       </div>
       <div class="mt">
-        <label class="f" for="gRango">Texto del período (va en el prompt)</label>
+        <label class="f" for="gRango">Cómo se escribe el período en el informe</label>
         <input type="text" id="gRango" placeholder="lun 18-08">
       </div>
       <p class="hint" id="conteo"></p>
@@ -359,35 +448,24 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <textarea id="gPend" placeholder="Uno por línea. El informe te dirá cuáles siguen apareciendo en la bitácora y cuáles no se volvieron a mencionar."></textarea>
     </div>
 
-    <div class="card">
-      <h2>Prompt</h2>
-      <label class="chk"><input type="checkbox" id="gTodos"> Incluir las reglas de los tres modos</label>
+    <div class="card cardIA" id="cardPre">
+      <h2><svg class="i"><use href="#i-chispa"/></svg> Pre-informe con DeepSeek</h2>
+      <p class="hint" style="margin-top:0">DeepSeek lee las notas del período con las reglas de la bitácora y deja el borrador abajo, en «Informe». Tú lo revisas, lo corriges si hace falta y lo mandas.</p>
       <div class="btns mt">
-        <button class="btn" id="btnCopiar">📋 Copiar prompt</button>
-        <button class="btn sec" id="btnCopiarNotas">Copiar solo las notas</button>
-        <button class="btn sec" id="btnTxt">Descargar .txt</button>
+        <button class="btn" id="btnPre"><svg class="i"><use href="#i-chispa"/></svg> <span>Armar pre-informe</span></button>
       </div>
-      <label class="f mt" style="margin-top:14px">Abrir el chat con el prompt copiado</label>
-      <div class="btns">
-        <button class="btn sec ia" data-ia="claude">🤖 Claude</button>
-        <button class="btn sec ia" data-ia="chatgpt">💬 ChatGPT</button>
-        <button class="btn sec ia" data-ia="gemini">✨ Gemini</button>
-        <button class="btn sec ia" data-ia="deepseek">🐋 DeepSeek</button>
-        <button class="btn sec ia" data-ia="copilot">🪟 Copilot</button>
-      </div>
-      <p class="hint">Copia el prompt y abre el chat en otra pestaña. En Claude queda escrito solo cuando el prompt es corto; en el resto pégalo tú (Ctrl + V, o mantener pulsado → Pegar en el teléfono).</p>
-      <pre class="out mt" id="preview"></pre>
+      <div id="preEstado"></div>
     </div>
 
-    <div class="card">
-      <h2>Informe de vuelta <span class="pill">pégalo y corrígelo</span></h2>
-      <p class="hint" style="margin:0 0 10px">Pega lo que te devolvió Claude, arréglalo si hace falta y mándalo. Abajo ves cómo va a llegar al grupo.</p>
+    <div class="card" id="cardInf">
+      <h2>Informe <span class="pill">revísalo y envíalo</span></h2>
+      <p class="hint" style="margin:0 0 10px">Aquí queda el pre-informe de DeepSeek, o lo que pegues de otro chat. Corrígelo si hace falta: abajo ves cómo va a llegar al grupo.</p>
       <div class="fmt">
         <button class="fmtb" data-fmt="negrita" title="Poner en negrita lo seleccionado">*N*</button>
         <button class="fmtb" data-fmt="titulo" title="Convertir la línea en título">*TÍTULO*</button>
         <button class="fmtb" data-fmt="vineta" title="Poner viñeta a la línea">•</button>
-        <button class="fmtb" data-fmt="arreglar" title="Pasar el texto a formato WhatsApp">🧹 Arreglar formato</button>
-        <button class="fmtb" data-fmt="expandir" title="Agrandar el cuadro">⛶</button>
+        <button class="fmtb" data-fmt="arreglar" title="Pasar el texto a formato WhatsApp"><svg class="i"><use href="#i-formato"/></svg> Arreglar formato</button>
+        <button class="fmtb" data-fmt="expandir" title="Agrandar el cuadro" aria-label="Agrandar el cuadro"><svg class="i"><use href="#i-expandir"/></svg></button>
       </div>
       <textarea id="rTexto" placeholder="*Bitácora François* — lun 17-08&#10;…"></textarea>
       <p class="hint" id="rCuenta"></p>
@@ -398,7 +476,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
       <div id="boxFotosInf" class="hide">
         <label class="f mt" style="margin-top:14px">Fotos del período <span id="fotosInfSub" style="text-transform:none;font-weight:600"></span></label>
-        <p class="hint" style="margin:0 0 2px">Tócalas para incluirlas o dejarlas fuera. Con 🔍 las ves grandes. Por WhatsApp van aparte, justo después del informe; en el PDF cada una queda bajo el punto que la menciona.</p>
+        <p class="hint" style="margin:0 0 2px">Tócalas para incluirlas o dejarlas fuera; con la lupa las ves grandes. Por WhatsApp van aparte, justo después del informe; en el PDF cada una queda bajo el punto que la menciona.</p>
         <div class="thumbs" id="thumbsInf"></div>
       </div>
 
@@ -407,16 +485,37 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
           <input type="text" id="rNum" placeholder="56912345678" inputmode="numeric"></div>
       </div>
       <div class="btns mt">
-        <button class="btn ok" id="btnWA">📲 Enviar por WhatsApp</button>
-        <button class="btn sec hide" id="btnFotosWA">📎 Enviar fotos</button>
-        <button class="btn sec" id="btnPDF">🖨️ PDF</button>
-        <button class="btn sec" id="btnCopiarInf">📋 Copiar</button>
-        <button class="btn sec" id="btnGuardarInf">💾 Guardar</button>
-        <button class="btn sec" id="btnSoloInf">✂️ Dejar solo el informe</button>
+        <button class="btn ok" id="btnWA"><svg class="i"><use href="#i-enviar"/></svg> Enviar por WhatsApp</button>
+        <button class="btn sec hide" id="btnFotosWA"><svg class="i"><use href="#i-clip"/></svg> <span>Enviar fotos</span></button>
+        <button class="btn sec" id="btnPDF"><svg class="i"><use href="#i-imprimir"/></svg> PDF</button>
+        <button class="btn sec" id="btnCopiarInf"><svg class="i"><use href="#i-copiar"/></svg> Copiar</button>
+        <button class="btn sec" id="btnGuardarInf"><svg class="i"><use href="#i-guardar"/></svg> Guardar</button>
+        <button class="btn sec" id="btnSoloInf"><svg class="i"><use href="#i-tijera"/></svg> Dejar solo el informe</button>
         <button class="btn sec" id="btnLimpiarInf">Limpiar</button>
       </div>
-      <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes. <b>📎 Enviar fotos</b> las manda aparte (el enlace de WhatsApp solo lleva texto) y <b>🖨️ PDF</b> arma una hoja con el informe y cada foto bajo el punto que le corresponde: en el teléfono elige «Guardar como PDF».</p>
+      <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes. <b>Enviar fotos</b> las manda aparte (el enlace de WhatsApp solo lleva texto) y <b>PDF</b> arma una hoja con el informe y cada foto bajo el punto que le corresponde: en el teléfono elige «Guardar como PDF».</p>
     </div>
+
+    <details class="card plegable" id="cardPrompt">
+      <summary><h2>Usar otra IA: copiar el prompt</h2><svg class="i flecha"><use href="#i-abajo"/></svg></summary>
+      <p class="hint" style="margin-top:0">Si prefieres Claude, ChatGPT u otro chat: copia el prompt, pégalo allá y trae la respuesta al cuadro «Informe» (al pegar en el cuadro vacío, la app quita lo que el chat agrega antes y después).</p>
+      <label class="chk mt"><input type="checkbox" id="gTodos"> Incluir las reglas de los tres modos</label>
+      <div class="btns mt">
+        <button class="btn sec" id="btnCopiar"><svg class="i"><use href="#i-copiar"/></svg> Copiar prompt</button>
+        <button class="btn sec" id="btnCopiarNotas">Copiar solo las notas</button>
+        <button class="btn sec" id="btnTxt"><svg class="i"><use href="#i-bajar"/></svg> Descargar .txt</button>
+      </div>
+      <label class="f mt" style="margin-top:14px">Abrir el chat con el prompt copiado</label>
+      <div class="btns">
+        <button class="btn sec ia" data-ia="claude">Claude <svg class="i"><use href="#i-externo"/></svg></button>
+        <button class="btn sec ia" data-ia="chatgpt">ChatGPT <svg class="i"><use href="#i-externo"/></svg></button>
+        <button class="btn sec ia" data-ia="gemini">Gemini <svg class="i"><use href="#i-externo"/></svg></button>
+        <button class="btn sec ia" data-ia="deepseek">DeepSeek <svg class="i"><use href="#i-externo"/></svg></button>
+        <button class="btn sec ia" data-ia="copilot">Copilot <svg class="i"><use href="#i-externo"/></svg></button>
+      </div>
+      <p class="hint">Copia el prompt y abre el chat en otra pestaña. En Claude y ChatGPT queda escrito solo cuando el prompt es corto; en el resto pégalo tú (Ctrl + V, o mantener pulsado → Pegar en el teléfono).</p>
+      <pre class="out mt" id="preview"></pre>
+    </details>
   </section>
 
   <!-- ============ INFORMES ============ -->
@@ -431,7 +530,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint" style="margin-top:0" id="syncEstado">Cargando…</p>
       <p class="hint hide" id="syncErr" style="color:var(--danger); font-weight:600"></p>
       <p class="hint hide" id="syncResumen" style="font-weight:600"></p>
-      <div class="btns hide" id="syncErrBtns"><button class="btn sec sm" id="btnCopiarErr">📋 Copiar el detalle</button></div>
+      <div class="btns hide" id="syncErrBtns"><button class="btn sec sm" id="btnCopiarErr"><svg class="i"><use href="#i-copiar"/></svg> Copiar el detalle</button></div>
       <div id="syncLogin" class="hide">
         <div class="row">
           <div style="flex:2 1 220px"><label class="f" for="syEmail">Correo</label>
@@ -448,7 +547,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <div id="syncOn" class="hide">
         <label class="chk"><input type="checkbox" id="sySyncFotos" checked> Sincronizar también las fotos</label>
         <div class="btns mt">
-          <button class="btn" id="btnSync">🔄 Sincronizar ahora</button>
+          <button class="btn" id="btnSync"><svg class="i"><use href="#i-sync"/></svg> Sincronizar ahora</button>
           <button class="btn sec" id="btnSalir">Cerrar sesión</button>
         </div>
         <p class="hint">Se sincroniza sola al abrir la app y cada vez que agregas o cambias algo. Sin internet sigues anotando igual: sube cuando vuelva la señal.</p>
@@ -459,8 +558,8 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint" style="margin-top:0" id="perfilEstado"></p>
       <div id="listaPerfiles"></div>
       <div class="btns mt">
-        <button class="btn sec" id="btnNuevoPerfil">➕ Agregar persona</button>
-        <button class="btn sec hide" id="btnCambiarPerfil">🔁 Cambiar de usuario</button>
+        <button class="btn sec" id="btnNuevoPerfil"><svg class="i"><use href="#i-mas"/></svg> Agregar persona</button>
+        <button class="btn sec hide" id="btnCambiarPerfil"><svg class="i"><use href="#i-usuarios"/></svg> Cambiar de usuario</button>
       </div>
       <label class="chk mt hide" id="boxVerTodo"><input type="checkbox" id="syVerTodo"> Ver también las notas de los demás</label>
       <p class="hint" id="quienAviso" style="color:var(--danger); font-weight:600"></p>
@@ -472,8 +571,8 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint" style="margin-top:0" id="statTxt"></p>
       <label class="chk"><input type="checkbox" id="gFotos" checked> Incluir las fotos en el respaldo <span style="color:var(--tx3)">(archivo mucho más pesado)</span></label>
       <div class="btns mt">
-        <button class="btn sec" id="btnExport">⬇️ Exportar JSON</button>
-        <button class="btn sec" id="btnImport">⬆️ Importar JSON</button>
+        <button class="btn sec" id="btnExport"><svg class="i"><use href="#i-bajar"/></svg> Exportar JSON</button>
+        <button class="btn sec" id="btnImport"><svg class="i"><use href="#i-subir"/></svg> Importar JSON</button>
         <input type="file" id="fileImport" accept="application/json" class="hide">
       </div>
       <p class="hint">Las notas se guardan solo en este dispositivo (localStorage) y las fotos en el almacén del navegador. Exporta de vez en cuando.</p>
@@ -482,7 +581,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <h2>App en el teléfono</h2>
       <p class="hint" style="margin-top:0" id="instEstado"></p>
       <div class="btns mt">
-        <button class="btn" id="btnInstall2">📲 Instalar en el teléfono</button>
+        <button class="btn" id="btnInstall2"><svg class="i"><use href="#i-movil"/></svg> Instalar en el teléfono</button>
       </div>
     </div>
     <div class="card">
@@ -503,18 +602,18 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
   </section>
 
-  <footer>François · La Florida — datos locales, sin servidor.</footer>
+  <footer>François · La Florida — las notas viven en tu aparato y, con cuenta, también en la nube.</footer>
 </div>
 
 <!-- ============ INSTALAR ============ -->
 <div id="ovlInstall" class="ovl hide">
   <div class="ovlCard">
-    <h2>📲 Instalar en el teléfono</h2>
+    <h2>Instalar en el teléfono</h2>
     <div id="instPasos"></div>
     <div class="btns mt">
       <button class="btn hide" id="btnInstallGo">Instalar ahora</button>
-      <button class="btn sec" id="btnCopiarUrl">🔗 Copiar dirección</button>
-      <button class="btn sec hide" id="btnCompartir">↗️ Compartir</button>
+      <button class="btn sec" id="btnCopiarUrl"><svg class="i"><use href="#i-enlace"/></svg> Copiar dirección</button>
+      <button class="btn sec hide" id="btnCompartir"><svg class="i"><use href="#i-compartir"/></svg> Compartir</button>
       <button class="btn sec" id="btnCerrarInst">Cerrar</button>
     </div>
   </div>
@@ -531,7 +630,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <input type="password" id="qClave" autocomplete="current-password" placeholder="••••••">
       <div class="btns mt">
         <button class="btn" id="btnEntrarPerfil">Entrar</button>
-        <button class="btn sec" id="btnVolverPerfil">← Volver</button>
+        <button class="btn sec" id="btnVolverPerfil"><svg class="i"><use href="#i-volver"/></svg> Volver</button>
       </div>
     </div>
     <div id="quienNuevo" class="hide">
@@ -559,9 +658,9 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <button class="navf" id="fotoNext" title="Siguiente">›</button>
     </div>
     <div class="fotoBar">
-      <button class="btn sec" id="fotoShare">↗️ Compartir</button>
-      <button class="btn sec" id="fotoDown">⬇️ Guardar</button>
-      <button class="btn danger" id="fotoDel">🗑️ Borrar foto</button>
+      <button class="btn sec" id="fotoShare"><svg class="i"><use href="#i-compartir"/></svg> Compartir</button>
+      <button class="btn sec" id="fotoDown"><svg class="i"><use href="#i-bajar"/></svg> Guardar</button>
+      <button class="btn danger" id="fotoDel"><svg class="i"><use href="#i-basura"/></svg> Borrar foto</button>
       <button class="btn sec" id="fotoClose">Cerrar</button>
     </div>
   </div>
@@ -569,6 +668,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
 <div id="toast"></div>
 
+<script src="prompt.js"></script>
 <script>
 /* ================= Estado ================= */
 var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1', BORR='if_borrador_v1', TOMB='if_borrados_v1',
@@ -578,7 +678,8 @@ var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
 
 var notas=load(KEY,[]);
 var informes=load(INF,[]);
-var prefs=load(PREF,{dark:false, wa:''});
+/* La primera vez, el tema sigue al del teléfono; después manda el botón */
+var prefs=load(PREF,{dark:!!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches), wa:''});
 /* Borrados: id → cuándo se borró. Sin esto, al sincronizar la nube
    devolvería la nota borrada y reviviría. */
 var borrados=load(TOMB,{n:{},i:{}});
@@ -640,6 +741,7 @@ function savePerf(){ localStorage.setItem(PERF,JSON.stringify(perfiles)); }
 function ahora(){ return new Date().toISOString(); }
 function ms(x){ return x ? (Date.parse(x)||0) : 0; }
 function $(s){ return document.querySelector(s); }
+function ico(n){ return '<svg class="i" aria-hidden="true"><use href="#i-'+n+'"/></svg>'; }
 function toast(m){ var t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('on');},1900); }
 
 /* ================= Fechas ================= */
@@ -806,9 +908,9 @@ function agregarFotos(files, donde){
 /* --- Miniaturas --- */
 function thumbHTML(id, cerrable, extra){
   var t=thumbs[id];
-  var dentro = t ? '<img src="'+t.t+'" alt="">' : '<span class="cargando">⏳</span>';
+  var dentro = t ? '<img src="'+t.t+'" alt="">' : '<span class="cargando"><span class="rueda"></span></span>';
   return '<button class="th" '+(extra||'')+' title="Ver la foto">'+dentro+
-         (cerrable?'<span class="x" data-quitar="'+id+'">✕</span>':'')+'</button>';
+         (cerrable?'<span class="x" data-quitar="'+id+'">'+ico('x')+'</span>':'')+'</button>';
 }
 function renderThumbsForm(){
   var c=$('#fThumbs'); if(!c) return;
@@ -898,15 +1000,15 @@ function renderFotosInf(){
   if(!arr.length) return;
   var k=fotosMarcadas().length;
   $('#fotosInfSub').textContent='· '+k+' de '+arr.length+' marcada'+(k===1?'':'s');
-  $('#btnFotosWA').textContent='📎 Enviar '+(k===1?'la foto':k+' fotos');
+  $('#btnFotosWA').innerHTML=ico('clip')+' Enviar '+(k===1?'la foto':k+' fotos');
   $('#btnFotosWA').disabled = !k;
   $('#thumbsInf').innerHTML = arr.map(function(f,i){
     var on = selInf[f.id]!==false;
     var pista = f.donde==='m' ? 'Respalda la medida: '+(f.nota.medida||'') : f.nota.texto;
     return '<button class="th'+(on?' on':'')+'" data-selfoto="'+f.id+'" title="'+esc(pista).slice(0,90)+'">'+
       '<img src="'+thumbs[f.id].t+'" alt="">'+
-      '<span class="lupa" data-verinf="'+i+'">🔍</span>'+
-      '<span class="tick">'+(on?'✓':'')+'</span></button>';
+      '<span class="lupa" data-verinf="'+i+'">'+ico('lupa')+'</span>'+
+      '<span class="tick">'+(on?ico('check'):'')+'</span></button>';
   }).join('');
 }
 
@@ -1064,6 +1166,35 @@ function tiraFotos(fs){
   }).join('')+'</div>';
 }
 
+/* En el CIERRE los temas para la reunión vienen como «N° | CATEGORÍA | … | Evidencia»:
+   en el PDF van como tabla, que es como se leen en la reunión. */
+var EIS_COLS=['N°','Categoría','Qué pasó','Acuerdo propuesto','Responsable','Evidencia'];
+function pdfCuerpo(lineas){
+  var out='', texto=[], filas=[];
+  function conTexto(){ if(texto.length){ out+='<div class="cuerpo">'+waHTML(texto.join('\n'))+'</div>'; texto=[]; } }
+  function conTabla(){
+    if(!filas.length) return;
+    out+='<table class="eis"><thead><tr>'+EIS_COLS.map(function(c){ return '<th>'+c+'</th>'; }).join('')+'</tr></thead><tbody>'+
+      filas.map(function(f){ return '<tr>'+f.map(function(c){ return '<td>'+waHTML(c)+'</td>'; }).join('')+'</tr>'; }).join('')+
+      '</tbody></table>';
+    filas=[];
+  }
+  lineas.forEach(function(l){
+    if(/^\s*N[°ºo]?\.?\s*\|/i.test(l)) return;                  // el encabezado lo pone la tabla
+    var m=/^\s*(\d+)\s*[.)]?\s*\|(.*)$/.exec(l);
+    if(m){
+      var c=[m[1]].concat(m[2].split('|').map(function(x){ return x.trim(); }));
+      if(c.length>6) c=c.slice(0,5).concat([c.slice(5).join(' | ')]);
+      while(c.length<6) c.push('');
+      conTexto(); filas.push(c); return;
+    }
+    if(filas.length && !l.trim()) return;                       // línea en blanco entre filas
+    conTabla(); texto.push(l);
+  });
+  conTabla(); conTexto();
+  return out;
+}
+
 function hojaPDF(txt, fotos){
   var rango=$('#gRango').value.trim();
   var titulo='Bitácora François · '+gen.modo+(rango?' — '+rango:'');
@@ -1072,11 +1203,11 @@ function hojaPDF(txt, fotos){
   u.lineas.forEach(function(l, i){
     buf.push(l);
     if(u.dest[i]){
-      cuerpo+='<div class="cuerpo">'+waHTML(buf.join('\n'))+'</div>'+tiraFotos(u.dest[i]);
+      cuerpo+=pdfCuerpo(buf)+tiraFotos(u.dest[i]);
       buf=[];
     }
   });
-  if(buf.length) cuerpo+='<div class="cuerpo">'+waHTML(buf.join('\n'))+'</div>';
+  if(buf.length) cuerpo+=pdfCuerpo(buf);
   var colocadas=fotos.length-u.sueltas.length;
   var html='<!doctype html><html lang="es"><head><meta charset="utf-8"><title>'+esc(titulo)+'</title><style>'+
     '@page{margin:14mm}'+
@@ -1085,6 +1216,11 @@ function hojaPDF(txt, fotos){
     '.sub{font-size:9.5pt; color:#777; margin:0 0 14px}'+
     '.cuerpo{white-space:pre-wrap; word-break:break-word; font-size:11.5pt}'+
     '.cuerpo b{color:#000}'+
+    'table.eis{width:100%; border-collapse:collapse; margin:4px 0 14px; font-size:9.5pt; line-height:1.35}'+
+    'table.eis th{background:#f3ebe2; color:#7a4a22; text-align:left; padding:5px 6px; border:1px solid #e0d4c6}'+
+    'table.eis td{padding:5px 6px; border:1px solid #e6dccf; vertical-align:top}'+
+    'table.eis tr{page-break-inside:avoid; break-inside:avoid}'+
+    'table.eis td:first-child{text-align:center; color:#7a4a22; font-weight:700}'+
     'h2{font-size:12pt; color:#7a4a22; margin:20px 0 8px; border-top:1px solid #ddd; padding-top:10px}'+
     'figure{margin:0; page-break-inside:avoid; break-inside:avoid}'+
     'figure img{width:100%; object-fit:contain; background:#f2ede8; border:1px solid #ddd; border-radius:4px}'+
@@ -1253,7 +1389,7 @@ function renderLista(){
   arr = ordenadas(arr).reverse();
 
   if(!arr.length){
-    $('#lista').innerHTML='<div class="empty">'+(notas.length?'Nada con ese filtro.':'Todavía no hay notas. Empieza arriba. ☝️')+'</div>';
+    $('#lista').innerHTML='<div class="empty">'+(notas.length?'Nada con ese filtro.':'Todavía no hay notas. Empieza arriba.')+'</div>';
     return;
   }
   var html='', dia='';
@@ -1273,68 +1409,21 @@ function renderLista(){
     html+='<div class="note"><div class="body">'+
       '<div class="meta">'+(n.hora||'—')+' · <b>'+cap(n.area)+'</b>'+
         (n.quien?' · '+esc(n.quien):'')+
-        (fs.length+fm.length?' · <i>📷 '+(fs.length+fm.length)+'</i>':'')+'</div>'+
+        (fs.length+fm.length?' · <i>'+ico('camara')+' '+(fs.length+fm.length)+'</i>':'')+'</div>'+
       '<div class="txt">'+esc(n.texto)+'</div>'+
       tira(fs,'')+
       (n.medida?'<div class="med">'+esc(n.medida)+'</div>':'')+
       tira(fm,'m')+'</div>'+
-      '<div class="acts"><button data-edit="'+n.id+'" title="Editar">✏️</button>'+
-      '<button data-del="'+n.id+'" title="Borrar">🗑️</button></div></div>';
+      '<div class="acts"><button data-edit="'+n.id+'" title="Editar" aria-label="Editar">'+ico('lapiz')+'</button>'+
+      '<button data-del="'+n.id+'" title="Borrar" aria-label="Borrar">'+ico('basura')+'</button></div></div>';
   });
   $('#lista').innerHTML=html;
 }
 function esc(s){ return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
 
-/* ================= Prompt maestro ================= */
-var REGLAS =
-'REGLAS QUE VALEN PARA LOS TRES MODOS\n\n'+
-'1. Español de Chile, registro directo y sobrio. Sin introducciones, sin cierres, sin frases de relleno tipo "en resumen" o "cabe destacar".\n'+
-'2. No inventes nada: ni causas, ni nombres, ni horas, ni cifras que no estén en las notas. Si una nota es ambigua, déjala casi textual y márcala con "(revisar)".\n'+
-'3. Junta en un solo punto las notas que hablan de lo mismo. Si un tema se repite en distintos días, dilo con el dato: "3 veces esta semana (mar, jue, vie)".\n'+
-'4. Si una nota posterior contradice o resuelve a una anterior, gana la más nueva y lo señalas: "resuelto el jueves".\n'+
-'5. Terminología interna que debes respetar tal cual: 86 = producto agotado; 101 = producto prioritario de vender o sugerir; arqueo ciego = el cajero no ajusta ni borra mesas para calzar la caja.\n'+
-'6. Formato WhatsApp: negrita con un solo asterisco a cada lado (*ASÍ*). Nada de #, ni tablas, ni doble asterisco, ni viñetas de markdown. Cada punto parte con "• ".\n'+
-'7. Los nombres de personas van tal como aparecen en las notas. Si una nota apunta a alguien de forma crítica, redáctala sobre el hecho y no sobre la persona.\n'+
-'8. Nunca cierres con preguntas al lector ni con ofrecimientos.\n'+
-'9. Algunas notas traen, después de "→ MEDIDA:", lo que se hizo en el momento. Eso ya está hecho: menciónalo en el mismo punto y en pasado ("se hizo X"), y no lo pongas como pendiente. Si la medida deja el tema cerrado, trátalo como resuelto; si solo lo parcha, dilo y deja el pendiente de fondo. Si una nota no trae medida, no supongas que se hizo algo.\n'+
-'10. La marca "[con foto]" o "[con N fotos]" significa que hay respaldo fotográfico guardado en el teléfono. Va pegada a lo que respalda: si aparece después del hecho, la foto respalda el hecho; si aparece después de la medida, respalda la medida. No describas la foto ni supongas lo que muestra: solo, si ese punto llega al informe, cierra la línea con "(hay foto)".\n'+
-'11. Salud, licencias, accidentes y temas contractuales o disciplinarios: van en el tema PERSONAL con el detalle administrativo que traiga la nota (fechas, trámite, qué falta resolver). Del estado de salud, solo lo que la nota dice y lo que afecta la operación; no agregues diagnósticos, causas ni juicios.\n'+
-'12. Algunas notas terminan en "— anotó X": ese es quien registró la nota, no necesariamente quien protagonizó el hecho. Nunca lo trates como responsable ni lo menciones por mencionarlo. Úsalo solo cuando sirva: si dos notas del mismo tema se contradicen, di quién anotó cada una; y en el modo CIERRE, cuando un tema quede con dudas, agrega entre paréntesis a quién preguntarle ("preguntar a X").';
-
-function bloqueDiario(rango){ return (
-'SI EL MODO ES "DIARIO"\n\n'+
-'Salida máxima 180 palabras.\n\n'+
-'*Bitácora François* — '+rango+'\n'+
-'Dos o tres líneas corridas contando cómo estuvo el día: carga de trabajo, lo que se salió de lo normal, cómo se cerró.\n\n'+
-'Después, los puntos agrupados por tema (usa solo los temas que aparezcan: SALA, COCINA, CAJA, PERSONAL, PROVEEDORES, EQUIPOS, PRODUCTO). Encabezado del tema en negrita y mayúsculas, y debajo sus puntos con "• ".\n\n'+
-'Cierra con:\n*PENDIENTES PARA MAÑANA*\n• lo que quedó abierto, con responsable solo si la nota lo dice.\n\n'+
-'Si el día no tuvo nada relevante, dilo en una línea y no rellenes.'); }
-
-function bloqueSemanal(rango){ return (
-'SI EL MODO ES "SEMANAL"\n\n'+
-'Salida máxima 350 palabras.\n\n'+
-'*Bitácora François* — semana del '+rango+'\n'+
-'Tres o cuatro líneas con el pulso de la semana: qué se repitió, qué mejoró, qué se cayó.\n\n'+
-'Puntos agrupados por tema, igual que en el modo diario, pero ya consolidados: nada de repetir el mismo hecho en días distintos.\n\n'+
-'Cierra con:\n*PENDIENTES*\n• lo que sigue abierto.\n'+
-'*POSITIVOS*\n• reconocimientos concretos al equipo, con el hecho que los respalda. Si no hay, omite la sección entera.'); }
-
-function bloqueCierre(){ return (
-'SI EL MODO ES "CIERRE"\n\n'+
-'Este no va al grupo: es el insumo para la reunión del lunes. Puede ser largo. Estructura exacta:\n\n'+
-'RESUMEN DE LA SEMANA\n'+
-'Cuatro a seis líneas de prosa. Qué pasó, qué patrón se ve, qué quedó sin resolver.\n\n'+
-'TEMAS PARA LA REUNIÓN\n'+
-'Ordenados por prioridad Eisenhower, en tres bloques: HACER AHORA / PLANIFICAR / DELEGAR Y SEGUIR. Un tema por línea numerada, con estos campos separados por " | ":\n'+
-'N° | CATEGORÍA | Qué pasó (una frase) | Acuerdo propuesto (una frase, en infinitivo) | Responsable sugerido (solo si la nota lo dice, si no: "por definir") | Evidencia (fechas de las notas que lo respaldan)\n\n'+
-'El acuerdo propuesto es una propuesta tuya para discutir, no una decisión tomada; redáctalo como acción concreta y verificable, no como intención.\n\n'+
-'RESUELTOS (SOLO CONFIRMAR)\n'+
-'Lo que se cerró durante la semana y solo hay que dar por visto.\n\n'+
-'POSITIVOS\n'+
-'Hechos concretos para reconocer al equipo.\n\n'+
-'FALTA INFORMACIÓN\n'+
-'Preguntas que las notas dejan abiertas y que conviene resolver en la reunión. Si no falta nada, escribe "Sin vacíos".'); }
-
+/* ================= Prompt maestro =================
+   Las reglas y los tres modos viven en prompt.js: el mismo texto sirve para
+   «Copiar prompt» y para el pre-informe de DeepSeek (api/preinforme.js). */
 function marcaFoto(k){ return k ? ' [con '+(k===1?'foto':k+' fotos')+']' : ''; }
 function lineaNota(n){
   var kh=(n.fotos||[]).length, km=(n.fotosm||[]).length;
@@ -1364,25 +1453,14 @@ function textoNotas(){
   return arr.map(lineaNota).join('\n');
 }
 
-function construirPrompt(){
-  var rango=$('#gRango').value.trim() || '(sin período)';
-  var modo=gen.modo;
-  var partes=[];
-  partes.push('Eres el asistente de bitácora de François, cafetería, pastelería y panadería en La Florida, Santiago de Chile. Recibes las notas que el supervisor tomó al paso durante el turno: desordenadas, cortas, a veces repetidas o incompletas.');
-  partes.push('MODO: '+modo+'\nPERÍODO: '+rango);
-  partes.push(REGLAS);
-  if($('#gTodos').checked){
-    partes.push(bloqueDiario(rango)); partes.push(bloqueSemanal(rango)); partes.push(bloqueCierre());
-  } else {
-    partes.push(modo==='DIARIO'?bloqueDiario(rango):(modo==='SEMANAL'?bloqueSemanal(rango):bloqueCierre()));
-  }
-  if(modo==='CIERRE'){
-    var pend=$('#gPend').value.trim();
-    if(pend) partes.push('PENDIENTES DE LA REUNIÓN PASADA\n'+pend+'\n\nCruza estos pendientes con las notas del período: di cuáles siguen apareciendo (con la evidencia) y cuáles no se volvieron a mencionar.');
-  }
-  partes.push('NOTAS DEL PERÍODO\n'+textoNotas());
-  return partes.join('\n\n');
+/* Lo que se le pasa al prompt: el mismo pedido sirve para copiar y para DeepSeek */
+function pedidoInforme(){
+  return { modo:gen.modo, rango:$('#gRango').value.trim(),
+           notas:notasDelPeriodo().map(lineaNota).join('\n'),
+           pendientes: gen.modo==='CIERRE' ? $('#gPend').value.trim() : '',
+           todos:$('#gTodos').checked };
 }
+function construirPrompt(){ return PROMPT_FR.armar(pedidoInforme()); }
 
 function renderPreview(){
   var arr=notasDelPeriodo();
@@ -1418,32 +1496,33 @@ function setModo(m){
     ? 'Resumen del día para mandar al grupo al cierre del turno.'
     : (m==='SEMANAL' ? 'Resumen de la semana para mandar al grupo (domingo).'
                      : 'Informe de cierre: insumo para la reunión del lunes. No va al grupo.');
-  autoRango(); renderPreview();
+  autoRango(); renderPreview(); preLimpiar();
 }
 
 /* ================= Informes ================= */
-/* Deja solo el mensaje: quita el texto que venga antes o después del informe. */
+/* Dónde parte el informe: «*Bitácora François*» (diario y semanal) o
+   «RESUMEN DE LA SEMANA» (cierre), con o sin negrita, con uno o dos asteriscos. */
+var RX_INICIO=/^\s*\**\s*Bit[áa]cora\s+Fran/i;
+var RX_CIERRE=/^\s*\**\s*RESUMEN DE LA SEMANA\s*\**\s*:?\s*$/i;
+function esCierreTxt(t){ return RX_CIERRE.test(((t||'').replace(/\r/g,'').trim().split('\n')[0])||''); }
+/* Lo que agrega un chat alrededor del informe: «Aquí tienes…», «¿Quieres que…?», «Nota: …».
+   Solo frases dirigidas a quien pidió el informe: una pregunta del informe
+   («¿Quién recibe el gas?», en FALTA INFORMACIÓN) no calza y se queda. */
+var RX_CHARLA=/^\s*(¿\s*(quieres|te |necesitas|deseas|prefieres|algo m[aá]s|ajusto|lo |la )|notas?\s*:|observaci[oó]n(es)?\s*:|aclaraci[oó]n|si (quieres|necesitas|prefieres|te sirve|deseas)|av[ií]same|espero que|puedo |cualquier (cosa|duda|ajuste)|quedo atent|aqu[ií] (tienes|est[aá]|va)|te dejo|he (armado|redactado|preparado)|a continuaci[oó]n|-{3,}\s*$|_{3,}\s*$)/i;
+/* Deja solo el mensaje: quita el texto que venga antes o después del informe.
+   Nunca corta contenido: solo párrafos enteros que son conversación del chat. */
 function soloInforme(t){
   t=(t||'').replace(/\r/g,'').trim();
   var bloque=t.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
   if(bloque) t=bloque[1].trim();                                   // vino dentro de ``` ```
   var lineas=t.split('\n');
-  var ini=-1;
   for(var i=0;i<lineas.length;i++){
-    if(/^\s*\*Bit[áa]cora/i.test(lineas[i]) || /^\s*RESUMEN DE LA SEMANA\s*$/i.test(lineas[i])){ ini=i; break; }
+    if(RX_INICIO.test(lineas[i]) || RX_CIERRE.test(lineas[i])){ lineas=lineas.slice(i); break; }
   }
-  if(ini>0) lineas=lineas.slice(ini);
-  var esCierre=/^\s*RESUMEN DE LA SEMANA/i.test(lineas[0]||'');
-  if(!esCierre){                                                   // DIARIO y SEMANAL: cortar la cola
-    var fin=-1;
-    for(var j=lineas.length-1;j>=0;j--){
-      var l=lineas[j].trim();
-      if(!l) continue;
-      if(/^[•*]/.test(l)){ fin=j; break; }
-    }
-    if(fin>=0) lineas=lineas.slice(0,fin+1);
-  }
-  return lineas.join('\n').trim();
+  var par=lineas.join('\n').split(/\n[ \t]*\n/);
+  while(par.length>1 && RX_CHARLA.test(par[0])) par.shift();
+  while(par.length>1 && RX_CHARLA.test(par[par.length-1])) par.pop();
+  return par.join('\n\n').trim();
 }
 function aplicarSolo(silencioso){
   var antes=$('#rTexto').value, despues=soloInforme(antes);
@@ -1473,7 +1552,7 @@ function vistaInf(){
 
 /* --- Revisión del formato WhatsApp --- */
 function problemasWA(t){
-  var p=[], cierre=/^\s*RESUMEN DE LA SEMANA/i.test(t);
+  var p=[], cierre=esCierreTxt(t);
   if(/\*\*[^*\n]+\*\*/.test(t)) p.push('Hay negritas con doble asterisco (**así**): WhatsApp las muestra con los asteriscos.');
   if(/^\s{0,3}#{1,6}\s+\S/m.test(t)) p.push('Hay encabezados con # : WhatsApp no los convierte en título.');
   if(/^\s*[-–—]\s+\S/m.test(t)) p.push('Hay viñetas con guion: en el grupo se usan con «• ».');
@@ -1490,14 +1569,14 @@ function avisosInf(){
   if(!t){ box.innerHTML=''; return; }
   var p=problemasWA(t);
   box.innerHTML = p.length
-    ? p.map(function(x){ return '<div class="aviso"><span>⚠️</span><span>'+esc(x)+'</span></div>'; }).join('')
-    : '<div class="aviso ok"><span>✓</span><span>El formato está listo para WhatsApp.</span></div>';
+    ? p.map(function(x){ return '<div class="aviso">'+ico('alerta')+'<span>'+esc(x)+'</span></div>'; }).join('')
+    : '<div class="aviso ok">'+ico('check')+'<span>El formato está listo para WhatsApp.</span></div>';
 }
 
 /* --- Pasar el texto a formato WhatsApp --- */
 function arreglarWA(t){
   t=(t||'').replace(/\r/g,'');
-  var cierre=/^\s*RESUMEN DE LA SEMANA/i.test(t);
+  var cierre=esCierreTxt(t);
   t=t.replace(/\*\*([^*\n]+)\*\*/g,'*$1*');
   t=t.replace(/^\s{0,3}#{1,6}\s*(.+?)\s*#*\s*$/gm,'*$1*');
   t=t.replace(/^\s*[-–—]\s+/gm,'• ');
@@ -1545,7 +1624,7 @@ function abrirQuien(forzado){
   $('#quienLista').innerHTML = perfilesVivos().map(function(p){
     return '<button class="btn sec" style="width:100%; margin-bottom:8px" data-perfil="'+p.id+'">'+
            esc(p.nombre)+(p.admin?' · administra la app':'')+'</button>';
-  }).join('') + '<button class="btn sec" style="width:100%" id="btnNuevoPerfil2">➕ Agregar persona</button>' +
+  }).join('') + '<button class="btn sec" style="width:100%" id="btnNuevoPerfil2">'+ico('mas')+' Agregar persona</button>' +
     (forzado ? '' : '<div class="btns mt"><button class="btn sec" id="btnCerrarQuien">Cerrar</button></div>');
   $('#ovlQuien').classList.remove('hide');
 }
@@ -1633,7 +1712,7 @@ function pintarPerfiles(){
     return '<div class="note"><div class="body"><div class="txt">'+esc(p.nombre)+
       (p.admin?' <span class="hint" style="font-weight:600">· administra la app</span>':'')+
       (p.clave?'':' <span class="hint">· sin clave</span>')+'</div></div>'+
-      '<div class="acts"><button data-delperfil="'+p.id+'" title="Borrar">🗑️</button></div></div>';
+      '<div class="acts"><button data-delperfil="'+p.id+'" title="Borrar" aria-label="Borrar">'+ico('basura')+'</button></div></div>';
   }).join('');
   $('#btnCambiarPerfil').classList.toggle('hide', !vivos.length);
   $('#boxVerTodo').classList.toggle('hide', !soyAdmin());
@@ -1672,7 +1751,7 @@ function enviarWA(txt){
 function renderInformes(){
   var lista=mias(informes);
   if(!lista.length){
-    $('#listaInf').innerHTML='<div class="empty">Todavía no guardas informes.<br>Pega en «Generar» el texto que te devuelva Claude y mándalo desde ahí. 📄</div>';
+    $('#listaInf').innerHTML='<div class="empty">Todavía no guardas informes.<br>Arma el pre-informe en «Generar», revísalo y mándalo desde ahí: queda guardado aquí.</div>';
     return;
   }
   $('#listaInf').innerHTML = lista.map(function(i){
@@ -1682,9 +1761,9 @@ function renderInformes(){
       '<span>guardado '+etiqueta(hoyISO(f))+' · '+p2(f.getHours())+':'+p2(f.getMinutes())+'</span></div>'+
       '<pre class="out" style="max-height:210px">'+esc(i.texto)+'</pre>'+
       '<div class="btns mt">'+
-        '<button class="btn ok sm" data-wa="'+i.id+'">📲 WhatsApp</button>'+
-        '<button class="btn sec sm" data-copyinf="'+i.id+'">📋 Copiar</button>'+
-        '<button class="btn sec sm" data-txtinf="'+i.id+'">⬇️ .txt</button>'+
+        '<button class="btn ok sm" data-wa="'+i.id+'">'+ico('enviar')+' WhatsApp</button>'+
+        '<button class="btn sec sm" data-copyinf="'+i.id+'">'+ico('copiar')+' Copiar</button>'+
+        '<button class="btn sec sm" data-txtinf="'+i.id+'">'+ico('bajar')+' .txt</button>'+
         '<button class="btn danger sm" data-delinf="'+i.id+'">Borrar</button>'+
       '</div></div>';
   }).join('');
@@ -1711,6 +1790,69 @@ function abrirIA(id){
   window.open(url, '_blank', 'noopener');
 }
 
+/* ================= Pre-informe con DeepSeek =================
+   Manda las notas del período —las mismas líneas del prompt— a api/preinforme,
+   que guarda la clave de DeepSeek en Vercel: la clave nunca pasa por el teléfono.
+   Pide la sesión de la cuenta de la app, para que nadie de afuera gaste el saldo. */
+var pre={ocupado:false, revisado:false};
+function preEstado(html){ $('#preEstado').innerHTML=html||''; }
+function preAviso(tipo, icono, html){
+  return '<div class="aviso'+(tipo?' '+tipo:'')+'">'+ico(icono)+'<span>'+html+'</span></div>';
+}
+function preIrDatos(){ return '<div class="btns mt"><button class="btn sec sm" data-ir="datos">Ir a Datos</button></div>'; }
+/* Al cambiar de modo o de período, lo que dijo DeepSeek del anterior ya no aplica */
+function preLimpiar(){ if(!pre.ocupado) preEstado(''); }
+/* Una vez por visita: si el servidor no tiene la clave, se avisa antes de apretar */
+function preRevisar(){
+  if(pre.revisado) return; pre.revisado=true;
+  fetch('api/preinforme').then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+    if(d && d.deepseek===false && !$('#preEstado').innerHTML)
+      preEstado(preAviso('', 'alerta', 'DeepSeek todavía no está conectado: falta la clave <b>DEEPSEEK_API_KEY</b> en Vercel (proyecto informe-francois). Mientras tanto puedes usar «Usar otra IA».'));
+  }).catch(function(){});
+}
+async function armarPreinforme(){
+  if(pre.ocupado) return;
+  var arr=notasDelPeriodo();
+  if(!arr.length){ preEstado(preAviso('', 'info', 'No hay notas en el período elegido: cambia el día o las fechas.')); return; }
+  if(navigator.onLine===false){ preEstado(preAviso('', 'alerta', 'Sin internet: DeepSeek necesita conexión. Las notas siguen guardadas en el aparato.')); return; }
+  var s=await sesion();
+  if(!s){ preEstado(preAviso('', 'alerta', 'Para usar DeepSeek entra con la cuenta de la app.')+preIrDatos()); return; }
+  if($('#rTexto').value.trim() &&
+     !confirm('Ya hay un informe en el cuadro «Informe».\n\n¿Reemplazarlo por el pre-informe nuevo? Lo que está ahora se pierde si no lo guardaste.')) return;
+
+  var pedido=pedidoInforme(), t0=Date.now(), btn=$('#btnPre');
+  pre.ocupado=true; btn.disabled=true; btn.querySelector('span').textContent='Armando…';
+  preEstado('<div class="preCarga"><span class="rueda"></span><span>DeepSeek está leyendo '+arr.length+' nota'+(arr.length===1?'':'s')+
+            '. Suele tardar entre 10 y 40 segundos.</span></div>');
+  try{
+    var r=await fetch('api/preinforme', { method:'POST',
+      headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+s.access_token },
+      body:JSON.stringify({ modo:pedido.modo, rango:pedido.rango, notas:pedido.notas, pendientes:pedido.pendientes }) });
+    var d=await r.json().catch(function(){ return {}; });
+    if(!r.ok || !d.ok) throw (d.error ? d : {error:'El servidor respondió '+r.status+'.'});
+
+    var txt=d.informe;
+    if(problemasWA(txt).length) txt=arreglarWA(txt);   // sin ** ni guiones; en el cierre respeta las filas «N° | …»
+    $('#rTexto').value=txt; refrescarInf();
+    var seg=Math.max(1, Math.round((Date.now()-t0)/1000));
+    var h=preAviso('ok', 'check', 'Pre-informe listo en '+seg+' s'+(d.modelo?' · '+esc(d.modelo):'')+'. Revísalo abajo antes de enviarlo.');
+    if(d.cortado) h+=preAviso('', 'alerta', 'DeepSeek llegó a su largo máximo: revisa que el final no haya quedado cortado.');
+    if(d.observaciones && d.observaciones.length){
+      h+='<label class="f" style="margin-top:14px">Para revisar · no va en el informe</label><ul class="obs">'+
+         d.observaciones.map(function(o){ return '<li>'+ico('info')+esc(o)+'</li>'; }).join('')+'</ul>';
+    }
+    preEstado(h);
+    toast('Pre-informe listo');
+    setTimeout(function(){ $('#cardInf').scrollIntoView({behavior:'smooth', block:'start'}); }, 300);
+  }catch(e){
+    var msg=(e && e.error) || (e && e.message) || String(e);
+    if(/Failed to fetch|NetworkError|Load failed/i.test(msg)) msg='No se pudo conectar con el servidor. ¿Hay internet?';
+    preEstado(preAviso('', 'alerta', esc(msg))+(e && e.sinSesion ? preIrDatos() : ''));
+  }finally{
+    pre.ocupado=false; btn.disabled=false; btn.querySelector('span').textContent='Armar pre-informe';
+  }
+}
+
 /* ================= Instalación en el teléfono ================= */
 var UA=navigator.userAgent||'';
 var esIOS=/iPad|iPhone|iPod/.test(UA) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
@@ -1726,7 +1868,7 @@ function pasosInstalar(){
 
   if(window._ip) return '<p>Tu navegador puede instalarla de una vez.</p>'+
     '<ol class="pasos"><li>Toca <b>Instalar ahora</b>.</li><li>Confirma <b>Instalar</b> en el aviso del navegador.</li>'+
-    '<li>Queda el ícono 📋 en tu pantalla de inicio.</li></ol>';
+    '<li>Queda el ícono de Informe François en tu pantalla de inicio.</li></ol>';
 
   if(esIOS && esSafari) return '<ol class="pasos">'+
     '<li>Toca el botón <b>Compartir</b> (el cuadrito con la flecha hacia arriba, abajo en la pantalla).</li>'+
@@ -1741,7 +1883,7 @@ function pasosInstalar(){
   if(esAndroid) return '<ol class="pasos">'+
     '<li>Abre el menú <b>⋮</b> arriba a la derecha del navegador.</li>'+
     '<li>Toca <b>Instalar aplicación</b> (o <b>Agregar a pantalla principal</b>).</li>'+
-    '<li>Confirma y queda el ícono 📋 en tu pantalla de inicio.</li></ol>'+
+    '<li>Confirma y queda el ícono de Informe François en tu pantalla de inicio.</li></ol>'+
     '<p class="nota">Si no aparece la opción, recarga la página y vuelve a intentar.</p>';
 
   return '<p>Estás en un computador. Para tenerla en el teléfono:</p>'+
@@ -1862,9 +2004,10 @@ function sesion(){
     .then(function(r){ return (r && r.data && r.data.session) || null; })
     .catch(function(){ return null; });
 }
-function nube(icono, titulo){
+function nube(icono, titulo){              // icono: nube · nubeok · sync · alerta
   var b=$('#btnNube'); if(!b) return;
-  b.textContent=icono; b.title=titulo;
+  b.innerHTML=ico(icono); b.title=titulo; b.setAttribute('aria-label', titulo);
+  b.classList.toggle('gira', icono==='sync');
 }
 function haceRato(iso){
   var s=Math.round((Date.now()-ms(iso))/1000);
@@ -1889,9 +2032,9 @@ function entrar(){
   esperaLib(5000).then(function(hay){
     var c=hay ? getSB() : null;
     if(!c){ toast('No se pudo cargar la sincronía. ¿Hay internet?'); return; }
-    nube('🔄','Entrando');
+    nube('sync','Entrando');
     c.auth.signInWithPassword({email:em, password:pw}).then(function(r){
-      if(r.error){ nube('⚠️','No entró'); toast(traduceErr(r.error.message)); pintarSync(); return; }
+      if(r.error){ nube('alerta','No entró'); toast(traduceErr(r.error.message)); pintarSync(); return; }
       $('#syPass').value='';
       prefs.email=em; savePrefs();
       toast('Listo, cuenta conectada');
@@ -1903,7 +2046,7 @@ function entrar(){
 function salir(){
   var c=getSB(); if(!c) return;
   if(!confirm('Cerrar sesión en este aparato.\n\nLas notas que ya están acá se quedan; solo deja de sincronizar.')) return;
-  c.auth.signOut().then(function(){ nube('☁️','Sin cuenta'); toast('Sesión cerrada'); pintarSync(); });
+  c.auth.signOut().then(function(){ nube('nube','Sin cuenta'); toast('Sesión cerrada'); pintarSync(); });
 }
 
 /* --- Estado en pantalla ---
@@ -1930,7 +2073,7 @@ function pintarFalla(){
   var f=prefs.ultimaFalla;
   p.classList.toggle('hide', !f);
   b.classList.toggle('hide', !f && !prefs.ultimoResumen);
-  if(f) p.textContent='⚠️ Falló en «'+f.paso+'»: '+f.texto;
+  if(f) p.textContent='Falló en «'+f.paso+'»: '+f.texto;
 }
 /* Qué movió la última sincronía. Sin esto, «al día» no distingue entre
    «no había nada que traer» y «no subió nada de lo mío». */
@@ -1952,8 +2095,8 @@ function pintarSync(){
   pintarFalla(); pintarResumen();
   var q=$('#quienAviso');
   if(q) q.textContent = sinPerfiles
-    ? '⚠️ Las personas viven solo en este aparato: falta correr el bloque de if_perfiles de supabase.sql. Hasta entonces, el otro teléfono no las ve.'
-    : (sinQuien ? '⚠️ La firma se ve acá, pero no viaja al otro aparato hasta correr la línea de la columna «quien» de supabase.sql.' : '');
+    ? 'Las personas viven solo en este aparato: falta correr el bloque de if_perfiles de supabase.sql. Hasta entonces, el otro teléfono no las ve.'
+    : (sinQuien ? 'La firma se ve acá, pero no viaja al otro aparato hasta correr la línea de la columna «quien» de supabase.sql.' : '');
   var hay=!!window.supabase;
   sesion().then(function(s){
     $('#syncLogin').classList.toggle('hide', !!s);
@@ -1961,17 +2104,17 @@ function pintarSync(){
     $('#sySyncFotos').checked = prefs.syncFotos!==false;
     if(!hay){
       $('#syncEstado').textContent='La sincronía no cargó (parece que estás sin internet). Puedes seguir anotando: se guarda en este aparato.';
-      nube('⚠️','Sincronía no disponible');
+      nube('alerta','Sincronía no disponible');
       return;
     }
     if(!s){
       $('#syncEstado').textContent='Sin cuenta en este aparato: lo que anotes acá no se ve en el otro. Entra con tu correo y clave.';
-      nube('☁️','Sin cuenta — toca para configurar');
+      nube('nube','Sin cuenta — toca para configurar');
       return;
     }
     $('#syncEstado').textContent='Conectado como '+s.user.email+
       (prefs.lastSync ? ' · última sincronía '+haceRato(prefs.lastSync) : ' · sin sincronizar todavía')+'.';
-    if(!syncOcupado) nube('☁️','Sincronizado '+(prefs.lastSync?haceRato(prefs.lastSync):''));
+    if(!syncOcupado) nube('nubeok','Sincronizado '+(prefs.lastSync?haceRato(prefs.lastSync):''));
   });
 }
 
@@ -1989,7 +2132,7 @@ function fotosDeFila(f){
   return {fotos:[], fotosm:[]};
 }
 /* La firma vive en la columna "quien". Si el proyecto todavía no la tiene,
-   la app no se cae: sube las notas sin firma y lo avisa en ⚙️ Datos. */
+   la app no se cae: sube las notas sin firma y lo avisa en Datos. */
 var sinQuien=false;
 function faltaColumnaQuien(e){
   if(!e) return false;
@@ -2143,7 +2286,7 @@ async function sincroFotos(c, uid){
   var falla=null;
   var subir=Object.keys(necesarias).filter(function(id){ return thumbs[id] && !enNube[id]; });
   for(var a=0; a<subir.length; a++){
-    nube('🔄','Subiendo fotos '+(a+1)+'/'+subir.length);
+    nube('sync','Subiendo fotos '+(a+1)+'/'+subir.length);
     var b=await fotoLeerP(subir[a]);
     if(!b) continue;
     var u=await c.storage.from(BUCKET).upload(uid+'/'+subir[a]+'.jpg', b, {contentType:'image/jpeg', upsert:true});
@@ -2153,7 +2296,7 @@ async function sincroFotos(c, uid){
 
   var bajar=Object.keys(necesarias).filter(function(id){ return !thumbs[id] && enNube[id]; });
   for(var d=0; d<bajar.length; d++){
-    nube('🔄','Bajando fotos '+(d+1)+'/'+bajar.length);
+    nube('sync','Bajando fotos '+(d+1)+'/'+bajar.length);
     var g=await c.storage.from(BUCKET).download(uid+'/'+bajar[d]+'.jpg');
     if(g.error || !g.data){ falla=falla||{paso:'bajar una foto', e:g.error||{message:'llegó vacía'}}; continue; }
     await guardarBajada(bajar[d], g.data);
@@ -2166,6 +2309,20 @@ async function sincroFotos(c, uid){
     await c.storage.from(BUCKET).remove(sobran.map(function(id){ return uid+'/'+id+'.jpg'; }));
   }
   return out;
+}
+
+/* Supabase entrega un tope de filas por consulta (1.000 por defecto): se piden
+   por tramos, ordenadas por id, hasta que no llegue nada. Sin esto, pasadas las
+   1.000 notas (las borradas también cuentan) lo nuevo del otro aparato no bajaba. */
+async function traerTodo(c, tabla){
+  var todo=[], desde=0;
+  for(;;){
+    var r=await c.from(tabla).select('*').order('id').range(desde, desde+999);
+    if(r.error) throw r.error;
+    var lote=r.data||[];
+    if(!lote.length) return todo;
+    todo=todo.concat(lote); desde+=lote.length;
+  }
 }
 
 /* --- La sincronía ---
@@ -2181,21 +2338,21 @@ async function sincronizar(modo){
   if(modo==='auto' && prefs.lastSync && Date.now()-ms(prefs.lastSync) < 15000) return;
 
   var s=await sesion();
-  if(!s){ if(manual) toast('Primero entra con tu correo en ⚙️ Datos'); pintarSync(); return; }
+  if(!s){ if(manual) toast('Primero entra con tu correo en Datos'); pintarSync(); return; }
 
   var c=getSB(), uid=s.user.id, paso='empezar';
   if(manual){ sinQuien=false; sinPerfiles=false; }   // a mano se reintenta, por si ya corrieron el SQL
-  syncOcupado=true; nube('🔄','Sincronizando');
+  syncOcupado=true; nube('sync','Sincronizando');
   try{
     paso='traer las personas';
     var cambioP=await sincroPerfiles(c, uid);
     paso='traer las notas';
-    var rn=await c.from('if_notas').select('*');       if(rn.error) throw rn.error;
+    var rn=await traerTodo(c, 'if_notas');
     paso='traer los informes';
-    var ri=await c.from('if_informes').select('*');    if(ri.error) throw ri.error;
+    var ri=await traerTodo(c, 'if_informes');
     var remN={}, remI={};
-    (rn.data||[]).forEach(function(r){ remN[r.id]=r; });
-    (ri.data||[]).forEach(function(r){ remI[r.id]=r; });
+    rn.forEach(function(r){ remN[r.id]=r; });
+    ri.forEach(function(r){ remI[r.id]=r; });
 
     paso='juntar lo de acá con lo de la nube';
     var k=fusionar(remN, remI);
@@ -2252,7 +2409,7 @@ async function sincronizar(modo){
     savePrefs();
     if(f.falla) anotaFalla(f.falla.paso, f.falla.e); else limpiaFalla();
     syncOcupado=false;
-    nube('☁️','Sincronizado recién');
+    nube('nubeok','Sincronizado recién');
 
     if(k.n||k.i||f.baja||cambioP) refrescarTodo();
     pintarSync();
@@ -2264,14 +2421,14 @@ async function sincronizar(modo){
       if(f.baja) p.push('bajaron '+f.baja+' foto'+(f.baja===1?'':'s'));
       if(subeN.length) p.unshift('subieron '+subeN.length+' nota'+(subeN.length===1?'':'s'));
       if(f.sube) p.push('subieron '+f.sube+' foto'+(f.sube===1?'':'s'));
-      toast(p.length ? 'Al día: '+p.join(', ') : 'Al día · el detalle, en ⚙️ Datos');
+      toast(p.length ? 'Al día: '+p.join(', ') : 'Al día · el detalle, en Datos');
     }
   }catch(e){
     syncOcupado=false;
     anotaFalla(paso, e);
-    nube('⚠️','No pudo sincronizar');
+    nube('alerta','No pudo sincronizar');
     pintarSync();
-    toast('Falló la sincronía. El detalle quedó en ⚙️ Datos');
+    toast('Falló la sincronía. El detalle quedó en Datos');
   }
 }
 function syncPronto(){
@@ -2314,7 +2471,7 @@ document.addEventListener('click', function(e){
     ['notas','generar','informes','datos'].forEach(function(id){
       $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
     });
-    if(t.dataset.tab==='generar') renderPreview();
+    if(t.dataset.tab==='generar'){ renderPreview(); preRevisar(); }
     if(t.dataset.tab==='informes') renderInformes();
     if(t.dataset.tab==='datos'){ stats(); pintarSync(); }
     window.scrollTo({top:0});
@@ -2325,6 +2482,7 @@ document.addEventListener('click', function(e){
   if(t.dataset.del){ borrar(t.dataset.del); return; }
   if(t.dataset.modo){ setModo(t.dataset.modo); return; }
   if(t.dataset.ia){ abrirIA(t.dataset.ia); return; }
+  if(t.dataset.ir){ var bi=document.querySelector('nav.tabs button[data-tab="'+t.dataset.ir+'"]'); if(bi) bi.click(); return; }
 
   if(t.dataset.fmt){
     if(t.dataset.fmt==='negrita') envolver('*');
@@ -2337,7 +2495,7 @@ document.addEventListener('click', function(e){
     }
     if(t.dataset.fmt==='expandir'){
       $('#rTexto').classList.toggle('grande');
-      t.textContent = $('#rTexto').classList.contains('grande') ? '⛝' : '⛶';
+      t.innerHTML = ico($('#rTexto').classList.contains('grande') ? 'contraer' : 'expandir');
     }
     return;
   }
@@ -2364,11 +2522,12 @@ document.addEventListener('click', function(e){
     if(t.dataset.atajo==='ayer'){ $('#gDia').value=hoyISO(sumaDias(h,-1)); }
     if(t.dataset.atajo==='estaSem'){ var l=lunesDe(h); $('#gDesde').value=hoyISO(l); $('#gHasta').value=hoyISO(sumaDias(l,6)); }
     if(t.dataset.atajo==='semPasada'){ var l2=sumaDias(lunesDe(h),-7); $('#gDesde').value=hoyISO(l2); $('#gHasta').value=hoyISO(sumaDias(l2,6)); }
-    autoRango(); renderPreview(); return;
+    autoRango(); renderPreview(); preLimpiar(); return;
   }
 
   switch(t.id){
     case 'btnGuardar': guardar(); break;
+    case 'btnPre': armarPreinforme(); break;
     case 'btnCancelar': resetForm(); break;
     case 'btnNuevoPerfil': case 'btnNuevoPerfil2': formNuevoPerfil(); break;
     case 'btnCrearPerfil': crearPerfil(); break;
@@ -2416,7 +2575,7 @@ document.addEventListener('click', function(e){
       }
       guardarInforme(true); enviarWA($('#rTexto').value);
       var kfw=fotosMarcadas().length;
-      if(kfw) setTimeout(function(){ toast('Ahora manda '+(kfw===1?'la foto':'las '+kfw+' fotos')+' con 📎'); }, 1200);
+      if(kfw) setTimeout(function(){ toast('Ahora manda '+(kfw===1?'la foto':'las '+kfw+' fotos')+' con «Enviar fotos»'); }, 1200);
       break;
     case 'btnFotosWA': enviarFotos(); break;
     case 'btnPDF': pdfInforme(); break;
@@ -2531,15 +2690,18 @@ document.addEventListener('keydown', function(e){
 document.addEventListener('input', function(e){
   var id=e.target.id;
   if(id==='fBuscar'||id==='fFiltro') renderLista();
-  if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); }
+  if(id==='gDia'||id==='gDesde'||id==='gHasta'){ autoRango(); renderPreview(); preLimpiar(); }
   if(id==='gRango'||id==='gPend') renderPreview();
   if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
   if(id==='rTexto') refrescarInf();
 });
 
-/* Al pegar la respuesta de Claude, deja solo el informe. */
+/* Al pegar la respuesta del chat en el cuadro vacío, deja solo el informe.
+   Si se pega un trozo dentro de un texto que ya estaba, no se toca nada. */
 document.addEventListener('paste', function(e){
-  if(e.target.id!=='rTexto') return;
+  var ta=e.target;
+  if(ta.id!=='rTexto') return;
+  if(ta.value.trim() && !(ta.selectionStart===0 && ta.selectionEnd===ta.value.length)) return;
   setTimeout(function(){ aplicarSolo(true); refrescarInf(); }, 0);
 });
 document.addEventListener('change', function(e){
@@ -2607,7 +2769,7 @@ function pesoTxt(b){
 }
 function aplicaTema(){
   document.body.classList.toggle('dark', !!prefs.dark);
-  $('#btnTheme').textContent = prefs.dark ? '☀️' : '🌙';
+  $('#btnTheme').innerHTML = ico(prefs.dark ? 'sol' : 'luna');
 }
 
 /* ================= Init ================= */
@@ -2662,7 +2824,7 @@ window.addEventListener('beforeinstallprompt', function(e){
   }
 });
 window.addEventListener('appinstalled', function(){
-  window._ip=null; cerrarInstalar(); estadoInstal(); toast('App instalada 🎉');
+  window._ip=null; cerrarInstalar(); estadoInstal(); toast('App instalada');
 });
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });

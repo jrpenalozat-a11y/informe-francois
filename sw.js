@@ -1,8 +1,8 @@
 /* Informe François — service worker
-   HTML: network-first (siempre lo más nuevo con conexión).
+   HTML y JS propios: network-first (siempre lo más nuevo con conexión).
    Resto: cache-first. Sube CACHE al cambiar assets del núcleo. */
-const CACHE = "if-v23";
-const CORE = ["./", "./index.html", "./manifest.json", "./icon.svg",
+const CACHE = "if-v24";
+const CORE = ["./", "./index.html", "./prompt.js", "./manifest.json", "./icon.svg",
               "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./icon-maskable-512.png"];
 
 self.addEventListener("install", e => {
@@ -27,11 +27,12 @@ self.addEventListener("fetch", e => {
   const propio = url.origin === self.location.origin;
   const libreria = url.hostname === "cdn.jsdelivr.net";
   if (!propio && !libreria) return;
+  if (propio && url.pathname.indexOf("/api/") === 0) return;     // la función de DeepSeek, siempre a la red
 
   const esHTML = req.mode === "navigate" ||
     (req.headers.get("accept") || "").includes("text/html");
 
-  if (esHTML) {
+  if (esHTML || (propio && url.pathname.endsWith(".js"))) {
     e.respondWith(
       fetch(req)
         .then(res => {

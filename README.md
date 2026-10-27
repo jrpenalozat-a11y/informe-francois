@@ -2,11 +2,11 @@
 
 **https://informe-francois.vercel.app**
 
-PWA de un solo `index.html` (sin build, sin backend) para **anotar lo que pasa en el turno** y salir con el **prompt maestro de bitácora** ya armado, listo para pegar en Claude.
+PWA de un solo `index.html` (sin build) para **anotar lo que pasa en el turno** y sacar la **bitácora** del día, de la semana o de cierre: **DeepSeek arma el pre-informe** desde la app (función `api/preinforme.js`, con la clave en Vercel) y tú lo revisas y lo mandas. Si prefieres otro chat, el **prompt maestro** sigue saliendo armado, listo para pegar.
 
 ## Instalarla en el teléfono
 
-Abre la URL y toca el botón **📲** (arriba a la derecha, o en la pestaña *Datos* → «Instalar en el teléfono»). La ficha muestra los pasos de tu propio dispositivo:
+Abre la URL y toca el botón del **teléfono con la flecha** (arriba a la derecha, o en la pestaña *Datos* → «Instalar en el teléfono»). La ficha muestra los pasos de tu propio dispositivo:
 
 - **Android (Chrome):** normalmente ofrece *Instalar ahora* de una vez; si no, menú ⋮ → *Instalar aplicación*.
 - **iPhone (Safari):** *Compartir* → *Agregar a inicio*. Si estás en Chrome iOS te avisa que abras en Safari y te copia la dirección.
@@ -16,47 +16,56 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
 
 ## Qué hace
 
-1. **📝 Notas** — agregas la nota al paso: fecha, hora, área (Sala · Cocina · Caja · Personal · Proveedores · Equipos · Producto · Otro), **qué pasó** y, opcional, la **medida tomada en el momento**. Se pueden editar y borrar; se agrupan por día. `Ctrl + Enter` guarda rápido.
+1. **Notas** — agregas la nota al paso: fecha, hora, área (Sala · Cocina · Caja · Personal · Proveedores · Equipos · Producto · Otro), **qué pasó** y, opcional, la **medida tomada en el momento**. Se pueden editar y borrar; se agrupan por día. `Ctrl + Enter` guarda rápido.
 
-   **✍️ Quién anota** — la nota queda firmada por la persona que está usando la app (ver
+   **Quién anota** — la nota queda firmada por la persona que está usando la app (ver
    **[Varias personas](#varias-personas-en-la-misma-cuenta)**). La firma se pone **al crear** la nota
    y no se toca más: editar una nota ajena —o una vieja sin firma— no te convierte en su autor. Se ve
    en la lista y viaja al prompt como `— anotó Ángel`. La regla 11 le dice a Claude que esa persona es
    quien **registró** la nota, no la responsable del hecho: que la use solo cuando aporte —notas del
    mismo tema que se contradicen, o a quién preguntarle en el CIERRE—. Vive en la columna `quien` de
    `if_notas`; si el proyecto todavía no la tiene, la app sube las notas sin firma y lo avisa en
-   ⚙️ Datos en vez de caerse.
+   Datos en vez de caerse.
 
    La medida viaja al prompt en la misma línea, después de `→ MEDIDA:`, y la regla 9 le dice a Claude que eso ya está hecho: lo reporta en pasado dentro del mismo punto, no lo repite como pendiente, y si la medida cierra el tema lo trata como resuelto (si solo lo parcha, lo dice y deja el pendiente de fondo).
 
-   **📷 Fotos** — la nota tiene **dos juegos de fotos**: las de **Foto del hecho**, bajo «Qué pasó», respaldan lo que ocurrió; las de **Foto de la medida**, bajo «Medida tomada en el momento», respaldan lo que se hizo. Cada botón abre la cámara del teléfono y su **Galería** toma una ya sacada (varias a la vez). Se comprimen a 1600 px / JPEG antes de guardarlas (una foto de teléfono queda en ~100-250 KB), aparecen como miniaturas en el formulario y en la nota, y se abren en el visor: pasar entre fotos, **Compartir** (mandarla por WhatsApp desde el teléfono), **Guardar** en el dispositivo o **Borrar**. Si aprietas «Agregar nota» mientras la foto se está guardando, la nota se guarda sola apenas termina.
+   **Fotos** — la nota tiene **dos juegos de fotos**: las de **Foto del hecho**, bajo «Qué pasó», respaldan lo que ocurrió; las de **Foto de la medida**, bajo «Medida tomada en el momento», respaldan lo que se hizo. Cada botón abre la cámara del teléfono y su **Galería** toma una ya sacada (varias a la vez). Se comprimen a 1600 px / JPEG antes de guardarlas (una foto de teléfono queda en ~100-250 KB), aparecen como miniaturas en el formulario y en la nota, y se abren en el visor: pasar entre fotos, **Compartir** (mandarla por WhatsApp desde el teléfono), **Guardar** en el dispositivo o **Borrar**. Si aprietas «Agregar nota» mientras la foto se está guardando, la nota se guarda sola apenas termina.
 
    Al prompt solo va la marca `[con foto]` / `[con N fotos]`, **pegada a lo que respalda**: después del hecho si la foto es del hecho, y después de `→ MEDIDA:` si es de la medida. **La imagen no viaja al chat**. La regla 10 le dice a Claude que no describa ni suponga lo que muestra, y que como mucho cierre ese punto con «(hay foto)».
-2. **📄 Generar** — eliges modo y período y la app arma el prompt completo:
+2. **Generar** — eliges **qué informe** (modo y período) y lo armas:
    - **DIARIO** → resumen del día para el grupo (elige un día).
    - **SEMANAL** → resumen de la semana para el grupo (desde/hasta, con atajos «esta semana» / «semana pasada»).
    - **CIERRE** → informe para la reunión del lunes; aparece el campo opcional **Pendientes de la reunión pasada**, que se cruza con las notas del período.
 
-   Las notas del período se insertan en el bloque `NOTAS DEL PERÍODO` con el formato acordado:
-   `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo [con foto] → MEDIDA: se hizo arqueo ciego de nuevo [con foto]`, en orden cronológico.
+   Las notas del período van con el formato acordado, en orden cronológico:
+   `[lun 18-08 · 14:20] (Caja) diferencia de 3.400 en el arqueo [con foto] → MEDIDA: se hizo arqueo ciego de nuevo [con foto]`.
 
-   Botones: **Copiar prompt**, **Copiar solo las notas**, **Descargar .txt**, y una fila para
-   **abrir el chat con el prompt ya copiado**: 🤖 Claude · 💬 ChatGPT · ✨ Gemini · 🐋 DeepSeek · 🪟 Copilot.
-   Claude y ChatGPT aceptan el texto por enlace (`?q=…`) y la app lo usa cuando el prompt no pasa de
-   4.000 caracteres; si ChatGPT no lo toma —depende de su versión— abre igual y el prompt ya está
-   copiado. Sobre esos 4.000, y siempre en Gemini, DeepSeek y Copilot, se copia y basta con pegarlo. La casilla *«Incluir las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del modo elegido (más corto y más preciso).
-3. **Informe de vuelta** (al pie de Generar) — pegas ahí el texto que devolvió Claude, **lo corriges y lo mandas**. Incluye:
+   **Pre-informe con DeepSeek** (el camino de siempre): **Armar pre-informe** manda esas líneas a
+   `api/preinforme.js`, que le pide el informe a DeepSeek con las mismas reglas del prompt maestro
+   (`prompt.js`) y deja el borrador en el cuadro **Informe**, ya en formato WhatsApp. Lo que DeepSeek
+   quiere que revises —una nota ambigua, un área que no calza con lo que dice la nota— sale aparte,
+   en «Para revisar», y **no** va en el informe. Si el cuadro ya tenía texto, pregunta antes de
+   reemplazarlo. Necesita internet y la cuenta de la app conectada en Datos (así nadie de afuera
+   gasta el saldo de DeepSeek). Si falta la clave en Vercel, la app lo avisa al abrir Generar.
+
+   **Usar otra IA: copiar el prompt** (plegado al final): **Copiar prompt**, **Copiar solo las
+   notas**, **Descargar .txt** y una fila para **abrir el chat con el prompt ya copiado** (Claude ·
+   ChatGPT · Gemini · DeepSeek · Copilot). Claude y ChatGPT aceptan el texto por enlace (`?q=…`) cuando
+   el prompt no pasa de 4.000 caracteres; si no, se copia y basta con pegarlo. La casilla *«Incluir
+   las reglas de los tres modos»* pega el prompt maestro completo; por defecto va solo el bloque del
+   modo elegido (más corto y más preciso).
+3. **Informe** (en Generar, bajo el pre-informe) — ahí queda el borrador de DeepSeek o lo que pegues de otro chat: **lo corriges y lo mandas**. Incluye:
 
    - **Vista «cómo llega al grupo»**: una burbuja tipo WhatsApp con las negritas y viñetas ya renderizadas, para revisar antes de enviar.
-   - **Revisión de formato**: avisa si hay `**doble asterisco**`, encabezados con `#`, viñetas con guion, filas de tabla o un asterisco sin cerrar. **🧹 Arreglar formato** lo pasa todo a formato WhatsApp (`*negrita*`, `• viñeta`), y al enviar, si queda algo, pregunta si lo arregla primero.
-   - **Barra de redacción**: `*N*` pone en negrita lo que marques, `*TÍTULO*` convierte la línea en encabezado, `•` le pone viñeta, `⛶` agranda el cuadro.
+   - **Revisión de formato**: avisa si hay `**doble asterisco**`, encabezados con `#`, viñetas con guion, filas de tabla o un asterisco sin cerrar. **Arreglar formato** lo pasa todo a formato WhatsApp (`*negrita*`, `• viñeta`), y al enviar, si queda algo, pregunta si lo arregla primero. En el CIERRE respeta las filas `N° | CATEGORÍA | …`.
+   - **Barra de redacción**: `*N*` pone en negrita lo que marques, `*TÍTULO*` convierte la línea en encabezado, `•` le pone viñeta y el último botón agranda el cuadro.
    - **Borrador automático**: lo que estés escribiendo se guarda (`if_borrador_v1`) y vuelve si cierras la app.
-   - **📎 Fotos del período**: bajo la vista de WhatsApp aparece la tira con las fotos de las notas del período. Tócalas para incluirlas o dejarlas fuera (🔍 las abre grandes) y **📎 Enviar fotos** las manda con el compartir nativo del teléfono, para elegir el mismo grupo justo después del informe — el enlace `wa.me` solo lleva texto, por eso van aparte. Al enviar el informe, un aviso recuerda mandarlas. En el PC, que no comparte archivos, ofrece descargarlas.
-   - **🖨️ PDF**: arma una hoja con el título (modo + período) y el informe ya formateado, con **cada foto justo bajo el punto que la menciona** (no todas juntas al final). Como el informe lo redacta la IA con sus propias palabras, la app empareja cada foto con la línea que más se le parece: palabras en común, el «(hay foto)» de la regla 10 y el título del bloque (SALA, CAJA…). Las del hecho buscan la línea del hecho y las de la medida, la de la medida — si el informe junta las dos cosas en un punto, quedan las dos ahí (primero el hecho); si las separa (por ejemplo el hecho en CAJA y la medida en RESUELTOS), cada una va donde corresponde, y las de la medida llevan «respalda la medida» en el pie. Las que no calzan con ninguna línea caen en **«Otras fotos»** al final, con su día · hora · área y el texto de la nota — así ninguna se pierde. Se abre el diálogo de imprimir: en el teléfono, «Guardar como PDF». Ese archivo sí se adjunta al grupo o se lleva a la reunión.
+   - **Fotos del período**: bajo la vista de WhatsApp aparece la tira con las fotos de las notas del período. Tócalas para incluirlas o dejarlas fuera (la lupa las abre grandes) y **Enviar fotos** las manda con el compartir nativo del teléfono, para elegir el mismo grupo justo después del informe — el enlace `wa.me` solo lleva texto, por eso van aparte. Al enviar el informe, un aviso recuerda mandarlas. En el PC, que no comparte archivos, ofrece descargarlas.
+   - **PDF**: arma una hoja con el título (modo + período) y el informe ya formateado, con **cada foto justo bajo el punto que la menciona** (no todas juntas al final). En el CIERRE, los **temas para la reunión** (`N° | CATEGORÍA | Qué pasó | Acuerdo | Responsable | Evidencia`) salen como **tabla**. Como el informe lo redacta la IA con sus propias palabras, la app empareja cada foto con la línea que más se le parece: palabras en común, el «(hay foto)» de la regla 10 y el título del bloque (SALA, CAJA…). Las del hecho buscan la línea del hecho y las de la medida, la de la medida — si el informe junta las dos cosas en un punto, quedan las dos ahí (primero el hecho); si las separa (por ejemplo el hecho en CAJA y la medida en RESUELTOS), cada una va donde corresponde, y las de la medida llevan «respalda la medida» en el pie. Las que no calzan con ninguna línea caen en **«Otras fotos»** al final, con su día · hora · área y el texto de la nota — así ninguna se pierde. Se abre el diálogo de imprimir: en el teléfono, «Guardar como PDF». Ese archivo sí se adjunta al grupo o se lleva a la reunión.
 
-   **Al pegar deja solo el informe**: si viene dentro de ``` ``` usa el bloque, y si trae texto antes o comentarios después, los recorta (empieza en `*Bitácora François*` o en `RESUMEN DE LA SEMANA`; en modo CIERRE no toca la cola porque termina en prosa). El botón **✂️ Dejar solo el informe** repite esa limpieza a mano. Lo que se envía es exactamente lo que quede en el cuadro: el prompt y las notas nunca salen. Botones: **📲 Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
-4. **📤 Informes** — los informes guardados con su modo, período y fecha; desde cada uno: WhatsApp, copiar, descargar `.txt` o borrar.
-5. **⚙️ Datos** — **cuenta y sincronía** (ver más abajo), exportar / importar JSON de respaldo (notas + informes y, si marcas la casilla, **las fotos**), glosario interno (86, 101, arqueo ciego) y borrado (notas, informes o solo las fotos).
+   **Al pegar en el cuadro vacío deja solo el informe**: si viene dentro de ``` ``` usa el bloque; si trae texto antes, parte en `*Bitácora François*` o en `RESUMEN DE LA SEMANA` (con o sin negrita, con uno o dos asteriscos), y quita **solo párrafos enteros que son conversación del chat** («Aquí tienes…», «¿Quieres que…?», «Nota: …», «Espero que te sirva»). Nunca corta contenido del informe: hasta el 2026-10-27 cortaba todo lo que viniera después de la última viñeta con `•` o `*`, y se comía los pendientes escritos con guion, la línea de un día sin novedades y las preguntas de FALTA INFORMACIÓN del CIERRE. Si pegas un trozo dentro de un texto que ya estaba, no limpia nada. El botón **Dejar solo el informe** repite esa limpieza a mano. Lo que se envía es exactamente lo que quede en el cuadro: el prompt y las notas nunca salen. Botones: **Enviar por WhatsApp** (abre el chat con el informe escrito; sin número WhatsApp te deja elegir el grupo, con número —`56` + celular, sin `+`— va directo), **Copiar**, **Guardar**. Al enviar se guarda solo, sin duplicar. Si el texto pasa de 1.800 caracteres avisa que WhatsApp puede cortarlo y lo deja copiado.
+4. **Informes** — los informes guardados con su modo, período y fecha; desde cada uno: WhatsApp, copiar, descargar `.txt` o borrar.
+5. **Datos** — **cuenta y sincronía** (ver más abajo), exportar / importar JSON de respaldo (notas + informes y, si marcas la casilla, **las fotos**), glosario interno (86, 101, arqueo ciego) y borrado (notas, informes o solo las fotos).
 
 El texto del período (`lun 17-08`, `17-08 al 23-08`) se calcula solo, pero es editable a mano.
 
@@ -90,18 +99,18 @@ por perfil**, cada una con su propia clave de app. Al abrir, la app pregunta qui
   fuerte. La app corre entera en el teléfono de cada uno y comparten la cuenta de Supabase, así que
   alguien con conocimientos técnicos puede saltársela. Frena lo que tiene que frenar: que se anote
   con el nombre de otro.
-- **Si se olvida una clave:** se borra esa persona (🗑️ en la ficha) y se crea de nuevo. Sus notas no
+- **Si se olvida una clave:** se borra esa persona (el basurero en la ficha) y se crea de nuevo. Sus notas no
   se tocan: quedan firmadas con su nombre.
 - **Nombrar administrador:** si ya hay quien administre, la casilla solo aparece para esa persona.
   Así nadie se hace administrador solo por abrir la app en un teléfono recién instalado.
 - **Lo anotado antes** de que existieran los perfiles se le ofrece al primer perfil, preguntando:
   si el primero en crearse fuera el otro teléfono, se llevaría notas que no son suyas.
 - **Puesta en marcha:** el bloque `if_perfiles` de [`supabase.sql`](supabase.sql). Si no se corre, los
-  perfiles funcionan igual pero solo en ese aparato, y la app lo avisa en ⚙️ Datos en vez de caerse.
+  perfiles funcionan igual pero solo en ese aparato, y la app lo avisa en Datos en vez de caerse.
 
 ## Sincronía entre el teléfono y el computador
 
-Opcional: si entras con tu correo en ⚙️ Datos, las notas, los informes y las fotos suben a
+Opcional: si entras con tu correo en Datos, las notas, los informes y las fotos suben a
 **Supabase** y los dos aparatos muestran lo mismo. El dispositivo sigue mandando —todo se guarda
 primero en local y sin señal se anota igual—; la nube es solo la copia común.
 
@@ -120,31 +129,40 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
   el otro aparato no tiene y bajan las que faltan acá (la miniatura se rehace al bajarlas). Se puede
   apagar con la casilla *«Sincronizar también las fotos»*. Las fotos que ya no usa ninguna nota se
   borran de la nube.
-- **Qué movió la última vez:** bajo el estado, en ⚙️ Datos, queda escrito el resumen del último
+- **Qué movió la última vez:** bajo el estado, en Datos, queda escrito el resumen del último
   viaje — *«subieron 12 notas · no bajó nada · en la nube hay 12 notas»* —, porque un «al día» a
-  secas no distingue entre «no había nada que traer» y «no subió nada de lo mío». **📋 Copiar el
+  secas no distingue entre «no había nada que traer» y «no subió nada de lo mío». **Copiar el
   detalle** copia ese resumen (y la falla, si la hubo) para mandarlo por WhatsApp.
+- **Sin tope de filas:** las notas y los informes se bajan por tramos de 1.000 (`traerTodo`). Antes
+  se pedían de una vez y Supabase entrega como mucho 1.000 filas por consulta (las borradas también
+  cuentan): pasado ese número, lo nuevo del otro aparato no habría bajado nunca.
 - **Cuándo sincroniza:** al abrir la app, al volver a ella, al recuperar la señal, 2,5 s después de
-  cualquier cambio y a mano con **🔄 Sincronizar ahora** o el botón ☁️ del encabezado.
+  cualquier cambio y a mano con **Sincronizar ahora** o el botón de la nube del encabezado.
 - ⚠️ **No toques la configuración de Auth del proyecto** (por ejemplo, apagar los registros):
   el Checklist de Turno entra con **sesiones anónimas** y se quedaría afuera.
 
 ## Archivos
 
-- `index.html` — toda la app (datos, estilos, lógica).
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v23`): **súbela** al cambiar assets del núcleo. HTML network-first, el resto cache-first. Las llamadas a Supabase **no pasan por la caché** (si no, la app leería siempre la misma respuesta vieja).
+- `index.html` — toda la app (datos, estilos, lógica). Los íconos son SVG de línea (sprite al inicio del `body`, función `ico()`), sin emojis.
+- `prompt.js` — el **prompt maestro**: reglas y los tres modos. Lo usan la página («Copiar prompt») y la función de DeepSeek: si cambias una regla, cámbiala aquí.
+- `api/preinforme.js` — función de Vercel que le pide el pre-informe a DeepSeek. Solo atiende a una sesión de Supabase de la app que no sea anónima; responde `{informe, observaciones, modelo}`. `GET` dice si la clave está cargada.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v24`): **súbela** al cambiar assets del núcleo. HTML y JS propios network-first, el resto cache-first. Las llamadas a Supabase y a `/api/` **no pasan por la caché**.
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
-- `vercel.json` / `netlify.toml` — deploy estático sin build; `/sw.js` se sirve con `Cache-Control: no-cache`.
+- `vercel.json` / `netlify.toml` — deploy sin build; `/sw.js` se sirve con `Cache-Control: no-cache` y la función tiene 60 s.
+- `servir-local.cjs` — servidor para el computador (estático + `/api/`, como Vercel). No se publica (`.vercelignore`).
 
 ## Correr en local
 
-Servidor estático en la raíz, puerto 5189 (config `informe-francois-dev` en `.claude/launch.json`):
+Servidor en la raíz, puerto 5189 (config `informe-francois` en `Desktop\.claude\launch.json`):
 
 ```bash
-npx serve . -l 5189
+node servir-local.cjs 5189
 ```
+
+Sin `DEEPSEEK_API_KEY` en el entorno, el pre-informe avisa que falta la clave; el resto de la app funciona igual.
+`npx serve` falla en este equipo (la ruta de Node tiene un espacio): por eso el servidor propio.
 
 ⚠️ El navegador puede cachear `index.html`: al verificar cambios usa recarga forzada o `?v=<timestamp>`.
 
@@ -163,8 +181,15 @@ El botón **Copiar prompt** de la app sigue siendo útil para pegarlo donde no e
 ## Deploy
 
 - Repo: https://github.com/jrpenalozat-a11y/informe-francois (rama `master`).
-- Producción: https://informe-francois.vercel.app — proyecto Vercel `informe-francois`, **conectado al repo**: cada `git push` a `master` redespliega solo. Sin build, sin variables de entorno.
+- Producción: https://informe-francois.vercel.app — proyecto Vercel `informe-francois`, **conectado al repo**: cada `git push` a `master` redespliega solo. Sin build.
 - Deploy manual, si hiciera falta: `npx vercel --prod --yes` desde la carpeta.
 
-Sin variables de entorno: la URL y la llave pública de Supabase van en el `index.html` (es su diseño;
-lo que protege los datos son las políticas RLS). Sin cuenta, las notas no salen del dispositivo.
+**Variables de entorno** (Vercel → proyecto `informe-francois` → Settings → Environment Variables):
+
+- `DEEPSEEK_API_KEY` — **obligatoria para el pre-informe**. La misma clave de DeepSeek que usa el panel de operaciones. Sin ella, la app avisa en Generar y todo lo demás funciona.
+- `DEEPSEEK_MODEL` — opcional. Por defecto `deepseek-flash`; si el modelo no existe para la clave, la función pregunta a DeepSeek cuáles hay y usa otro (primero los «flash»).
+
+Después de agregarla hay que **volver a desplegar** para que la función la lea.
+
+La URL y la llave pública de Supabase van en el `index.html` y en la función (es su diseño: lo que
+protege los datos son las políticas RLS). Sin cuenta, las notas no salen del dispositivo.
