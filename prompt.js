@@ -6,6 +6,17 @@
 
 var INTRO = 'Eres el asistente de bitácora de François, cafetería, pastelería y panadería en La Florida, Santiago de Chile. Recibes las notas que el supervisor tomó al paso durante el turno: desordenadas, cortas, a veces repetidas o incompletas.';
 
+/* Cada sede tiene su propia cuenta y su propio informe (la sede viene de la cuenta:
+   app_metadata.sede). La Florida («lf») no cambia: el mismo texto de siempre. */
+var SEDES = {
+  lf: { titulo:'Bitácora François', intro:INTRO },
+  s2: { titulo:'Bitácora François PV',
+        intro:'Eres el asistente de bitácora de François PV, la cafetería, pastelería y heladería de François en Puerto Varas, Chile. Recibes las notas que el supervisor tomó al paso durante el turno: desordenadas, cortas, a veces repetidas o incompletas.' },
+  s3: { titulo:'Bitácora Maximarket PV',
+        intro:'Eres el asistente de bitácora de Maximarket PV, el minimarket de François en Puerto Varas, Chile. Recibes las notas que el supervisor tomó al paso durante el turno: desordenadas, cortas, a veces repetidas o incompletas.' }
+};
+function sedeDe(s){ return SEDES[s] || SEDES.lf; }
+
 var REGLAS =
 'REGLAS QUE VALEN PARA LOS TRES MODOS\n\n'+
 '1. Español de Chile, registro directo y sobrio. Sin introducciones, sin cierres, sin frases de relleno tipo "en resumen" o "cabe destacar".\n'+
@@ -21,19 +32,19 @@ var REGLAS =
 '11. Salud, licencias, accidentes y temas contractuales o disciplinarios: van en el tema PERSONAL con el detalle administrativo que traiga la nota (fechas, trámite, qué falta resolver). Del estado de salud, solo lo que la nota dice y lo que afecta la operación; no agregues diagnósticos, causas ni juicios.\n'+
 '12. Algunas notas terminan en "— anotó X": ese es quien registró la nota, no necesariamente quien protagonizó el hecho. Nunca lo trates como responsable ni lo menciones por mencionarlo. Úsalo solo cuando sirva: si dos notas del mismo tema se contradicen, di quién anotó cada una; y en el modo CIERRE, cuando un tema quede con dudas, agrega entre paréntesis a quién preguntarle ("preguntar a X").';
 
-function bloqueDiario(rango){ return (
+function bloqueDiario(rango, sede){ return (
 'SI EL MODO ES "DIARIO"\n\n'+
 'Salida máxima 180 palabras.\n\n'+
-'*Bitácora François* — '+rango+'\n'+
+'*'+sedeDe(sede).titulo+'* — '+rango+'\n'+
 'Dos o tres líneas corridas contando cómo estuvo el día: carga de trabajo, lo que se salió de lo normal, cómo se cerró.\n\n'+
 'Después, los puntos agrupados por tema (usa solo los temas que aparezcan: SALA, COCINA, CAJA, PERSONAL, PROVEEDORES, EQUIPOS, PRODUCTO). Encabezado del tema en negrita y mayúsculas, y debajo sus puntos con "• ".\n\n'+
 'Cierra con:\n*PENDIENTES PARA MAÑANA*\n• lo que quedó abierto, con responsable solo si la nota lo dice.\n\n'+
 'Si el día no tuvo nada relevante, dilo en una línea y no rellenes.'); }
 
-function bloqueSemanal(rango){ return (
+function bloqueSemanal(rango, sede){ return (
 'SI EL MODO ES "SEMANAL"\n\n'+
 'Salida máxima 350 palabras.\n\n'+
-'*Bitácora François* — semana del '+rango+'\n'+
+'*'+sedeDe(sede).titulo+'* — semana del '+rango+'\n'+
 'Tres o cuatro líneas con el pulso de la semana: qué se repitió, qué mejoró, qué se cayó.\n\n'+
 'Puntos agrupados por tema, igual que en el modo diario, pero ya consolidados: nada de repetir el mismo hecho en días distintos.\n\n'+
 'Cierra con:\n*PENDIENTES*\n• lo que sigue abierto.\n'+
@@ -55,20 +66,20 @@ function bloqueCierre(){ return (
 'FALTA INFORMACIÓN\n'+
 'Preguntas que las notas dejan abiertas y que conviene resolver en la reunión. Si no falta nada, escribe "Sin vacíos".'); }
 
-function bloqueDe(modo, rango){
-  return modo==='DIARIO' ? bloqueDiario(rango) : (modo==='SEMANAL' ? bloqueSemanal(rango) : bloqueCierre());
+function bloqueDe(modo, rango, sede){
+  return modo==='DIARIO' ? bloqueDiario(rango, sede) : (modo==='SEMANAL' ? bloqueSemanal(rango, sede) : bloqueCierre());
 }
 function textoPendientes(pend){
   return 'PENDIENTES DE LA REUNIÓN PASADA\n'+pend+'\n\nCruza estos pendientes con las notas del período: di cuáles siguen apareciendo (con la evidencia) y cuáles no se volvieron a mencionar.';
 }
 
 /* El prompt completo, como se copia para pegarlo en cualquier chat.
-   o: {modo, rango, notas (texto, una nota por línea), pendientes, todos} */
+   o: {modo, rango, notas (texto, una nota por línea), pendientes, todos, sede} */
 function armar(o){
   var rango=o.rango || '(sin período)', modo=o.modo;
-  var partes=[INTRO, 'MODO: '+modo+'\nPERÍODO: '+rango, REGLAS];
-  if(o.todos){ partes.push(bloqueDiario(rango), bloqueSemanal(rango), bloqueCierre()); }
-  else partes.push(bloqueDe(modo, rango));
+  var partes=[sedeDe(o.sede).intro, 'MODO: '+modo+'\nPERÍODO: '+rango, REGLAS];
+  if(o.todos){ partes.push(bloqueDiario(rango, o.sede), bloqueSemanal(rango, o.sede), bloqueCierre()); }
+  else partes.push(bloqueDe(modo, rango, o.sede));
   if(modo==='CIERRE' && o.pendientes) partes.push(textoPendientes(o.pendientes));
   partes.push('NOTAS DEL PERÍODO\n'+(o.notas || '(sin notas registradas en el período)'));
   return partes.join('\n\n');
@@ -94,8 +105,8 @@ var SALIDA_JSON =
 '"informe": el texto final, listo para copiar y mandar tal cual. Sin bloque de código, sin comentarios antes ni después, sin repetir estas instrucciones. Usa saltos de línea reales (\\n) entre líneas.\n'+
 '"observaciones": lista de 0 a 5 frases cortas para el supervisor, que NO van en el informe: notas ambiguas que marcaste con "(revisar)", áreas que no calzan con lo que dice la nota (respeta el área anotada en el informe y avísalo aquí para que la corrija en la app), datos que faltan. Lista vacía si no hay nada que decir.';
 
-function sistemaIA(modo, rango){
-  return [INTRO, REGLAS, bloqueDe(modo, rango || '(sin período)'), SALIDA_JSON].join('\n\n');
+function sistemaIA(modo, rango, sede){
+  return [sedeDe(sede).intro, REGLAS, bloqueDe(modo, rango || '(sin período)', sede), SALIDA_JSON].join('\n\n');
 }
 function mensajeIA(o){
   var partes=['MODO: '+o.modo+'\nPERÍODO: '+(o.rango || '(sin período)')];
@@ -104,7 +115,7 @@ function mensajeIA(o){
   return partes.join('\n\n');
 }
 
-var PROMPT_FR = { INTRO:INTRO, REGLAS:REGLAS, bloqueDiario:bloqueDiario, bloqueSemanal:bloqueSemanal,
+var PROMPT_FR = { INTRO:INTRO, SEDES:SEDES, REGLAS:REGLAS, bloqueDiario:bloqueDiario, bloqueSemanal:bloqueSemanal,
                   bloqueCierre:bloqueCierre, armar:armar, paraClaude:paraClaude, sistemaIA:sistemaIA, mensajeIA:mensajeIA };
 if(typeof module!=='undefined' && module.exports) module.exports=PROMPT_FR;
 else raiz.PROMPT_FR=PROMPT_FR;

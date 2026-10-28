@@ -114,9 +114,14 @@ module.exports = async function handler(req, res) {
   if (req.method === "GET") return res.status(200).json({ ok: true, deepseek: hayClave, v: 2 });
   if (req.method !== "POST") return res.status(405).json({ error: "Solo GET o POST" });
 
+  /* la sede sale de la cuenta (app_metadata.sede, que solo se cambia por SQL): François PV y
+     Maximarket PV tienen la suya; la de La Florida no lleva sede */
+  let sede = "lf";
   try {
-    if (!PRUEBA_LOCAL && !(await cuenta(req)))
+    const u = PRUEBA_LOCAL ? null : await cuenta(req);
+    if (!PRUEBA_LOCAL && !u)
       return res.status(401).json({ error: "Para usar DeepSeek entra con la cuenta de la app en Datos.", sinSesion: true });
+    sede = String((u ? u.app_metadata && u.app_metadata.sede : (req.body || {}).sede) || "lf");
   } catch (e) {
     return res.status(502).json({ error: "No se pudo verificar la cuenta. ¿Hay internet?" });
   }
@@ -137,7 +142,7 @@ module.exports = async function handler(req, res) {
   const recibidas = notas.split(/\n/).filter(l => l.trim()).length;   // una nota por línea (lineaNota)
   const t0 = Date.now();
   try {
-    const r = await conDeepseek(PROMPT.sistemaIA(modo, o.rango), PROMPT.mensajeIA(o));
+    const r = await conDeepseek(PROMPT.sistemaIA(modo, o.rango, sede), PROMPT.mensajeIA(o));
     const s = leerSalida(r.texto);
     if (!s.informe) throw new Error("DeepSeek devolvió un informe vacío");
     return res.status(200).json({ ok: true, informe: s.informe, observaciones: s.observaciones,

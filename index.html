@@ -15,6 +15,20 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Informe FR">
+<script>
+/* Sede de este aparato (ver «Sede» más abajo): la que ya tiene guardada o, si está en
+   blanco, la del enlace (?sede=pv · ?sede=maximarket). Cambia el nombre con que se instala. */
+(function(){ try{
+  var p=JSON.parse(localStorage.getItem('if_prefs_v1')||'{}'), s=p.sede;
+  var q=(new URLSearchParams(location.search).get('sede')||'').toLowerCase(), k={ pv:'s2', maximarket:'s3' };
+  if(!s && k[q] && !JSON.parse(localStorage.getItem('if_notas_v1')||'[]').length) s=k[q];
+  var m={ s2:['manifest-pv.json','Informe François PV','Informe PV'], s3:['manifest-maximarket.json','Informe Maximarket PV','Maximarket'] }[s];
+  if(!m) return;
+  document.querySelector('link[rel="manifest"]').href=m[0];
+  document.title=m[1];
+  document.querySelector('meta[name="apple-mobile-web-app-title"]').content=m[2];
+}catch(e){} })();
+</script>
 <style>
 :root{
   --bg:#faf6f1; --bg2:#fffdfb; --card:#ffffff; --line:#e7dccf;
@@ -546,6 +560,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint hide" id="syncResumen" style="font-weight:600"></p>
       <div class="btns hide" id="syncErrBtns"><button class="btn sec sm" id="btnCopiarErr"><svg class="i"><use href="#i-copiar"/></svg> Copiar el detalle</button></div>
       <div id="syncLogin" class="hide">
+        <p class="hint hide" id="sedeAviso" style="margin-top:0; font-weight:600"></p>
         <div class="row">
           <div style="flex:2 1 220px"><label class="f" for="syEmail">Correo</label>
             <input type="email" id="syEmail" autocomplete="username" inputmode="email"
@@ -702,6 +717,59 @@ var sel={area:'SALA', edit:null, fotos:[], fotosm:[]};
 function fotosDe(n){ return (n.fotos||[]).concat(n.fotosm||[]); }
 function cajon(donde){ return donde==='m' ? 'fotosm' : 'fotos'; }
 var gen={modo:'DIARIO'};
+
+/* ================= Sede =================
+   Cada sede entra con su propia cuenta de Supabase: sus notas, personas,
+   informes y fotos quedan aparte (las políticas RLS son por cuenta). La sede
+   la dice la cuenta (app_metadata.sede, que solo se pone por SQL); antes de
+   entrar, el enlace de la sede (?sede=pv · ?sede=maximarket) ya muestra su
+   nombre. La Florida no lleva sede y para ella nada cambia.
+   Un aparato con notas de una sede no se conecta a la cuenta de otra. */
+var SEDES_IF={ lf:{ n:'François', app:'Informe François', lugar:'La Florida' },
+               s2:{ n:'François PV', app:'Informe François PV', lugar:'Puerto Varas' },
+               s3:{ n:'Maximarket PV', app:'Informe Maximarket PV', lugar:'Puerto Varas' } };
+var ENLACE_SEDE={ pv:'s2', maximarket:'s3' };
+var avisoEnlace='';                           // el enlace pedía otra sede y este aparato ya tiene la suya
+function sedeIF(){ return SEDES_IF[prefs.sede] ? prefs.sede : 'lf'; }
+/* la dirección para instalarla en otro teléfono: la de una sede lleva su enlace */
+function urlApp(){
+  var base=location.href.split('?')[0].split('#')[0], id=sedeIF();
+  var k=Object.keys(ENLACE_SEDE).find(function(x){ return ENLACE_SEDE[x]===id; });
+  return k ? base+'?sede='+k : base;
+}
+function sedeDeCuenta(u){ var s=u && u.app_metadata && u.app_metadata.sede; return SEDES_IF[s] ? s : 'lf'; }
+function aparatoNuevo(){ return !notas.length && !informes.length && !load(PERF,[]).length; }
+(function(){
+  var q=ENLACE_SEDE[(new URLSearchParams(location.search).get('sede')||'').toLowerCase()];
+  if(!q || q===sedeIF()) return;
+  if(!prefs.sede && aparatoNuevo()){ prefs.sede=q; localStorage.setItem(PREF,JSON.stringify(prefs)); }
+  else avisoEnlace=q;
+})();
+/* el nombre de la sede en pantalla; La Florida queda tal como está escrita en el HTML */
+function aplicaSede(){
+  var id=sedeIF(), s=SEDES_IF[id]; if(id==='lf') return;
+  document.title=s.app;
+  $('header.top h1').textContent=s.app;
+  $('footer').textContent=s.n+' · '+s.lugar+' — las notas viven en tu aparato y, con cuenta, también en la nube.';
+  $('#rTexto').placeholder='*'+PROMPT_FR.SEDES[id].titulo+'* — lun 17-08\n…';
+  $('#sedeAviso').textContent='Este aparato es de '+s.n+': entra con la cuenta de esa sede.';
+  $('#sedeAviso').classList.remove('hide');
+  /* en las sedes, la clave de cada persona es un PIN */
+  $('label[for="qNuevaClave"]').textContent='PIN';
+  $('#qNuevaClave').placeholder='mínimo 4 números'; $('#qNuevaClave').inputMode='numeric';
+  $('#qClave').inputMode='numeric';
+  $('#qNuevoNombre').placeholder='Tu nombre';
+}
+/* Al abrir en una sede: primero la cuenta de la sede, después nombre y PIN */
+function entradaSede(){
+  if(sedeIF()==='lf' || yo) return;
+  sesion().then(function(s){
+    if(s && sedeDeCuenta(s.user)===sedeIF()){ abrirQuien(true); return; }
+    var bd=document.querySelector('nav.tabs button[data-tab="datos"]'); if(bd) bd.click();
+    toast(s ? 'Esta cuenta es de '+SEDES_IF[sedeDeCuenta(s.user)].n+': cierra sesión y entra con la de '+SEDES_IF[sedeIF()].n
+            : 'Primero conecta este aparato con la cuenta de '+SEDES_IF[sedeIF()].n);
+  });
+}
 
 /* ================= Quién usa la app =================
    Una sola cuenta de Supabase para todos; adentro, una persona por perfil,
@@ -1211,7 +1279,7 @@ function pdfCuerpo(lineas){
 
 function hojaPDF(txt, fotos){
   var rango=$('#gRango').value.trim();
-  var titulo='Bitácora François · '+gen.modo+(rango?' — '+rango:'');
+  var titulo=PROMPT_FR.SEDES[sedeIF()].titulo+' · '+gen.modo+(rango?' — '+rango:'');
   var hoy=new Date();
   var u=ubicarFotos(txt, fotos), cuerpo='', buf=[];
   u.lineas.forEach(function(l, i){
@@ -1486,7 +1554,7 @@ function pedidoInforme(){
   return { modo:gen.modo, rango:$('#gRango').value.trim(),
            notas:notasDelPeriodo().map(lineaNota).join('\n'),
            pendientes: gen.modo==='CIERRE' ? $('#gPend').value.trim() : '',
-           todos:$('#gTodos').checked };
+           todos:$('#gTodos').checked, sede:sedeIF() };
 }
 function construirPrompt(){ return PROMPT_FR.armar(pedidoInforme()); }
 
@@ -1547,7 +1615,7 @@ function setModo(m){
 /* ================= Informes ================= */
 /* Dónde parte el informe: «*Bitácora François*» (diario y semanal) o
    «RESUMEN DE LA SEMANA» (cierre), con o sin negrita, con uno o dos asteriscos. */
-var RX_INICIO=/^\s*\**\s*Bit[áa]cora\s+Fran/i;
+var RX_INICIO=/^\s*\**\s*Bit[áa]cora\s+(Fran|Maximarket)/i;
 var RX_CIERRE=/^\s*\**\s*RESUMEN DE LA SEMANA\s*\**\s*:?\s*$/i;
 function esCierreTxt(t){ return RX_CIERRE.test(((t||'').replace(/\r/g,'').trim().split('\n')[0])||''); }
 /* Lo que agrega un chat alrededor del informe: «Aquí tienes…», «¿Quieres que…?», «Nota: …».
@@ -1664,7 +1732,7 @@ function abrirQuien(forzado){
   $('#quienLista').classList.remove('hide');
   $('#quienTitulo').textContent = perfilesVivos().length ? '¿Quién eres?' : 'Empecemos';
   $('#quienPaso').textContent = perfilesVivos().length
-    ? 'Elige tu nombre y escribe tu clave de la app.'
+    ? 'Elige tu nombre y escribe tu '+nombreClave()+'.'
     : 'Crea tu usuario para que las notas queden a tu nombre.';
   $('#quienLista').innerHTML = perfilesVivos().map(function(p){
     return '<button class="btn sec" style="width:100%; margin-bottom:8px" data-perfil="'+p.id+'">'+
@@ -1672,7 +1740,10 @@ function abrirQuien(forzado){
   }).join('') + '<button class="btn sec" style="width:100%" id="btnNuevoPerfil2">'+ico('mas')+' Agregar persona</button>' +
     (forzado ? '' : '<div class="btns mt"><button class="btn sec" id="btnCerrarQuien">Cerrar</button></div>');
   $('#ovlQuien').classList.remove('hide');
+  /* en una sede, la primera vez se pide de una vez el nombre y el PIN */
+  if(forzado && sedeIF()!=='lf' && !perfilesVivos().length) formNuevoPerfil();
 }
+function nombreClave(){ return sedeIF()==='lf' ? 'clave de la app' : 'PIN'; }
 function cerrarQuien(){ $('#ovlQuien').classList.add('hide'); }
 function pedirClave(id){
   var p=perfilPorId(id); if(!p) return;
@@ -1688,7 +1759,7 @@ function pedirClave(id){
 async function probarClave(){
   if(!qSel) return;
   if(await claveCalza(qSel, $('#qClave').value)) entrarComo(qSel);
-  else { toast('Esa clave no es'); $('#qClave').value=''; $('#qClave').focus(); }
+  else { toast(sedeIF()==='lf' ? 'Esa clave no es' : 'Ese PIN no es'); $('#qClave').value=''; $('#qClave').focus(); }
 }
 function entrarComo(p){
   yo=p; prefs.perfil=p.id; savePrefs();
@@ -1705,6 +1776,8 @@ function formNuevoPerfil(){
      el que abriera la app en un teléfono nuevo se haría administrador solo. */
   var hayAdmin=perfilesVivos().some(function(p){ return p.admin; });
   $('#qAdmin').parentNode.classList.toggle('hide', hayAdmin && !soyAdmin());
+  /* en una sede, la primera persona no se salta: nombre y PIN antes de anotar */
+  $('#btnCancelarPerfil').classList.toggle('hide', sedeIF()!=='lf' && !perfilesVivos().length);
   $('#quienNuevo').classList.remove('hide');
   $('#ovlQuien').classList.remove('hide');
   setTimeout(function(){ $('#qNuevoNombre').focus(); }, 60);
@@ -1714,6 +1787,7 @@ async function crearPerfil(){
   var cla=$('#qNuevaClave').value;
   if(!nom){ toast('Escribe el nombre'); return; }
   if(perfilPorNombre(nom)){ toast('Ya hay alguien con ese nombre'); return; }
+  if(sedeIF()!=='lf' && !/^\d{4,}$/.test(cla)){ toast('El PIN son 4 números o más'); return; }
   if(cla && cla.length<4){ toast('La clave necesita 4 caracteres o más'); return; }
   if(cla && !hayCripto()){ toast('Este navegador no puede guardar la clave cifrada'); return; }
   var s=cla?sal():'';
@@ -1888,7 +1962,8 @@ async function armarPreinforme(){
               '. Suele tardar menos de un minuto; con muchas notas, un poco más.</span></div>');
     var r=await fetch('api/preinforme', { method:'POST',
       headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+s.access_token },
-      body:JSON.stringify({ modo:pedido.modo, rango:pedido.rango, notas:pedido.notas, pendientes:pedido.pendientes }) });
+      body:JSON.stringify({ modo:pedido.modo, rango:pedido.rango, notas:pedido.notas, pendientes:pedido.pendientes,
+                            sede:pedido.sede }) });            // la sede la manda la cuenta; esto solo vale en la prueba local
     var d=await r.json().catch(function(){ return {}; });
     if(!r.ok || !d.ok) throw (d.error ? d : {error:'El servidor respondió '+r.status+'.'});
 
@@ -2116,11 +2191,28 @@ function entrar(){
     nube('sync','Entrando');
     c.auth.signInWithPassword({email:em, password:pw}).then(function(r){
       if(r.error){ nube('alerta','No entró'); toast(traduceErr(r.error.message)); pintarSync(); return; }
+      /* la cuenta tiene que ser la de la sede de este aparato; un aparato
+         todavía en blanco toma la sede de la cuenta */
+      var cu=sedeDeCuenta(r.data && r.data.user);
+      if(cu!==sedeIF()){
+        if(!aparatoNuevo()){
+          c.auth.signOut().then(function(){
+            nube('alerta','No entró'); pintarSync();
+            alert('Esa cuenta es de '+SEDES_IF[cu].n+' y este aparato ya tiene notas de '+SEDES_IF[sedeIF()].n+'.\n\n'+
+                  'Entra con la cuenta de '+SEDES_IF[sedeIF()].n+'.');
+          });
+          return;
+        }
+        if(cu==='lf') delete prefs.sede; else prefs.sede=cu;
+        prefs.email=em; savePrefs();
+        location.replace(location.pathname);         // se vuelve a abrir con el nombre de la sede y sincroniza
+        return;
+      }
       $('#syPass').value='';
       prefs.email=em; savePrefs();
       toast('Listo, cuenta conectada');
       pintarSync();
-      sincronizar('manual');
+      sincronizar('manual').then(entradaSede);
     });
   });
 }
@@ -2191,6 +2283,12 @@ function pintarSync(){
     if(!s){
       $('#syncEstado').textContent='Sin cuenta en este aparato: lo que anotes acá no se ve en el otro. Entra con tu correo y clave.';
       nube('nube','Sin cuenta — toca para configurar');
+      return;
+    }
+    if(sedeDeCuenta(s.user)!==sedeIF()){
+      $('#syncEstado').textContent='La cuenta '+s.user.email+' es de '+SEDES_IF[sedeDeCuenta(s.user)].n+
+        ' y este aparato es de '+SEDES_IF[sedeIF()].n+': no se sincroniza nada. Cierra sesión y entra con la cuenta de '+SEDES_IF[sedeIF()].n+'.';
+      nube('alerta','Cuenta de otra sede');
       return;
     }
     $('#syncEstado').textContent='Conectado como '+s.user.email+
@@ -2420,6 +2518,12 @@ async function sincronizar(modo){
 
   var s=await sesion();
   if(!s){ if(manual) toast('Primero entra con tu correo en Datos'); pintarSync(); return; }
+  /* nunca se mezclan dos sedes: si la cuenta es de otra, no se sube ni se baja nada */
+  if(sedeDeCuenta(s.user)!==sedeIF()){
+    nube('alerta','Cuenta de otra sede');
+    if(manual) toast('Esta cuenta es de '+SEDES_IF[sedeDeCuenta(s.user)].n+', no de '+SEDES_IF[sedeIF()].n+': cierra sesión y entra con la de la sede');
+    return;
+  }
 
   var c=getSB(), uid=s.user.id, paso='empezar';
   if(manual){ sinQuien=false; sinPerfiles=false; }   // a mano se reintenta, por si ya corrieron el SQL
@@ -2688,7 +2792,7 @@ document.addEventListener('click', function(e){
       det.push('firmas: '+(Object.keys(firmas).map(function(q){ return q+'='+firmas[q]; }).join(', ')||'—'));
       if(sinPerfiles) det.push('OJO: falta la tabla if_perfiles');
       if(sinQuien) det.push('OJO: falta la columna quien');
-      copiar('Informe François · '+det.join(' · '), 'Detalle copiado');
+      copiar(SEDES_IF[sedeIF()].app+' · '+det.join(' · '), 'Detalle copiado');
       break;
     case 'btnSalir': salir(); break;
     case 'btnSync': sincronizar('manual'); break;
@@ -2738,10 +2842,10 @@ document.addEventListener('click', function(e){
       break;
     case 'btnInstall': case 'btnInstall2': abrirInstalar(); break;
     case 'btnCerrarInst': cerrarInstalar(); break;
-    case 'btnCopiarUrl': copiar(location.href.split('?')[0], 'Dirección copiada'); break;
+    case 'btnCopiarUrl': copiar(urlApp(), 'Dirección copiada'); break;
     case 'btnCompartir':
       if(navigator.share){
-        navigator.share({ title:'Informe François', text:'App para las notas del turno', url:location.href.split('?')[0] })
+        navigator.share({ title:SEDES_IF[sedeIF()].app, text:'App para las notas del turno', url:urlApp() })
           .catch(function(){});
       }
       break;
@@ -2872,11 +2976,15 @@ function aplicaTema(){
   if(!yo && prefs.perfil){ delete prefs.perfil; savePrefs(); }
 
   aplicaTema();
+  aplicaSede();
   resetForm();
   renderLista();
   renderInformes();
   pintarPerfiles();
   if(perfilesVivos().length && !yo) abrirQuien(true);
+  if(avisoEnlace) setTimeout(function(){
+    toast('Este aparato ya es de '+SEDES_IF[sedeIF()].n+': el enlace de '+SEDES_IF[avisoEnlace].n+' no lo cambia');
+  }, 800);
   $('#rNum').value = prefs.wa || '';
   try{ $('#rTexto').value = localStorage.getItem(BORR) || ''; }catch(e){}
   refrescarInf();
@@ -2892,7 +3000,8 @@ function aplicaTema(){
 
   esperaLib(8000).then(function(hay){
     pintarSync();
-    if(hay) sincronizar('cambio');   // al abrir, sube lo que quedó pendiente y baja lo nuevo
+    var listo = hay ? sincronizar('cambio') : Promise.resolve();   // al abrir, sube lo que quedó pendiente y baja lo nuevo
+    listo.then(entradaSede);
   });
 })();
 

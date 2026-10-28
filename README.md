@@ -122,6 +122,36 @@ por perfil**, cada una con su propia clave de app. Al abrir, la app pregunta qui
 - **Puesta en marcha:** el bloque `if_perfiles` de [`supabase.sql`](supabase.sql). Si no se corre, los
   perfiles funcionan igual pero solo en ese aparato, y la app lo avisa en Datos en vez de caerse.
 
+## Una app por sede: François PV y Maximarket PV (28-oct-2026)
+
+La misma app sirve a las tres sedes. **Cada sede tiene su propia cuenta de Supabase**, así que sus
+notas, personas, informes y fotos quedan aparte solos (las políticas RLS ya son por cuenta) y el
+panel de operaciones lee cada una por separado. La Florida no lleva sede y para ella nada cambió.
+
+| Sede | Enlace para instalarla | Nombre en el teléfono | Título del informe |
+|---|---|---|---|
+| La Florida | `informe-francois.vercel.app` | Informe François | *Bitácora François* |
+| François PV (cafetería, pastelería y heladería) | `informe-francois.vercel.app/?sede=pv` | Informe François PV | *Bitácora François PV* |
+| Maximarket PV (minimarket) | `informe-francois.vercel.app/?sede=maximarket` | Informe Maximarket PV | *Bitácora Maximarket PV* |
+
+- **La sede la dice la cuenta:** `auth.users.raw_app_meta_data.sede` (`s2` = François PV,
+  `s3` = Maximarket PV; los mismos códigos del Checklist). Se pone por SQL y nadie la puede cambiar
+  desde el teléfono. `api/preinforme.js` la lee de la sesión para que DeepSeek sepa de qué local
+  escribe (`prompt.js` → `SEDES`). **Hay que ponerla antes de entrar con esa cuenta en un teléfono:**
+  una sesión abierta antes guarda la cuenta sin sede hasta que se renueve (≈1 hora).
+- **El enlace solo bautiza un aparato en blanco** (sin notas, informes ni personas): cambia el nombre,
+  el ícono instalado (`manifest-pv.json`, `manifest-maximarket.json`) y los textos. Un aparato que ya
+  tiene lo suyo no cambia de sede por abrir otro enlace.
+- **Entrada obligatoria en una sede:** primero la cuenta de la sede (la app abre Datos), después
+  **nombre y PIN** (4 números o más; la primera persona administra y no se puede saltar ese paso).
+- **Puesta en marcha (una vez):** crear las dos cuentas en *Authentication → Users → Add user* con
+  **Auto Confirm**, y correr [`SQL-cuentas-sede.sql`](SQL-cuentas-sede.sql) (pone la sede en cada
+  una). Ese SQL lleva los correos de las cuentas: queda solo en el computador
+  (`.gitignore`), porque este repositorio es público. Después, en cada tablet, abrir su enlace y entrar con su cuenta.
+- **Nunca se mezclan dos sedes:** si un aparato entra con la cuenta de otra sede, no se sube ni se
+  baja nada y Datos lo explica; si el aparato tenía notas, la sesión se cierra al tiro. Un aparato en
+  blanco que entra con la cuenta de una sede toma esa sede.
+
 ## Sincronía entre el teléfono y el computador
 
 Opcional: si entras con tu correo en Datos, las notas, los informes y las fotos suben a
@@ -160,9 +190,9 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
 - `index.html` — toda la app (datos, estilos, lógica). Los íconos son SVG de línea (sprite al inicio del `body`, función `ico()`), sin emojis.
 - `prompt.js` — el **prompt maestro**: reglas y los tres modos. Lo usan la página («Copiar prompt») y la función de DeepSeek: si cambias una regla, cámbiala aquí.
 - `api/preinforme.js` — función de Vercel que le pide el pre-informe a DeepSeek. Solo atiende a una sesión de Supabase de la app que no sea anónima; responde `{informe, observaciones, modelo}`. `GET` dice si la clave está cargada.
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v25`): **súbela** al cambiar assets del núcleo. HTML y JS propios network-first, el resto cache-first. Las llamadas a Supabase y a `/api/` **no pasan por la caché**.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v26`): **súbela** al cambiar assets del núcleo. HTML y JS propios network-first, el resto cache-first. Las llamadas a Supabase y a `/api/` **no pasan por la caché**.
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
-- `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
+- `manifest.json` (La Florida), `manifest-pv.json`, `manifest-maximarket.json` (las otras sedes), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.
 - `vercel.json` / `netlify.toml` — deploy sin build; `/sw.js` se sirve con `Cache-Control: no-cache` y la función tiene 300 s (DeepSeek espera hasta 240 s).
 - `servir-local.cjs` — servidor para el computador (estático + `/api/`, como Vercel). No se publica (`.vercelignore`).
