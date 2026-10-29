@@ -190,7 +190,7 @@ primero en local y sin señal se anota igual—; la nube es solo la copia común
 - `index.html` — toda la app (datos, estilos, lógica). Los íconos son SVG de línea (sprite al inicio del `body`, función `ico()`), sin emojis.
 - `prompt.js` — el **prompt maestro**: reglas y los tres modos. Lo usan la página («Copiar prompt») y la función de DeepSeek: si cambias una regla, cámbiala aquí.
 - `api/preinforme.js` — función de Vercel que le pide el pre-informe a DeepSeek. Solo atiende a una sesión de Supabase de la app que no sea anónima; responde `{informe, observaciones, modelo}`. `GET` dice si la clave está cargada.
-- `sw.js` — service worker. Constante `CACHE` (hoy `if-v26`): **súbela** al cambiar assets del núcleo. HTML y JS propios network-first, el resto cache-first. Las llamadas a Supabase y a `/api/` **no pasan por la caché**.
+- `sw.js` — service worker. Constante `CACHE` (hoy `if-v27`): **súbela** al cambiar assets del núcleo. HTML y JS propios network-first, el resto cache-first. Las llamadas a Supabase y a `/api/` **no pasan por la caché**.
 - `supabase.sql` — tablas, políticas y bucket de la sincronía. Se corre una sola vez.
 - `manifest.json` (La Florida), `manifest-pv.json`, `manifest-maximarket.json` (las otras sedes), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `icon-maskable-512.png`, `icon.svg` — PWA instalable.
 - `skill/SKILL.md` — copia versionada de la skill `bitacora-francois`.

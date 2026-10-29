@@ -303,7 +303,7 @@ details.verNotas[open] .flecha{transform:rotate(180deg)}
 
 /* Toast */
 #toast{
-  position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+  position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%) translateY(20px);
   background:var(--tx); color:var(--bg); padding:11px 18px; border-radius:999px;
   font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.22s; z-index:60;
 }
@@ -2958,6 +2958,12 @@ function pesoTxt(b){
 }
 function aplicaTema(){
   document.body.classList.toggle('dark', !!prefs.dark);
+  /* Barras del sistema en la app instalada: la de estado toma este theme-color
+     (Android lo lee en vivo); la de navegación de Android toma background_color
+     del manifest, por eso ahí va el fondo oscuro. */
+  var tc=document.querySelector('meta[name="theme-color"]');
+  if(tc) tc.content = prefs.dark ? '#3b2414' : '#7a4a22';
+  document.documentElement.style.colorScheme = prefs.dark ? 'dark' : 'light';
   $('#btnTheme').innerHTML = ico(prefs.dark ? 'sol' : 'luna');
 }
 
