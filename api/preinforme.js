@@ -4,6 +4,9 @@
      Authorization: Bearer <token de la sesión de Supabase de la app>
      → { ok, informe, observaciones:[…], modelo, cortado, recibidas (notas que llegaron) }
    GET  /api/preinforme   → { ok, deepseek } (si la clave está cargada)
+   GET  /api/preinforme?saldo=1   Authorization: Bearer <token>
+     → { ok, disponible, saldos:[{moneda,total,regalado,recargado}], hora }
+       el saldo de la cuenta de DeepSeek, lo mismo que muestra platform.deepseek.com
 
    La clave de DeepSeek vive SOLO en Vercel, nunca en la página:
      DEEPSEEK_API_KEY   (obligatoria)
@@ -109,9 +112,50 @@ function leerSalida(s) {
   return { informe: d.informe.replace(/\r/g, "").trim(), observaciones: obs };
 }
 
+/* ---- Saldo de la cuenta de DeepSeek ----
+   Lo mismo que muestra platform.deepseek.com: total, regalado (lo que dan al
+   abrir la cuenta) y recargado. Es de la cuenta, no de la clave: el panel de
+   operaciones gasta del mismo saldo. Solo con la sesión de la app; la página
+   lo enseña únicamente a quien administra. */
+async function saldo(req, res, hayClave) {
+  try {
+    const u = PRUEBA_LOCAL ? null : await cuenta(req);
+    if (!PRUEBA_LOCAL && !u) return res.status(401).json({ error: "Entra con la cuenta de la app en Datos.", sinSesion: true });
+  } catch (e) {
+    return res.status(502).json({ error: "No se pudo verificar la cuenta. ¿Hay internet?" });
+  }
+  if (!hayClave) return res.status(501).json({ error: "Falta la clave DEEPSEEK_API_KEY en Vercel.", sinClave: true });
+  let r, d;
+  try {
+    r = await fetch(DEEPSEEK_API + "user/balance", {
+      headers: { Authorization: "Bearer " + process.env.DEEPSEEK_API_KEY },
+      signal: AbortSignal.timeout(15000)
+    });
+    d = await r.json().catch(() => ({}));
+  } catch (e) {
+    return res.status(504).json({ error: "DeepSeek no respondió" });
+  }
+  if (!r.ok) {
+    const motivo = r.status === 401 ? "la clave DEEPSEEK_API_KEY no es válida" : ((d.error && d.error.message) || "DeepSeek " + r.status);
+    return res.status(502).json({ error: motivo });
+  }
+  const saldos = (Array.isArray(d.balance_infos) ? d.balance_infos : []).map(b => ({
+    moneda: String(b.currency || ""),
+    total: Number(b.total_balance) || 0,
+    regalado: Number(b.granted_balance) || 0,
+    recargado: Number(b.topped_up_balance) || 0
+  }));
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).json({ ok: true, disponible: d.is_available !== false, saldos, hora: new Date().toISOString() });
+}
+
 module.exports = async function handler(req, res) {
   const hayClave = !!process.env.DEEPSEEK_API_KEY;
-  if (req.method === "GET") return res.status(200).json({ ok: true, deepseek: hayClave, v: 2 });
+  if (req.method === "GET") {
+    const q = (req.url || "").split("?")[1] || "";
+    if (/(^|&)saldo(=|&|$)/.test(q)) return saldo(req, res, hayClave);
+    return res.status(200).json({ ok: true, deepseek: hayClave, v: 3 });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Solo GET o POST" });
 
   /* la sede sale de la cuenta (app_metadata.sede, que solo se cambia por SQL): François PV y

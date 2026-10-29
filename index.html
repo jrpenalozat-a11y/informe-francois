@@ -301,6 +301,25 @@ details.verNotas .flecha{transition:transform .2s}
 details.verNotas[open] .flecha{transform:rotate(180deg)}
 #conteo .solo{color:var(--warn)}
 
+/* Saldo de DeepSeek: cuadrito fijo en la esquina, solo para quien administra.
+   Toca para ver el detalle; se actualiza solo cada minuto. */
+#saldoDS{
+  position:fixed; left:12px; bottom:calc(12px + env(safe-area-inset-bottom, 0px)); z-index:55;
+  background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--sh);
+  padding:7px 10px; font-size:12px; line-height:1.35; color:var(--tx2); cursor:pointer;
+  -webkit-user-select:none; user-select:none; max-width:230px;
+}
+#saldoDS .cab{display:flex; align-items:center; gap:6px; color:var(--tx); white-space:nowrap}
+#saldoDS .cab svg.i{width:14px; height:14px; color:var(--acc)}
+#saldoDS .cab b{font-size:13px}
+#saldoDS .det{display:none; margin-top:6px; padding-top:6px; border-top:1px solid var(--line)}
+#saldoDS.abierto .det{display:block}
+#saldoDS .det p{margin:0 0 3px}
+#saldoDS .det a{color:var(--acc); font-weight:700; text-decoration:none}
+#saldoDS.cargando .cab svg.i{animation:gira .9s linear infinite}
+#saldoDS.bajo{border-color:var(--danger)}
+#saldoDS.bajo .cab, #saldoDS.bajo .cab svg.i{color:var(--danger)}
+
 /* Toast */
 #toast{
   position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%) translateY(20px);
@@ -695,6 +714,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   </div>
 </div>
 
+<div id="saldoDS" class="hide" role="status" title="Saldo de la cuenta de DeepSeek · toca para ver el detalle"></div>
 <div id="toast"></div>
 
 <script src="prompt.js"></script>
@@ -1839,6 +1859,7 @@ function pintarPerfiles(){
 }
 function refrescarTodo(){
   pintarPerfiles(); renderLista(); renderPreview(); renderInformes(); stats();
+  saldoCargar();                               // el cuadro de saldo solo lo ve quien administra
 }
 
 function guardarInforme(silencioso){
@@ -1982,6 +2003,7 @@ async function armarPreinforme(){
     }
     preEstado(h);
     toast('Pre-informe listo');
+    saldoCargar(true);                            // el saldo ya bajó: que el cuadro lo muestre
     setTimeout(function(){ $('#cardInf').scrollIntoView({behavior:'smooth', block:'start'}); }, 300);
   }catch(e){
     var msg=(e && e.error) || (e && e.message) || String(e);
@@ -1991,6 +2013,77 @@ async function armarPreinforme(){
     pre.ocupado=false; btn.disabled=false; btn.querySelector('span').textContent='Armar pre-informe';
   }
 }
+
+/* ================= Saldo de DeepSeek (solo quien administra) =================
+   El cuadrito de la esquina muestra lo mismo que platform.deepseek.com: el
+   saldo de la cuenta. Lo pide a api/preinforme?saldo=1 con la sesión de la
+   app, cada minuto mientras la app está a la vista y después de cada
+   pre-informe. Es de la cuenta, no de la clave: el panel de operaciones
+   gasta del mismo saldo. */
+var SALDO_BAJO=1;                              // en la moneda de la cuenta: con menos, el cuadro avisa
+var saldoDS={t:null, ultimo:0, datos:null, error:'', pidiendo:false, abierto:false};
+function saldoMoneda(m){ return m==='USD' ? 'US$ ' : m==='CNY' ? '¥ ' : (m ? m+' ' : ''); }
+function saldoNum(n){ return (Math.round((+n||0)*100)/100).toFixed(2).replace('.',','); }
+function saldoPrincipal(d){
+  var s=(d && d.saldos) || []; if(!s.length) return null;
+  return s.slice().sort(function(a,b){ return b.total-a.total; })[0];   // la moneda que tiene saldo
+}
+function saldoPintar(){
+  var box=$('#saldoDS'); if(!box) return;
+  var d=saldoDS.datos, p=saldoPrincipal(d), h='', bajo=false;
+  if(saldoDS.pidiendo && !d){
+    h='<div class="cab">'+ico('chispa')+'DeepSeek <b>…</b></div>';
+  }else if(!p){
+    bajo=true;
+    h='<div class="cab">'+ico('alerta')+'DeepSeek <b>sin dato</b></div>'+
+      '<div class="det"><p>'+esc(saldoDS.error||'No se pudo leer el saldo')+'</p><p><a data-saldo="ya">Actualizar</a></p></div>';
+  }else{
+    bajo = !d.disponible || p.total<SALDO_BAJO;
+    var hora=d.hora ? new Date(d.hora) : null;
+    h='<div class="cab">'+ico(bajo?'alerta':'chispa')+'DeepSeek <b>'+saldoMoneda(p.moneda)+saldoNum(p.total)+'</b></div>'+
+      '<div class="det">'+
+        (bajo ? '<p><b>'+(d.disponible ? 'Queda poco saldo' : 'Sin saldo: DeepSeek no va a responder')+'</b></p>' : '')+
+        '<p>Recargado '+saldoMoneda(p.moneda)+saldoNum(p.recargado)+' · Regalo '+saldoMoneda(p.moneda)+saldoNum(p.regalado)+'</p>'+
+        (hora ? '<p>Actualizado '+p2(hora.getHours())+':'+p2(hora.getMinutes())+(saldoDS.error ? ' · '+esc(saldoDS.error) : '')+'</p>' : '')+
+        '<p><a href="https://platform.deepseek.com/top_up" target="_blank" rel="noopener">Recargar en DeepSeek</a> · <a data-saldo="ya">Actualizar</a></p>'+
+      '</div>';
+  }
+  box.innerHTML=h;
+  box.classList.toggle('bajo', bajo);
+  box.classList.toggle('abierto', saldoDS.abierto);
+}
+async function saldoCargar(forzar){
+  var box=$('#saldoDS'); if(!box) return;
+  var s = soyAdmin() ? await sesion() : null;
+  if(!s){ box.classList.add('hide'); return; }
+  if(box.classList.contains('hide')){ box.classList.remove('hide'); forzar=true; }
+  if(saldoDS.pidiendo || (!forzar && Date.now()-saldoDS.ultimo<45000)) return;
+  saldoDS.pidiendo=true; box.classList.add('cargando'); if(!saldoDS.datos) saldoPintar();
+  try{
+    var r=await fetch('api/preinforme?saldo=1', { headers:{ Authorization:'Bearer '+s.access_token }, cache:'no-store' });
+    var d=await r.json().catch(function(){ return {}; });
+    if(!r.ok || !d.ok) throw (d.error || ('El servidor respondió '+r.status));
+    saldoDS.datos=d; saldoDS.error=''; saldoDS.ultimo=Date.now();
+  }catch(e){
+    var m=(e && e.message) || String(e);
+    saldoDS.error=/Failed to fetch|NetworkError|Load failed/i.test(m) ? 'Sin conexión' : m;
+    if(saldoDS.datos) saldoDS.ultimo=Date.now();        // se queda el último saldo conocido
+  }finally{
+    saldoDS.pidiendo=false; box.classList.remove('cargando'); saldoPintar();
+  }
+}
+function saldoArrancar(){
+  clearInterval(saldoDS.t);
+  saldoDS.t=setInterval(function(){ if(!document.hidden) saldoCargar(); }, 60000);
+  saldoCargar(true);
+}
+document.addEventListener('click', function(e){
+  var box=$('#saldoDS'); if(!box || !box.contains(e.target)) return;
+  var a=e.target.closest('a');
+  if(a && a.dataset.saldo==='ya'){ e.preventDefault(); saldoCargar(true); return; }
+  if(a && a.href) return;                              // el enlace a DeepSeek abre normal
+  saldoDS.abierto=!saldoDS.abierto; box.classList.toggle('abierto', saldoDS.abierto);
+});
 
 /* Copiar para Claude: el prompt completo (reglas + modo + todas las notas del período)
    y, si el cuadro «Informe» ya tiene el pre-informe, ese texto como borrador a revisar.
@@ -2212,6 +2305,7 @@ function entrar(){
       prefs.email=em; savePrefs();
       toast('Listo, cuenta conectada');
       pintarSync();
+      saldoCargar(true);
       sincronizar('manual').then(entradaSede);
     });
   });
@@ -2219,7 +2313,7 @@ function entrar(){
 function salir(){
   var c=getSB(); if(!c) return;
   if(!confirm('Cerrar sesión en este aparato.\n\nLas notas que ya están acá se quedan; solo deja de sincronizar.')) return;
-  c.auth.signOut().then(function(){ nube('nube','Sin cuenta'); toast('Sesión cerrada'); pintarSync(); });
+  c.auth.signOut().then(function(){ nube('nube','Sin cuenta'); toast('Sesión cerrada'); pintarSync(); saldoCargar(); });
 }
 
 /* --- Estado en pantalla ---
@@ -3006,6 +3100,7 @@ function aplicaTema(){
 
   esperaLib(8000).then(function(hay){
     pintarSync();
+    if(hay) saldoArrancar();
     var listo = hay ? sincronizar('cambio') : Promise.resolve();   // al abrir, sube lo que quedó pendiente y baja lo nuevo
     listo.then(entradaSede);
   });
@@ -3013,7 +3108,7 @@ function aplicaTema(){
 
 /* Al volver a la app (cambiar de pestaña, desbloquear el teléfono) y al
    recuperar la señal, vuelve a mirar la nube. */
-document.addEventListener('visibilitychange', function(){ if(!document.hidden) sincronizar('auto'); });
+document.addEventListener('visibilitychange', function(){ if(!document.hidden){ sincronizar('auto'); saldoCargar(); } });
 window.addEventListener('online', function(){ sincronizar('cambio'); });
 
 window.addEventListener('beforeinstallprompt', function(e){

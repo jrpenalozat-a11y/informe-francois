@@ -1,7 +1,7 @@
 /* Informe François — service worker
    HTML y JS propios: network-first (siempre lo más nuevo con conexión).
    Resto: cache-first. Sube CACHE al cambiar assets del núcleo. */
-const CACHE = "if-v27";
+const CACHE = "if-v28";
 const CORE = ["./", "./index.html", "./prompt.js", "./manifest.json", "./manifest-pv.json", "./manifest-maximarket.json", "./icon.svg",
               "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./icon-maskable-512.png"];
 
