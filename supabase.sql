@@ -48,6 +48,20 @@ create table if not exists public.if_informes (
   act     timestamptz not null default now()
 );
 
+-- ---------- Los comentarios sobre las notas ----------
+-- Van aparte, uno por fila: dos personas comentando a la vez no se pisan y
+-- editar la nota no los toca. El Pase los lee junto a su nota.
+create table if not exists public.if_comentarios (
+  id      text primary key,
+  uid     uuid not null references auth.users(id) on delete cascade,
+  nota    text,                                   -- la nota comentada (id de if_notas)
+  quien   text,                                   -- quién lo escribió
+  texto   text,
+  creado  text,                                   -- cuándo se escribió
+  borrada boolean not null default false,         -- borrado: se guarda la marca para que no reviva
+  act     timestamptz not null default now()
+);
+
 -- ---------- Quién anotó (si dos personas comparten la cuenta) ----------
 -- Se puede correr sola, sobre una tabla que ya existe: no toca los datos.
 alter table public.if_notas add column if not exists quien text;
@@ -58,11 +72,19 @@ alter table public.if_informes add column if not exists quien text;
 create index if not exists if_notas_uid_idx    on public.if_notas(uid);
 create index if not exists if_informes_uid_idx on public.if_informes(uid);
 create index if not exists if_perfiles_uid_idx on public.if_perfiles(uid);
+create index if not exists if_comentarios_uid_idx on public.if_comentarios(uid);
 
 -- ---------- Cada cuenta ve y escribe solo lo suyo ----------
 alter table public.if_notas    enable row level security;
 alter table public.if_informes enable row level security;
 alter table public.if_perfiles enable row level security;
+alter table public.if_comentarios enable row level security;
+
+drop policy if exists "if_comentarios dueno" on public.if_comentarios;
+create policy "if_comentarios dueno" on public.if_comentarios
+  for all using (auth.uid() = uid) with check (auth.uid() = uid);
+
+grant select, insert, update, delete on public.if_comentarios to authenticated;
 
 drop policy if exists "if_perfiles dueno" on public.if_perfiles;
 create policy "if_perfiles dueno" on public.if_perfiles

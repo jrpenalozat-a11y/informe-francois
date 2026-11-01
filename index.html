@@ -6,14 +6,14 @@
 <title>Informe François</title>
 <meta name="description" content="Notas del turno y generador del prompt maestro de bitácora (diario, semanal y cierre).">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#7a4a22">
+<meta name="theme-color" content="#FFF7EC">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Informe FR">
 <script>
 /* Sede de este aparato (ver «Sede» más abajo): la que ya tiene guardada o, si está en
@@ -27,17 +27,20 @@
   document.querySelector('link[rel="manifest"]').href=m[0];
   document.title=m[1];
   document.querySelector('meta[name="apple-mobile-web-app-title"]').content=m[2];
+  if(s==='s3') document.querySelector('link[rel="apple-touch-icon"]').href='icon-maximarket-192.png';
 }catch(e){} })();
 </script>
 <style>
 :root{
-  --bg:#faf6f1; --bg2:#fffdfb; --card:#ffffff; --line:#e7dccf;
-  --tx:#2c1e14; --tx2:#7a6553; --tx3:#a08c78;
-  --acc:#b5651d; --acc2:#8a4a16; --accSoft:#f6e8da;
+  /* identidad François: crema y coral, los mismos tonos de Checklist y El Pase */
+  --bg:#FCEEDA; --bg2:#FFFBF4; --card:#FFF7EC; --line:#EBD8BE;
+  --tx:#3B2E2A; --tx2:#6E5245; --tx3:#806450;
+  --acc:#C8403A; --acc2:#A5322C; --accSoft:#FBE0CF;
   --ok:#2e7d4f; --okSoft:#e3f2e8;
   --warn:#b3541e; --danger:#b3261e; --dangerSoft:#fbe6e5;
-  --sh:0 1px 2px rgba(44,30,20,.06), 0 8px 24px rgba(44,30,20,.06);
-  --onAcc:#fff;
+  --sh:0 1px 2px rgba(59,46,42,.06), 0 8px 24px rgba(59,46,42,.06);
+  --onAcc:#FFF7EC;
+  --marca:#C8403A;
   --r:14px;
 }
 body.dark{
@@ -48,6 +51,7 @@ body.dark{
   --warn:#e0913f; --danger:#ef7a72; --dangerSoft:#3a1f1d;
   --sh:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
   --onAcc:#1c1108;
+  --marca:#FEECD6;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -60,16 +64,19 @@ body{
 
 /* Header */
 header.top{
-  background:linear-gradient(135deg,var(--acc2),var(--acc));
-  color:#fff; padding:20px 16px 18px; border-radius:0 0 22px 22px;
+  background:var(--card); border-bottom:1px solid var(--line);
+  color:var(--tx); padding:20px 16px 18px; border-radius:0 0 22px 22px;
 }
 header.top .in{max-width:880px; margin:0 auto; display:flex; align-items:center; gap:12px}
-.logo{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:22px;flex:0 0 auto}
+/* el logo es crema sobre transparente: se usa como máscara para que tome el color del tema */
+.logo{width:124px; height:43px; flex:0 0 auto; background:var(--marca);
+  -webkit-mask:url(logo-francois.png) left center/contain no-repeat; mask:url(logo-francois.png) left center/contain no-repeat}
+.logo.sinMarca{width:44px; height:44px; border-radius:12px; background:var(--accSoft); color:var(--acc); display:grid; place-items:center; -webkit-mask:none; mask:none}
 header.top h1{margin:0; font-size:20px; letter-spacing:.2px}
-header.top p{margin:2px 0 0; font-size:13px; opacity:.9}
+header.top p{margin:2px 0 0; font-size:13px; color:var(--tx2)}
 .topbtns{margin-left:auto; display:flex; gap:8px}
 .iconbtn{
-  border:0; background:rgba(255,255,255,.18); color:#fff; width:38px;height:38px;
+  border:0; background:var(--accSoft); color:var(--acc2); width:38px;height:38px;
   border-radius:11px; font-size:17px; cursor:pointer;
 }
 .iconbtn:active{transform:scale(.94)}
@@ -97,19 +104,24 @@ body.dark .card h2 svg.i{color:var(--acc2)}
 @media (max-width:480px){
   nav.tabs{gap:6px}
   nav.tabs button{flex-direction:column; gap:3px; padding:8px 4px; font-size:12.5px}
-  header.top{padding:16px 16px 15px}
-  header.top .in{gap:10px}
-  header.top h1{font-size:17px; white-space:nowrap}
-  header.top p{font-size:12px}
-  .logo{width:38px; height:38px; border-radius:11px}
+  header.top{padding:14px 16px 12px}
+  header.top .in{gap:6px 10px; flex-wrap:wrap}
+  header.top .titulo{order:3; flex:1 0 100%}
+  header.top h1{font-size:16px; white-space:nowrap}
+  header.top p{margin:0; font-size:12px}
+  .logo{width:107px; height:37px}
+  .logo.sinMarca{width:38px; height:38px; border-radius:11px}
   .topbtns{gap:6px}
   .iconbtn{width:34px; height:34px; border-radius:10px}
 }
-body.dark header.top{background:linear-gradient(135deg,#3b2414,#62391a)}
+body.dark header.top{background:linear-gradient(135deg,#3b2414,#62391a); border-bottom:0}
+body.dark .iconbtn{background:rgba(255,255,255,.18); color:#fff}
 
 /* Cards */
 .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh); padding:16px; margin-bottom:14px}
 .card h2{margin:0 0 12px; font-size:15px; letter-spacing:.4px; text-transform:uppercase; color:var(--tx2)}
+.tituloBtn{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+.tituloBtn h2{margin:0}
 label.f{display:block; font-size:12px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:var(--tx2); margin:0 0 5px}
 input[type=text],input[type=date],input[type=time],input[type=email],input[type=password],textarea,select{
   width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:11px;
@@ -154,6 +166,16 @@ body.dark .note .meta b{color:var(--acc2)}
 .note .med{white-space:pre-wrap; word-break:break-word; font-size:13.5px; color:var(--ok); margin-top:4px; padding-left:14px; position:relative}
 .note .med:before{content:"↳"; position:absolute; left:0; opacity:.75}
 .note .acts{display:flex; gap:4px; flex:0 0 auto}
+.note .coms{margin-top:8px; padding-top:2px; border-top:1px solid var(--line)}
+.note .com{display:flex; gap:6px; align-items:flex-start; padding:6px 0 0; font-size:13.5px}
+.note .com .ctx{flex:1; min-width:0; white-space:pre-wrap; word-break:break-word}
+.note .com small{display:block; font-size:12px; color:var(--tx3)}
+.note .com button{border:0; background:transparent; cursor:pointer; padding:2px; border-radius:8px; color:var(--tx3); display:grid; place-items:center}
+.note .com button svg.i{width:15px; height:15px}
+.comBtn{display:inline-flex; align-items:center; gap:5px; margin-top:6px; padding:5px 8px 5px 0; border:0; background:transparent; cursor:pointer; font:inherit; font-size:13px; font-weight:600; color:var(--tx2)}
+.comBtn svg.i{width:15px; height:15px}
+.comForm{margin-top:8px}
+.comForm textarea{min-height:60px}
 .note .acts button{border:0; background:transparent; cursor:pointer; font-size:15px; padding:4px; border-radius:8px; color:var(--tx3)}
 .empty{color:var(--tx3); font-size:14px; text-align:center; padding:26px 10px}
 
@@ -368,6 +390,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   <symbol id="i-volver" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
   <symbol id="i-abajo" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
   <symbol id="i-basura" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-comentario" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
   <symbol id="i-lapiz" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
   <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
@@ -377,8 +400,8 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
 <header class="top">
   <div class="in">
-    <div class="logo"><svg class="i"><use href="#i-libreta"/></svg></div>
-    <div>
+    <div class="logo" role="img" aria-label="François, pastelería clásica"></div>
+    <div class="titulo">
       <h1>Informe François</h1>
       <p>Notas del turno y bitácora del día</p>
     </div>
@@ -448,10 +471,12 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
             <option value="7">Últimos 7 días</option>
             <option value="14">Últimos 14 días</option>
             <option value="30">Últimos 30 días</option>
+            <option value="reunion">Semana de la reunión</option>
             <option value="0">Todas</option>
           </select>
         </div>
       </div>
+      <label class="chk mt"><input type="checkbox" id="fPorTratar"> <span>Solo las por tratar, sin medida (<span id="fPorTratarN">0</span>)</span></label>
     </div>
 
     <div id="lista"></div>
@@ -460,7 +485,10 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   <!-- ============ GENERAR ============ -->
   <section id="tab-generar" class="hide">
     <div class="card">
-      <h2>Qué informe</h2>
+      <div class="tituloBtn">
+        <h2>Qué informe</h2>
+        <button class="btn sec sm hide" id="btnReunion"><svg class="i"><use href="#i-libreta"/></svg> Preparar reunión</button>
+      </div>
       <div class="seg" id="segModo">
         <button data-modo="DIARIO" class="on">Diario</button>
         <button data-modo="SEMANAL">Semanal</button>
@@ -490,7 +518,8 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
     <div class="card hide" id="boxPend">
       <h2>Pendientes de la reunión pasada <span class="pill">opcional</span></h2>
-      <textarea id="gPend" placeholder="Uno por línea. El informe te dirá cuáles siguen apareciendo en la bitácora y cuáles no se volvieron a mencionar."></textarea>
+      <textarea id="gPend" style="min-height:150px" placeholder="Uno por línea. El informe te dirá cuáles siguen apareciendo en la bitácora y cuáles no se volvieron a mencionar."></textarea>
+      <p class="hint hide" id="pendOrigen"></p>
     </div>
 
     <div class="card cardIA" id="cardPre">
@@ -721,17 +750,21 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 <script>
 /* ================= Estado ================= */
 var KEY='if_notas_v1', PREF='if_prefs_v1', INF='if_informes_v1', BORR='if_borrador_v1', TOMB='if_borrados_v1',
-    PERF='if_perfiles_v1';
+    PERF='if_perfiles_v1', COM='if_comentarios_v1';
 var AREAS=['SALA','COCINA','CAJA','PERSONAL','PROVEEDORES','EQUIPOS','PRODUCTO','OTRO'];
 var DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
 
 var notas=load(KEY,[]);
 var informes=load(INF,[]);
+var comentarios=load(COM,[]);
 /* La primera vez, el tema sigue al del teléfono; después manda el botón */
-var prefs=load(PREF,{dark:!!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches), wa:''});
+var prefs=load(PREF,{dark:false, wa:''});
+/* La app pasó a crema: quien venía en oscuro cambia una vez; desde ahí manda su botón */
+if(!prefs.crema){ prefs.crema=true; prefs.dark=false; localStorage.setItem(PREF,JSON.stringify(prefs)); }
 /* Borrados: id → cuándo se borró. Sin esto, al sincronizar la nube
    devolvería la nota borrada y reviviría. */
 var borrados=load(TOMB,{n:{},i:{}});
+if(!borrados.c) borrados.c={};                // los respaldos de antes de los comentarios no lo traen
 /* fotos: respaldan el hecho · fotosm: respaldan la medida */
 var sel={area:'SALA', edit:null, fotos:[], fotosm:[]};
 function fotosDe(n){ return (n.fotos||[]).concat(n.fotosm||[]); }
@@ -768,6 +801,7 @@ function aparatoNuevo(){ return !notas.length && !informes.length && !load(PERF,
 /* el nombre de la sede en pantalla; La Florida queda tal como está escrita en el HTML */
 function aplicaSede(){
   var id=sedeIF(), s=SEDES_IF[id]; if(id==='lf') return;
+  if(id==='s3'){ var lg=$('.logo'); lg.className='logo sinMarca'; lg.innerHTML=ico('libreta'); lg.setAttribute('aria-label', s.n); }  // Maximarket no lleva la marca François
   document.title=s.app;
   $('header.top h1').textContent=s.app;
   $('footer').textContent=s.n+' · '+s.lugar+' — las notas viven en tu aparato y, con cuenta, también en la nube.';
@@ -837,6 +871,7 @@ async function claveCalza(p, clave){
 function load(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
 function save(){ localStorage.setItem(KEY,JSON.stringify(notas)); }
 function saveInf(){ localStorage.setItem(INF,JSON.stringify(informes)); }
+function saveCom(){ localStorage.setItem(COM,JSON.stringify(comentarios)); }
 function savePrefs(){ localStorage.setItem(PREF,JSON.stringify(prefs)); }
 function saveTomb(){ localStorage.setItem(TOMB,JSON.stringify(borrados)); }
 function savePerf(){ localStorage.setItem(PERF,JSON.stringify(perfiles)); }
@@ -1271,6 +1306,15 @@ function tiraFotos(fs){
 /* En el CIERRE los temas para la reunión vienen como «N° | CATEGORÍA | … | Evidencia»:
    en el PDF van como tabla, que es como se leen en la reunión. */
 var EIS_COLS=['N°','Categoría','Qué pasó','Acuerdo propuesto','Responsable','Evidencia'];
+/* Una fila de esas en sus seis columnas, o null si la línea es otra cosa */
+function filaTema(l){
+  var m=/^\s*(?:[•·\-–]\s*)?(?:N[°ºo]\.?\s*)?\*{0,2}(\d+)\*{0,2}\s*[.)]?\s*\|(.*)$/.exec(l);
+  if(!m) return null;
+  var c=[m[1]].concat(m[2].split('|').map(function(x){ return x.trim(); }));
+  if(c.length>6) c=c.slice(0,5).concat([c.slice(5).join(' | ')]);
+  while(c.length<6) c.push('');
+  return c;
+}
 function pdfCuerpo(lineas){
   var out='', texto=[], filas=[];
   function conTexto(){ if(texto.length){ out+='<div class="cuerpo">'+waHTML(texto.join('\n'))+'</div>'; texto=[]; } }
@@ -1283,13 +1327,8 @@ function pdfCuerpo(lineas){
   }
   lineas.forEach(function(l){
     if(/^\s*N[°ºo]?\.?\s*\|/i.test(l)) return;                  // el encabezado lo pone la tabla
-    var m=/^\s*(\d+)\s*[.)]?\s*\|(.*)$/.exec(l);
-    if(m){
-      var c=[m[1]].concat(m[2].split('|').map(function(x){ return x.trim(); }));
-      if(c.length>6) c=c.slice(0,5).concat([c.slice(5).join(' | ')]);
-      while(c.length<6) c.push('');
-      conTexto(); filas.push(c); return;
-    }
+    var c=filaTema(l);
+    if(c){ conTexto(); filas.push(c); return; }
     if(filas.length && !l.trim()) return;                       // línea en blanco entre filas
     conTabla(); texto.push(l);
   });
@@ -1468,7 +1507,7 @@ function borrar(id){
   if(!confirm('¿Borrar esta nota'+(k?' y su'+(k>1?'s '+k+' fotos':' foto'):'')+'?\n\n'+n.texto)) return;
   fotosDe(n).forEach(function(f){ fotoBorrar(f); });
   notas=notas.filter(function(x){return x.id!==id;});
-  borrados.n[id]=ahora(); saveTomb();
+  borrados.n[id]=ahora(); comQuitarDe([id]); saveTomb();
   if(sel.edit===id) resetForm();
   save(); renderLista(); renderPreview(); stats(); syncPronto(); toast('Nota borrada');
 }
@@ -1481,17 +1520,20 @@ function ordenadas(arr){
 
 function renderLista(){
   var q=$('#fBuscar').value.trim().toLowerCase();
-  var dias=+$('#fFiltro').value;
-  var limite = dias ? hoyISO(sumaDias(new Date(), -(dias-1))) : '';
+  var filtro=$('#fFiltro').value, sem=filtro==='reunion' ? semanaReunion() : null;
+  var limite = sem ? sem.desde : (+filtro ? hoyISO(sumaDias(new Date(), -(+filtro-1))) : '');
   var arr=mias(notas).filter(function(n){
     if(limite && n.fecha < limite) return false;
-    if(q && (n.texto+' '+n.area+' '+(n.medida||'')).toLowerCase().indexOf(q)<0) return false;
+    if(sem && n.fecha > sem.hasta) return false;
+    if(q && (n.texto+' '+n.area+' '+(n.medida||'')+' '+comentariosDe(n.id).map(function(c){ return c.texto; }).join(' ')).toLowerCase().indexOf(q)<0) return false;
     return true;
   });
-  arr = ordenadas(arr).reverse();
+  var abiertas=arr.filter(function(n){ return !(n.medida||'').trim(); }), soloAbiertas=$('#fPorTratar').checked;
+  $('#fPorTratarN').textContent=abiertas.length;
+  arr = ordenadas(soloAbiertas ? abiertas : arr).reverse();
 
   if(!arr.length){
-    $('#lista').innerHTML='<div class="empty">'+(notas.length?'Nada con ese filtro.':'Todavía no hay notas. Empieza arriba.')+'</div>';
+    $('#lista').innerHTML='<div class="empty">'+(!notas.length ? 'Todavía no hay notas. Empieza arriba.' : (soloAbiertas ? 'No quedan notas por tratar con ese filtro.' : 'Nada con ese filtro.'))+'</div>';
     return;
   }
   var html='', dia='';
@@ -1515,18 +1557,93 @@ function renderLista(){
       '<div class="txt">'+esc(n.texto)+'</div>'+
       tira(fs,'')+
       (n.medida?'<div class="med">'+esc(n.medida)+'</div>':'')+
-      tira(fm,'m')+'</div>'+
+      tira(fm,'m')+comentariosHTML(n)+'</div>'+
       '<div class="acts"><button data-edit="'+n.id+'" title="Editar" aria-label="Editar">'+ico('lapiz')+'</button>'+
       '<button data-del="'+n.id+'" title="Borrar" aria-label="Borrar">'+ico('basura')+'</button></div></div>';
   });
+  /* una sincronía puede repintar la lista con el comentario a medio escribir */
+  var cta=$('#cTexto'), escribe=!!cta && document.activeElement===cta, pos=escribe ? cta.selectionStart : 0;
   $('#lista').innerHTML=html;
+  cta=escribe ? $('#cTexto') : null;
+  if(cta){ cta.focus(); cta.setSelectionRange(pos,pos); }
 }
 function esc(s){ return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+/* ================= Comentarios =================
+   Lo que se dice después sobre un tema ya anotado. Van aparte de la nota, uno
+   por fila: dos personas comentando a la vez no se pisan y editar la nota no
+   los toca. No cambian la nota ni entran a lo que va al grupo: los lee el
+   CIERRE (lineaComentarios), y El Pase los analiza junto a su nota. */
+var comAbierta='', comBorrador='';             // la nota que se está comentando y lo ya escrito
+function comentariosDe(id){
+  return comentarios.filter(function(c){ return c.nota===id; })
+    .sort(function(a,b){ return ms(a.creado)-ms(b.creado); });
+}
+/* cada quien borra lo suyo; quien administra, todo */
+function comEsBorrable(c){
+  if(!yo || soyAdmin()) return true;
+  return (c.quien||'').trim().toLowerCase()===yo.nombre.toLowerCase();
+}
+function comCuando(iso){
+  var d=new Date(iso);
+  return isNaN(d) ? '' : etiqueta(hoyISO(d))+' · '+p2(d.getHours())+':'+p2(d.getMinutes());
+}
+function comentariosHTML(n){
+  var hechos=comentariosDe(n.id).map(function(c){
+    return '<div class="com"><div class="ctx"><small>'+(c.quien?esc(c.quien)+' · ':'')+comCuando(c.creado)+'</small>'+esc(c.texto)+'</div>'+
+      (comEsBorrable(c)?'<button data-delcom="'+c.id+'" title="Borrar comentario" aria-label="Borrar comentario">'+ico('basura')+'</button>':'')+'</div>';
+  }).join('');
+  return (hechos?'<div class="coms">'+hechos+'</div>':'')+
+    (comAbierta===n.id
+      ? '<div class="comForm"><label class="f" for="cTexto">Comentario</label>'+
+        '<textarea id="cTexto" placeholder="Qué agregar sobre este tema. Ej: se repitió el martes, ya hablé con el proveedor">'+esc(comBorrador)+'</textarea>'+
+        '<div class="btns" style="margin-top:6px"><button class="btn sm" id="btnGuardarCom">Guardar comentario</button>'+
+        '<button class="btn sec sm" id="btnCancelarCom">Cancelar</button></div></div>'
+      : '<button class="comBtn" data-comentar="'+n.id+'">'+ico('comentario')+' Comentar</button>');
+}
+function comAbrir(id){
+  if(comBorrador.trim() && !confirm('¿Descartar el comentario que estabas escribiendo?')) return;
+  comAbierta=id; comBorrador=''; renderLista();
+  var t=$('#cTexto'); if(t) t.focus();
+}
+function comCerrar(){ comAbierta=''; comBorrador=''; renderLista(); }
+function comGuardar(){
+  var txt=$('#cTexto').value.trim();
+  if(!txt){ toast('Escribe el comentario'); $('#cTexto').focus(); return; }
+  var t=ahora();
+  comentarios.push({ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+                     nota:comAbierta, quien:yo ? yo.nombre : '', texto:txt, creado:t, act:t });
+  saveCom(); comCerrar(); stats(); syncPronto(); toast('Comentario guardado');
+}
+function comBorrar(id){
+  var c=comentarios.find(function(x){ return x.id===id; }); if(!c) return;
+  if(!confirm('¿Borrar este comentario?\n\n'+c.texto)) return;
+  comentarios=comentarios.filter(function(x){ return x.id!==id; });
+  borrados.c[id]=ahora(); saveTomb(); saveCom();
+  renderLista(); stats(); syncPronto(); toast('Comentario borrado');
+}
+/* borrar una nota se lleva sus comentarios */
+function comQuitarDe(ids){
+  var cuando=ahora();
+  comentarios=comentarios.filter(function(c){
+    if(ids.indexOf(c.nota)<0) return true;
+    borrados.c[c.id]=cuando; return false;
+  });
+  saveCom();
+}
 
 /* ================= Prompt maestro =================
    Las reglas y los tres modos viven en prompt.js: el mismo texto sirve para
    «Copiar prompt» y para el pre-informe de DeepSeek (api/preinforme.js). */
 function marcaFoto(k){ return k ? ' [con '+(k===1?'foto':k+' fotos')+']' : ''; }
+/* Solo en el CIERRE, que no va al grupo: sin los comentarios daría por abierto
+   un tema ya resuelto. Quedan en la misma línea: el servidor cuenta una nota por línea. */
+function lineaComentarios(n){
+  if(gen.modo!=='CIERRE') return '';
+  return comentariosDe(n.id).map(function(c){
+    return ' → COMENTARIO ['+comCuando(c.creado)+'] '+(c.quien?c.quien+': ':'')+c.texto.replace(/\s*\n\s*/g,' ');
+  }).join('');
+}
 function lineaNota(n){
   var kh=(n.fotos||[]).length, km=(n.fotosm||[]).length;
   if(!n.medida){ kh+=km; km=0; }                 // sin medida escrita, la foto respalda el hecho
@@ -1534,7 +1651,7 @@ function lineaNota(n){
         (n.texto||'').replace(/\s*\n\s*/g,' ')+marcaFoto(kh);
   if(n.medida) t+=' → MEDIDA: '+n.medida.replace(/\s*\n\s*/g,' ')+marcaFoto(km);
   if(n.quien) t+=' — anotó '+n.quien;
-  return t;
+  return t+lineaComentarios(n);
 }
 
 /* El período elegido, siempre cerrado: un día (diario) o desde–hasta, ambos incluidos.
@@ -1598,6 +1715,7 @@ function renderPreview(){
   $('#verNotasTit').textContent='Ver '+(arr.length===1?'la nota que entra':'las '+arr.length+' notas que entran');
   $('#listaPeriodo').textContent=arr.map(lineaNota).join('\n');
   $('#preview').textContent=construirPrompt();
+  $('#btnReunion').classList.toggle('hide', !!perfilesVivos().length && !soyAdmin());   // sin ver a todos, el cierre saldría cojo
   renderFotosInf();
 }
 function quienesDe(arr){
@@ -1630,6 +1748,67 @@ function setModo(m){
     : (m==='SEMANAL' ? 'Resumen para mandar al grupo (domingo). Elige las fechas que quieras: una semana, quince días o un mes.'
                      : 'Informe de cierre: insumo para la reunión del lunes. No va al grupo. Elige las fechas que quieras.');
   autoRango(); renderPreview(); preLimpiar();
+}
+
+/* ================= Reunión del lunes =================
+   La semana que mira la reunión: de lunes a domingo y, el mismo lunes de la
+   reunión, la que acaba de terminar. La misma regla de El Pase (bitDesdeReunion). */
+function semanaReunion(){
+  var h=new Date(), l=lunesDe(h);
+  if(hoyISO(l)===hoyISO(h)) l=sumaDias(l,-7);
+  return {desde:hoyISO(l), hasta:hoyISO(sumaDias(l,6))};
+}
+/* Los temas de un cierre como pendientes, uno por línea. Solo los de TEMAS PARA
+   LA REUNIÓN: lo de RESUELTOS ya no está pendiente. */
+function temasDeCierre(txt){
+  var dentro=false, out=[];
+  String(txt||'').replace(/\r/g,'').split('\n').forEach(function(l){
+    var s=l.replace(/\*/g,'').trim();
+    if(/^TEMAS PARA LA REUNI[ÓO]N/i.test(s)){ dentro=true; return; }
+    if(/^(RESUELTOS|POSITIVOS|FALTA INFORMACI[ÓO]N)/i.test(s)){ dentro=false; return; }
+    var c=dentro ? filaTema(s) : null;
+    if(!c || !c[2]) return;
+    var resp=/^por definir/i.test(c[4]) ? '' : c[4];
+    out.push((c[1]?c[1]+': ':'')+c[2]+(c[3]?' → '+c[3]:'')+(resp?' ('+resp+')':''));
+  });
+  return out;
+}
+/* Los pendientes valen por una semana y son de quien los dejó: el aparato puede
+   ser compartido y los temas del cierre traen cosas de personal. */
+function pendSuyos(){
+  var p=prefs.pendientes;
+  return p && p.semana===semanaReunion().desde && p.quien===(yo?yo.id:'') ? p : null;
+}
+function pendAviso(t){ $('#pendOrigen').textContent=t||''; $('#pendOrigen').classList.toggle('hide', !t); }
+function pendGuardar(origen){
+  var p=pendSuyos();
+  prefs.pendientes={ semana:semanaReunion().desde, quien:yo?yo.id:'', texto:$('#gPend').value,
+                     origen:origen!==undefined ? origen : (p?p.origen:'') };
+  savePrefs(); pendAviso(prefs.pendientes.origen);
+}
+function pendRestaurar(){
+  var p=pendSuyos();
+  $('#gPend').value=p?p.texto:''; pendAviso(p?p.origen:'');
+}
+/* El último cierre guardado que no sea el de este mismo período */
+function pendTraer(){
+  var rango=$('#gRango').value.trim();
+  var inf=mias(informes).filter(function(i){ return (i.modo==='CIERRE' || esCierreTxt(i.texto)) && i.rango!==rango; })
+    .sort(function(a,b){ return ms(b.creado)-ms(a.creado); })[0];
+  if(!inf){ pendAviso('No hay un cierre anterior guardado: escribe aquí los pendientes, si los hay.'); return; }
+  var temas=temasDeCierre(inf.texto), de=inf.rango ? 'del cierre '+inf.rango : 'del último cierre';
+  if(!temas.length){ pendAviso('No se pudieron leer los temas '+de+': escríbelos aquí.'); return; }
+  $('#gPend').value=temas.join('\n');
+  pendGuardar('Vienen de los temas '+de+'. La app no sabe qué se cerró en la reunión: borra lo resuelto.');
+}
+function prepararReunion(){
+  var s=semanaReunion();
+  $('#gDesde').value=s.desde; $('#gHasta').value=s.hasta;
+  setModo('CIERRE');
+  if(!pendSuyos()) pendTraer();
+  renderPreview();
+  var k=notasDelPeriodo().length;
+  toast(k ? 'Cierre listo: '+k+' nota'+(k===1?'':'s')+' de la semana' : 'No hay notas en esa semana');
 }
 
 /* ================= Informes ================= */
@@ -1858,6 +2037,7 @@ function pintarPerfiles(){
   $('#syVerTodo').checked = prefs.verTodo!==false;
 }
 function refrescarTodo(){
+  pendRestaurar();
   pintarPerfiles(); renderLista(); renderPreview(); renderInformes(); stats();
   saldoCargar();                               // el cuadro de saldo solo lo ve quien administra
 }
@@ -2171,7 +2351,7 @@ function copiar(txt, msg){
   } else fallback();
 }
 function exportar(){
-  var base={notas:notas, informes:informes};
+  var base={notas:notas, informes:informes, comentarios:comentarios};
   var nombre='informe-francois-'+hoyISO()+'.json';
   var ids=[];
   notas.forEach(function(n){ fotosDe(n).forEach(function(f){ if(thumbs[f]) ids.push(f); }); });
@@ -2350,8 +2530,8 @@ function pintarResumen(){
   p.classList.toggle('hide', !r);
   if(!r) return;
   function trozo(k, uno, varios){ return k ? k+' '+(k===1?uno:varios) : ''; }
-  var sub=[trozo(r.subeN,'nota','notas'), trozo(r.subeI,'informe','informes'), trozo(r.subeF,'foto','fotos')].filter(Boolean);
-  var baj=[trozo(r.bajaN,'nota','notas'), trozo(r.bajaI,'informe','informes'), trozo(r.bajaF,'foto','fotos')].filter(Boolean);
+  var sub=[trozo(r.subeN,'nota','notas'), trozo(r.subeC,'comentario','comentarios'), trozo(r.subeI,'informe','informes'), trozo(r.subeF,'foto','fotos')].filter(Boolean);
+  var baj=[trozo(r.bajaN,'nota','notas'), trozo(r.bajaC,'comentario','comentarios'), trozo(r.bajaI,'informe','informes'), trozo(r.bajaF,'foto','fotos')].filter(Boolean);
   p.textContent='Último viaje: '+
     (sub.length ? 'subieron '+sub.join(', ') : 'no subió nada')+' · '+
     (baj.length ? 'bajaron '+baj.join(', ') : 'no bajó nada')+
@@ -2386,7 +2566,8 @@ function pintarSync(){
       return;
     }
     $('#syncEstado').textContent='Conectado como '+s.user.email+
-      (prefs.lastSync ? ' · última sincronía '+haceRato(prefs.lastSync) : ' · sin sincronizar todavía')+'.';
+      (prefs.lastSync ? ' · última sincronía '+haceRato(prefs.lastSync) : ' · sin sincronizar todavía')+'.'+
+      (sinComentarios ? ' Los comentarios siguen solo en este aparato y El Pase no los ve: falta correr SQL-comentarios.sql.' : '');
     if(!syncOcupado) nube('nubeok','Sincronizado '+(prefs.lastSync?haceRato(prefs.lastSync):''));
   });
 }
@@ -2529,6 +2710,49 @@ function fusionar(remN, remI){
   return k;
 }
 
+/* Los comentarios no se editan: o están o se borraron, y una marca de borrado
+   gana siempre. Si la tabla todavía no existe, la app no se cae: quedan en este
+   aparato y lo avisa en Datos. */
+var sinComentarios=false;
+function faltaTablaComentarios(e){
+  if(!e) return false;
+  return /42P01|PGRST205/.test(e.code||'') || /if_comentarios.*(schema cache|does not exist)/i.test(e.message||'');
+}
+function filaCom(x, uid){
+  return { id:x.id, uid:uid, nota:x.nota, quien:x.quien||'', texto:x.texto,
+           creado:x.creado, borrada:false, act:x.act||x.creado };
+}
+function deFilaCom(r){
+  return { id:r.id, nota:r.nota, quien:r.quien||'', texto:r.texto||'', creado:r.creado||r.act, act:r.act };
+}
+async function sincroComentarios(c, uid){
+  var k={sube:0, baja:0}, filas;
+  try{ filas=await traerTodo(c, 'if_comentarios'); }
+  catch(e){ if(faltaTablaComentarios(e)){ sinComentarios=true; return k; } throw e; }
+  sinComentarios=false;
+
+  var rem={}, loc={};
+  comentarios.forEach(function(x){ loc[x.id]=x; });
+  filas.forEach(function(r){
+    rem[r.id]=r;
+    if(r.borrada){
+      if(loc[r.id]){ delete loc[r.id]; k.baja++; }
+      if(!borrados.c[r.id]) borrados.c[r.id]=r.act;
+    } else if(!loc[r.id] && !borrados.c[r.id]){ loc[r.id]=deFilaCom(r); k.baja++; }
+  });
+  if(k.baja){ comentarios=Object.keys(loc).map(function(id){ return loc[id]; }); saveCom(); }
+  saveTomb();
+
+  /* Las filas de un mismo upsert llevan las mismas columnas: los borrados van aparte */
+  var sube=comentarios.filter(function(x){ return !rem[x.id]; }).map(function(x){ return filaCom(x, uid); });
+  var tumbas=Object.keys(borrados.c).filter(function(id){ return !rem[id] || !rem[id].borrada; })
+    .map(function(id){ return {id:id, uid:uid, texto:'', borrada:true, act:borrados.c[id]}; });
+  if(sube.length){ var u=await c.from('if_comentarios').upsert(sube); if(u.error) throw u.error; }
+  if(tumbas.length){ var t=await c.from('if_comentarios').upsert(tumbas); if(t.error) throw t.error; }
+  k.sube=sube.length;
+  return k;
+}
+
 /* --- Fotos --- */
 function fotoLeerP(id){ return new Promise(function(res){ fotoLeer(id, res); }); }
 function guardarBajada(id, blob){
@@ -2620,7 +2844,7 @@ async function sincronizar(modo){
   }
 
   var c=getSB(), uid=s.user.id, paso='empezar';
-  if(manual){ sinQuien=false; sinPerfiles=false; }   // a mano se reintenta, por si ya corrieron el SQL
+  if(manual){ sinQuien=false; sinPerfiles=false; sinComentarios=false; }   // a mano se reintenta, por si ya corrieron el SQL
   syncOcupado=true; nube('sync','Sincronizando');
   try{
     paso='traer las personas';
@@ -2678,26 +2902,30 @@ async function sincronizar(modo){
       paso='las fotos';
       f=await sincroFotos(c, uid);
     }
+    paso='los comentarios';
+    var kc=await sincroComentarios(c, uid);
 
     var vivas=Object.keys(remN).filter(function(id){ return !remN[id].borrada; }).length;
     var nuevas=subeN.filter(function(x){ return !remN[x.id]; }).length;
     prefs.lastSync=ahora();
-    prefs.ultimoResumen={ subeN:subeN.length, subeI:subeI.length, subeF:f.sube||0,
-                          bajaN:k.n, bajaI:k.i, bajaF:f.baja||0,
+    prefs.ultimoResumen={ subeN:subeN.length, subeI:subeI.length, subeF:f.sube||0, subeC:kc.sube,
+                          bajaN:k.n, bajaI:k.i, bajaF:f.baja||0, bajaC:kc.baja,
                           enNube:vivas+nuevas, cuando:ahora() };
     savePrefs();
     if(f.falla) anotaFalla(f.falla.paso, f.falla.e); else limpiaFalla();
     syncOcupado=false;
     nube('nubeok','Sincronizado recién');
 
-    if(k.n||k.i||f.baja||cambioP) refrescarTodo();
+    if(k.n||k.i||f.baja||kc.baja||cambioP) refrescarTodo();
     pintarSync();
 
     if(manual){
       var p=[];
       if(k.n) p.push('bajaron '+k.n+' nota'+(k.n===1?'':'s'));
+      if(kc.baja) p.push('bajaron '+kc.baja+' comentario'+(kc.baja===1?'':'s'));
       if(k.i) p.push('bajaron '+k.i+' informe'+(k.i===1?'':'s'));
       if(f.baja) p.push('bajaron '+f.baja+' foto'+(f.baja===1?'':'s'));
+      if(kc.sube) p.unshift('subieron '+kc.sube+' comentario'+(kc.sube===1?'':'s'));
       if(subeN.length) p.unshift('subieron '+subeN.length+' nota'+(subeN.length===1?'':'s'));
       if(f.sube) p.push('subieron '+f.sube+' foto'+(f.sube===1?'':'s'));
       toast(p.length ? 'Al día: '+p.join(', ') : 'Al día · el detalle, en Datos');
@@ -2757,6 +2985,8 @@ document.addEventListener('click', function(e){
     return;
   }
   if(t.dataset.area){ sel.area=t.dataset.area; renderChips(); return; }
+  if(t.dataset.comentar){ comAbrir(t.dataset.comentar); return; }
+  if(t.dataset.delcom){ comBorrar(t.dataset.delcom); return; }
   if(t.dataset.edit){ editar(t.dataset.edit); return; }
   if(t.dataset.del){ borrar(t.dataset.del); return; }
   if(t.dataset.modo){ setModo(t.dataset.modo); return; }
@@ -2805,7 +3035,10 @@ document.addEventListener('click', function(e){
   }
 
   switch(t.id){
+    case 'btnReunion': prepararReunion(); break;
     case 'btnGuardar': guardar(); break;
+    case 'btnGuardarCom': comGuardar(); break;
+    case 'btnCancelarCom': comCerrar(); break;
     case 'btnPre': armarPreinforme(); break;
     case 'btnClaude': copiarParaClaude(); break;
     case 'btnAbrirClaude': window.open(IAS.claude.url, '_blank', 'noopener'); break;
@@ -2875,7 +3108,7 @@ document.addEventListener('click', function(e){
       var uf=prefs.ultimaFalla, ur=prefs.ultimoResumen, det=[];
       if(uf) det.push('falló en «'+uf.paso+'»: '+uf.texto+' ('+uf.cuando+')');
       if(ur) det.push('último viaje: '+JSON.stringify(ur));
-      det.push('notas acá: '+notas.length+' · informes: '+informes.length);
+      det.push('notas acá: '+notas.length+' · informes: '+informes.length+' · comentarios: '+comentarios.length);
       /* quién es quién en este aparato: nombres y roles, nunca las claves */
       det.push('yo: '+(yo?yo.nombre+(yo.admin?' (administra)':''):'nadie entró'));
       det.push('personas: '+(perfilesVivos().map(function(p){
@@ -2886,6 +3119,7 @@ document.addEventListener('click', function(e){
       det.push('firmas: '+(Object.keys(firmas).map(function(q){ return q+'='+firmas[q]; }).join(', ')||'—'));
       if(sinPerfiles) det.push('OJO: falta la tabla if_perfiles');
       if(sinQuien) det.push('OJO: falta la columna quien');
+      if(sinComentarios) det.push('OJO: falta la tabla if_comentarios');
       copiar(SEDES_IF[sedeIF()].app+' · '+det.join(' · '), 'Detalle copiado');
       break;
     case 'btnSalir': salir(); break;
@@ -2909,6 +3143,7 @@ document.addEventListener('click', function(e){
           fotosDe(n).forEach(function(f){ fotoBorrar(f); });
           borrados.n[n.id]=cuando; fuera[n.id]=1;
         });
+        comQuitarDe(Object.keys(fuera));
         saveTomb();
         notas=notas.filter(function(n){ return !fuera[n.id]; });
         save(); resetForm(); renderLista(); renderPreview(); stats(); syncPronto(); toast('Notas borradas');
@@ -2972,9 +3207,11 @@ document.addEventListener('input', function(e){
   var id=e.target.id;
   if(id==='fBuscar'||id==='fFiltro') renderLista();
   if(id==='gDia'||id==='gDesde'||id==='gHasta'){ if(id!=='gDia') ordenarFechas(); autoRango(); renderPreview(); preLimpiar(); }
+  if(id==='gPend') pendGuardar();
   if(id==='gRango'||id==='gPend') renderPreview();
   if(id==='rNum'){ prefs.wa=e.target.value.replace(/\D/g,''); savePrefs(); }
   if(id==='rTexto') refrescarInf();
+  if(id==='cTexto') comBorrador=e.target.value;
 });
 
 /* Al pegar la respuesta del chat en el cuadro vacío, deja solo el informe.
@@ -2994,7 +3231,7 @@ document.addEventListener('change', function(e){
     if(e.target.checked) sincronizar('manual');
     else toast('Las fotos se quedan solo en este aparato');
   }
-  if(e.target.id==='fFiltro') renderLista();
+  if(e.target.id==='fFiltro'||e.target.id==='fPorTratar') renderLista();
   if(e.target.id==='gTodos') renderPreview();
   /* Algunos Safari del iPhone avisan del calendario solo con «change» */
   if(/^g(Dia|Desde|Hasta)$/.test(e.target.id)){ if(e.target.id!=='gDia') ordenarFechas(); autoRango(); renderPreview(); preLimpiar(); }
@@ -3009,6 +3246,7 @@ document.addEventListener('change', function(e){
         var d=JSON.parse(r.result);
         var dn = Array.isArray(d) ? d : (d && Array.isArray(d.notas) ? d.notas : null);
         var di = (d && Array.isArray(d.informes)) ? d.informes : [];
+        var dc = (d && Array.isArray(d.comentarios)) ? d.comentarios : [];
         if(!dn) throw 0;
         var ids={}; notas.forEach(function(n){ ids[n.id]=1; });
         var nuevas=dn.filter(function(n){ return n && n.texto && n.fecha && !ids[n.id]; });
@@ -3016,8 +3254,12 @@ document.addEventListener('change', function(e){
         var idsI={}; informes.forEach(function(i){ idsI[i.id]=1; });
         var nuevosI=di.filter(function(i){ return i && i.texto && !idsI[i.id]; });
         informes=nuevosI.concat(informes); saveInf();
+        var idsC={}; comentarios.forEach(function(c){ idsC[c.id]=1; });
+        var nuevosC=dc.filter(function(c){ return c && c.nota && c.texto && !idsC[c.id] && !borrados.c[c.id]; });
+        comentarios=comentarios.concat(nuevosC); saveCom();
         renderLista(); renderPreview(); renderInformes(); stats(); syncPronto();
         toast(nuevas.length+' nota'+(nuevas.length===1?'':'s')+
+              (nuevosC.length?', '+nuevosC.length+' comentario'+(nuevosC.length===1?'':'s'):'')+
               (nuevosI.length?' y '+nuevosI.length+' informe'+(nuevosI.length===1?'':'s'):'')+' · importado');
         importarFotos(d && d.fotos, function(k){
           if(!k) return;
@@ -3031,6 +3273,7 @@ document.addEventListener('change', function(e){
   }
 });
 document.addEventListener('keydown', function(e){
+  if(e.target.id==='cTexto'){ if((e.ctrlKey||e.metaKey) && e.key==='Enter') comGuardar(); return; }
   if((e.ctrlKey||e.metaKey) && e.key==='Enter' && !$('#tab-notas').classList.contains('hide')) guardar();
   if(e.key==='Enter' && (e.target.id==='syPass'||e.target.id==='syEmail')){ e.preventDefault(); entrar(); }
   if(e.key==='Enter' && e.target.id==='qClave'){ e.preventDefault(); probarClave(); }
@@ -3043,6 +3286,7 @@ function stats(){
   var ids=Object.keys(thumbs), peso=0;
   ids.forEach(function(id){ peso+=(thumbs[id].tam||0); });
   $('#statTxt').textContent = notas.length+' nota'+(notas.length===1?'':'s')+' en '+d+' día'+(d===1?'':'s')+
+    (comentarios.length ? ' · '+comentarios.length+' comentario'+(comentarios.length===1?'':'s') : '')+
     ' · '+informes.length+' informe'+(informes.length===1?'':'s')+' guardado'+(informes.length===1?'':'s')+
     (ids.length ? ' · '+ids.length+' foto'+(ids.length===1?'':'s')+' ('+pesoTxt(peso)+')' : '')+'.';
 }
@@ -3056,7 +3300,7 @@ function aplicaTema(){
      (Android lo lee en vivo); la de navegación de Android toma background_color
      del manifest, por eso ahí va el fondo oscuro. */
   var tc=document.querySelector('meta[name="theme-color"]');
-  if(tc) tc.content = prefs.dark ? '#3b2414' : '#7a4a22';
+  if(tc) tc.content = prefs.dark ? '#3b2414' : '#FFF7EC';
   document.documentElement.style.colorScheme = prefs.dark ? 'dark' : 'light';
   $('#btnTheme').innerHTML = ico(prefs.dark ? 'sol' : 'luna');
 }
@@ -3092,6 +3336,7 @@ function aplicaTema(){
   $('#gDia').value=hoyISO(h);
   var l=lunesDe(h);
   $('#gDesde').value=hoyISO(l); $('#gHasta').value=hoyISO(sumaDias(l,6));
+  pendRestaurar();
   setModo('DIARIO');
   stats();
   estadoInstal();

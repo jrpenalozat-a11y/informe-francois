@@ -154,7 +154,7 @@ module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const q = (req.url || "").split("?")[1] || "";
     if (/(^|&)saldo(=|&|$)/.test(q)) return saldo(req, res, hayClave);
-    return res.status(200).json({ ok: true, deepseek: hayClave, v: 3 });
+    return res.status(200).json({ ok: true, deepseek: hayClave, v: 4 });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Solo GET o POST" });
 

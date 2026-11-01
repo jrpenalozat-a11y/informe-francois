@@ -32,10 +32,16 @@ Queda con ícono propio, a pantalla completa y **funciona sin señal** (service 
    **Fotos** — la nota tiene **dos juegos de fotos**: las de **Foto del hecho**, bajo «Qué pasó», respaldan lo que ocurrió; las de **Foto de la medida**, bajo «Medida tomada en el momento», respaldan lo que se hizo. Cada botón abre la cámara del teléfono y su **Galería** toma una ya sacada (varias a la vez). Se comprimen a 1600 px / JPEG antes de guardarlas (una foto de teléfono queda en ~100-250 KB), aparecen como miniaturas en el formulario y en la nota, y se abren en el visor: pasar entre fotos, **Compartir** (mandarla por WhatsApp desde el teléfono), **Guardar** en el dispositivo o **Borrar**. Si aprietas «Agregar nota» mientras la foto se está guardando, la nota se guarda sola apenas termina.
 
    Al prompt solo va la marca `[con foto]` / `[con N fotos]`, **pegada a lo que respalda**: después del hecho si la foto es del hecho, y después de `→ MEDIDA:` si es de la medida. **La imagen no viaja al chat**. La regla 10 le dice a Claude que no describa ni suponga lo que muestra, y que como mucho cierre ese punto con «(hay foto)».
+
+   **Comentarios** — cada nota tiene **Comentar**: lo que se dice después sobre ese tema, firmado y con fecha y hora. Cada quien borra lo suyo y quien administra, todo; borrar la nota se lleva sus comentarios. Van en su propia tabla (`if_comentarios`, se crea con [`SQL-comentarios.sql`](SQL-comentarios.sql)), así dos personas comentando a la vez no se pisan y editar la nota no los toca. **No entran a lo que va al grupo**: solo el CIERRE los lleva, en la misma línea de su nota, después de `→ COMENTARIO [fecha] autor:` (`lineaComentarios`); la regla está en el bloque del CIERRE en `prompt.js`. El Pase los lee junto a su nota, los muestra y sus agentes los analizan. Mientras la tabla no exista, quedan en ese aparato y Datos lo avisa.
+
+   **Para revisar antes de la reunión** — bajo la lista, **Mostrar** tiene «Semana de la reunión» (lunes a domingo; el mismo lunes de la reunión, la que acaba de terminar: la misma regla de El Pase) y **Solo las por tratar** deja las notas sin medida, con el número al lado.
 2. **Generar** — eliges **qué informe** (modo y período) y lo armas:
    - **DIARIO** → resumen del día para el grupo (elige un día).
    - **SEMANAL** → resumen para el grupo con las fechas que elijas (desde/hasta: una semana, quince días o un mes; atajos «esta semana» / «semana pasada»).
    - **CIERRE** → informe para la reunión del lunes, también desde/hasta; aparece el campo opcional **Pendientes de la reunión pasada**, que se cruza con las notas del período.
+
+   **Preparar reunión** deja el CIERRE listo con la semana de la reunión y rellena los pendientes con los temas del último cierre guardado que no sea de este mismo período (`temasDeCierre`, solo lo de TEMAS PARA LA REUNIÓN). La app no sabe qué se cerró en la reunión, porque eso queda en El Pase: quien la arma borra lo resuelto. Lo que queda en el cuadro se guarda en ese aparato, para esa semana y esa persona; volver a tocar el botón no lo pisa. No lo ve quien solo ve sus propias notas: su cierre saldría incompleto.
 
    **Qué notas entran:** todas las del período, con los dos extremos incluidos (`periodo()` / `notasDelPeriodo()`).
    El período siempre es cerrado: sin «hasta» no arma nada (antes tomaba todo lo posterior a «desde»), y si
@@ -88,6 +94,7 @@ El texto del período (`lun 17-08`, `17-08 al 23-08`) se calcula solo, pero es e
 Todo en el navegador del dispositivo:
 
 - `if_notas_v1` — las notas.
+- `if_comentarios_v1` — los comentarios sobre las notas.
 - `if_informes_v1` — los informes que pegaste de vuelta.
 - `if_borrador_v1` — el informe que estás redactando (borrador).
 - `if_prefs_v1` — modo claro/oscuro, número de WhatsApp, quién entró en este aparato.

@@ -6,30 +6,30 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#17120e",
-  "theme_color": "#7a4a22",
+  "background_color": "#FCEEDA",
+  "theme_color": "#FFF7EC",
   "lang": "es-CL",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-maximarket-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-maximarket-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-maskable-512.png",
+      "src": "icon-maximarket-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icon.svg",
+      "src": "icon-maximarket.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
