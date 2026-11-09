@@ -159,6 +159,23 @@ panel de operaciones lee cada una por separado. La Florida no lleva sede y para 
   baja nada y Datos lo explica; si el aparato tenía notas, la sesión se cierra al tiro. Un aparato en
   blanco que entra con la cuenta de una sede toma esa sede.
 
+## Retiro de caja (9-nov-2026, sin publicar)
+
+Pestaña **Retiro**: quien saca efectivo del cajón registra en el momento la foto del vale o comprobante,
+el monto y la causa (va a depósito · pago de turno, con la persona y el día · compra · otro).
+
+- **Aquí solo se captura.** El retiro queda en la tabla `caja_egresos` de El Pase como «vale suelto»
+  (`fuente = 'manual'`, `subido_por = 'Informe François'`). El cuadre con Fudo sigue en El Pase
+  (Finanzas → Egresos, «Unir con su movimiento») y el dueño lo ve en «François al día».
+- **Quién puede:** la cuenta del local (Supabase Auth) que esté en la lista `caja_cuentas`. La función
+  `egresos_retiro` (`SQL-retiro-caja.sql`) solo agrega; no lee, no edita ni borra. El local lo dice la
+  cuenta, no el teléfono.
+- **La foto** va al mismo lugar que las de El Pase (GitHub, rama `datos-personal`, `<sede>/egresos/`)
+  por `francois-operaciones.vercel.app/api/egresos` (`accion: "foto-retiro"`, con la sesión de la cuenta).
+- **Sin señal no se pierde:** primero se guarda en el aparato (`if_retiros_v1` + la foto en IndexedDB) y
+  queda «Sin enviar» hasta que se pueda mandar; se reintenta solo al abrir y al volver la señal.
+- **Para publicarlo:** correr `SQL-retiro-caja.sql`, publicar El Pase (`api/egresos.js`) y publicar esta app.
+
 ## Sincronía entre el teléfono y el computador
 
 Opcional: si entras con tu correo en Datos, las notas, los informes y las fotos suben a

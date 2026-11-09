@@ -228,6 +228,26 @@ body.dark .pill{color:var(--acc2)}
 .chk input{width:18px;height:18px;accent-color:var(--acc)}
 .hide{display:none !important}
 
+/* Retiro de caja */
+.retFoto{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+.retFoto img{width:112px; height:112px; object-fit:cover; border-radius:12px; border:1px solid var(--line); display:block; background:var(--bg2)}
+.retTomar{width:100%; padding:22px 14px; border:2px dashed var(--line); border-radius:14px; background:var(--bg2); color:var(--tx);
+  font:inherit; font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px}
+.retTomar svg.i{width:22px; height:22px; color:var(--acc)}
+body.dark .retTomar svg.i{color:var(--acc2)}
+#retMonto{font-size:22px; font-weight:700; font-variant-numeric:tabular-nums}
+.retIt{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line)}
+.retIt:first-child{border-top:0; padding-top:0}
+.retIt img, .retIt .sinFoto{width:52px; height:52px; flex:0 0 auto; border-radius:9px; border:1px solid var(--line); object-fit:cover; background:var(--bg2)}
+.retIt .cu{flex:1; min-width:0; overflow-wrap:anywhere}
+.retIt .cu b{font-variant-numeric:tabular-nums}
+.retIt .cu small{display:block; font-size:12.5px; color:var(--tx3)}
+.retIt .cu .falla{color:var(--danger); font-weight:600}
+.retIt .btns{margin-top:6px}
+.pill.ok{background:var(--okSoft); color:var(--ok)}
+.pill.pend{background:var(--dangerSoft); color:var(--warn)}
+body.dark .pill.ok{color:var(--ok)} body.dark .pill.pend{color:var(--warn)}
+
 /* Ficha de instalación */
 .ovl{
   position:fixed; inset:0; background:rgba(20,13,8,.62); backdrop-filter:blur(2px);
@@ -396,6 +416,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-billete" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></symbol>
 </svg>
 
 
@@ -418,6 +439,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
   <nav class="tabs">
     <button data-tab="notas" class="on"><svg class="i"><use href="#i-nota"/></svg><span>Notas</span></button>
+    <button data-tab="retiro"><svg class="i"><use href="#i-billete"/></svg><span>Retiro</span></button>
     <button data-tab="generar"><svg class="i"><use href="#i-generar"/></svg><span>Generar</span></button>
     <button data-tab="informes"><svg class="i"><use href="#i-informes"/></svg><span>Informes</span></button>
     <button data-tab="datos"><svg class="i"><use href="#i-datos"/></svg><span>Datos</span></button>
@@ -481,6 +503,41 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
 
     <div id="lista"></div>
+  </section>
+
+  <!-- ============ RETIRO DE CAJA ============ -->
+  <section id="tab-retiro" class="hide">
+    <div class="card">
+      <h2><svg class="i"><use href="#i-billete"/></svg> Retiro de caja</h2>
+      <p class="hint" style="margin-top:0">Cada vez que salga efectivo del cajón, regístralo aquí en el momento: foto del vale o comprobante, monto y causa.</p>
+      <div id="retAviso"></div>
+      <div class="mt">
+        <label class="f">Foto del vale o comprobante</label>
+        <div id="retFotoBox"></div>
+        <input type="file" id="retCam" accept="image/*" capture="environment" class="hide">
+      </div>
+      <div class="mt">
+        <label class="f" for="retMonto">Monto que salió del cajón</label>
+        <input type="text" id="retMonto" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="$ 0">
+      </div>
+      <div class="mt">
+        <label class="f">Causa</label>
+        <div class="chips" id="retCausas"></div>
+      </div>
+      <div class="row mt hide" id="retTurno">
+        <div><label class="f" for="retPersona">A quién se le paga</label><input type="text" id="retPersona" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="Nombre"></div>
+        <div><label class="f" for="retDia">Día trabajado</label><input type="date" id="retDia"></div>
+      </div>
+      <div class="mt">
+        <label class="f" for="retDetalle" id="retDetalleLbl">Detalle</label>
+        <input type="text" id="retDetalle" maxlength="200" autocomplete="off" placeholder="">
+      </div>
+      <div class="btns mt">
+        <button class="btn" id="btnRetGuardar">Registrar retiro</button>
+      </div>
+      <p class="hint">Anótalo también en Fudo como egreso de caja, con el mismo monto. La foto y el monto quedan como evidencia; el cuadre con Fudo lo ve el encargado en El Pase.</p>
+    </div>
+    <div id="retLista"></div>
   </section>
 
   <!-- ============ GENERAR ============ -->
@@ -771,6 +828,10 @@ var sel={area:'SALA', edit:null, fotos:[], fotosm:[]};
 function fotosDe(n){ return (n.fotos||[]).concat(n.fotosm||[]); }
 function cajon(donde){ return donde==='m' ? 'fotosm' : 'fotos'; }
 var gen={modo:'DIARIO'};
+/* Retiros de caja registrados en este aparato (ver «Retiro de caja») */
+var RET='if_retiros_v1';
+var retiros=load(RET,[]);
+var ret={clase:'', fotoId:'', ocupado:false, enviando:{}};
 
 /* ================= Sede =================
    Cada sede entra con su propia cuenta de Supabase: sus notas, personas,
@@ -970,6 +1031,8 @@ function usadas(){
   var m={};
   notas.forEach(function(n){ fotosDe(n).forEach(function(id){ m[id]=1; }); });
   fotosDe(sel).forEach(function(id){ m[id]=1; });
+  retiros.forEach(function(r){ m[r.id]=1; });        // la foto de cada retiro de caja va con el id del retiro
+  if(ret.fotoId) m[ret.fotoId]=1;
   return m;
 }
 
@@ -2067,8 +2130,8 @@ function pintarPerfiles(){
 }
 function refrescarTodo(){
   pendRestaurar();
-  pintarPerfiles(); renderLista(); renderPreview(); renderInformes(); stats();
-  saldoCargar();                               // el cuadro de saldo solo lo ve quien administra
+  pintarPerfiles(); renderLista(); renderPreview(); renderInformes(); stats(); retPintar();
+  saldoCargar();                              // el cuadro de saldo solo lo ve quien administra
 }
 
 function guardarInforme(silencioso){
@@ -2972,6 +3035,193 @@ function syncPronto(){
   syncTimer=setTimeout(function(){ sincronizar('cambio'); }, 2500);
 }
 
+/* ================= Retiro de caja =================
+   Quien saca efectivo del cajón lo registra en el momento: foto del vale o
+   comprobante, monto y causa. Aquí SOLO se captura:
+     · la foto va a GitHub por /api/egresos de El Pase (el mismo lugar de sus
+       vales), entrando con la sesión de la cuenta del local;
+     · el retiro queda en caja_egresos como «vale suelto» (función
+       egresos_retiro de SQL-retiro-caja.sql), a nombre del local de la cuenta.
+   El cuadre con Fudo no vive aquí: lo hace el mando en El Pase (Finanzas →
+   Egresos) y el dueño lo ve en «François al día».
+   Primero se guarda en este aparato (if_retiros_v1 + la foto en IndexedDB con
+   el id del retiro) y después se envía: sin señal no se pierde, queda
+   «pendiente» y se manda solo al volver. */
+var RET_API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/api/egresos' : 'https://francois-operaciones.vercel.app/api/egresos';
+var RET_CAUSAS=[['deposito','Va a depósito'],['personal','Pago de turno'],['gasto','Compra'],['otro','Otro']];
+var RET_DETALLE={ '':['Detalle',''], deposito:['Detalle (opcional)','Ej.: depósito del fin de semana'], personal:['Detalle (opcional)','Ej.: turno tarde, reemplazo'],
+                  gasto:['Qué se compró','Ej.: hielo'], otro:['Qué fue','Ej.: vuelto a un cliente por error de cobro'] };
+var RET_DIAS=7, RET_LADO=1400, retUltimo=0;
+
+function saveRet(){ localStorage.setItem(RET, JSON.stringify(retiros)); }
+function plataCL(n){ return '$ '+String(Math.round(+n||0)).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+function retNum(t){ return Math.min(99999999, Math.round(+String(t||'').replace(/\D/g,''))||0); }
+function retFechaLocal(d){ return hoyISO(d)+'T'+p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds()); }
+function retNuevoId(){ return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+/* los enviados se quedan 7 días en la lista; los pendientes, hasta que se envíen o se descarten */
+function retLimpiarViejos(){
+  var tope=Date.now()-RET_DIAS*864e5, n=retiros.length;
+  retiros=retiros.filter(function(r){ return r.estado!=='ok' || ms(r.creado)>tope; });
+  if(retiros.length!==n) saveRet();
+}
+
+/* --- La foto: se comprime y queda en el aparato con el id que tendrá el retiro --- */
+function retFoto(file){
+  if(!file || !/^image\//.test(file.type||'')){ toast('Eso no es una imagen'); return; }
+  ret.ocupado=true; retPintar();
+  function fin(msg){ ret.ocupado=false; retPintar(); if(msg) toast(msg); }
+  cargarImg(file, function(img){
+    if(!img) return fin('La foto no se pudo abrir');
+    aBlob(lienzo(img,RET_LADO), function(blob){
+      if(!blob) return fin('La foto no se pudo preparar');
+      var th=lienzo(img,LTH*2).toDataURL('image/jpeg',0.6), id=retNuevoId(), vieja=ret.fotoId;
+      if(img.close) img.close();
+      fotoGuardar(id, blob, th, function(bien){
+        if(!bien) return fin('No se pudo guardar la foto en este aparato');
+        ret.fotoId=id;
+        if(vieja) fotoBorrar(vieja);
+        fin();
+      });
+    });
+  });
+}
+
+/* --- Registrar: queda en el aparato y se envía enseguida --- */
+function retGuardar(){
+  if(ret.ocupado) return;
+  if(perfilesVivos().length && !yo){ abrirQuien(true); return; }
+  var monto=retNum($('#retMonto').value), persona=$('#retPersona').value.trim().replace(/\s+/g,' '),
+      detalle=$('#retDetalle').value.trim().replace(/\s+/g,' '), c=ret.clase, d=new Date();
+  if(!ret.fotoId || !thumbs[ret.fotoId]){ toast('Falta la foto del vale o comprobante'); return; }
+  if(!monto){ toast('Escribe el monto que salió'); $('#retMonto').focus(); return; }
+  if(!c){ toast('Elige la causa'); return; }
+  if(c==='personal' && !persona){ toast('Escribe a quién se le paga'); $('#retPersona').focus(); return; }
+  if((c==='gasto'||c==='otro') && detalle.length<3){ toast(c==='gasto' ? 'Escribe qué se compró' : 'Escribe qué fue'); $('#retDetalle').focus(); return; }
+  var com = c==='deposito' ? 'Va a depósito'+(detalle?' · '+detalle:'')
+          : c==='personal' ? 'Pago de turno a '+persona+(detalle?' · '+detalle:'')
+          : c==='gasto' ? 'Compra: '+detalle : detalle;
+  var r={ id:ret.fotoId, fecha:retFechaLocal(d), monto:monto, clase:c, persona:c==='personal'?persona:'',
+          dia:c==='personal' ? ($('#retDia').value||hoyISO(d)) : hoyISO(d), comentario:com.slice(0,300),
+          quien:yo?yo.nombre:'', foto:'', estado:'pend', error:'', creado:ahora() };
+  retiros.unshift(r); saveRet();
+  ret.fotoId=''; ret.clase='';
+  $('#retMonto').value=''; $('#retPersona').value=''; $('#retDetalle').value=''; $('#retDia').value='';
+  retPintar();
+  retEnviar(r.id, true);
+}
+function retTraduce(m){
+  m=String(m||'');
+  if(/could not find the function|PGRST202|does not exist|schema cache/i.test(m)) return 'Falta instalar el retiro de caja en Supabase (SQL-retiro-caja.sql).';
+  if(/sin permiso|permission denied|no autorizada/i.test(m)) return 'Esta cuenta no está autorizada para registrar retiros: avísale a quien administra la app.';
+  if(/falta qui[eé]n/i.test(m)) return 'Tu nombre no está entre las personas de esta cuenta: sincroniza en Datos y reintenta.';
+  if(/demasiados retiros/i.test(m)) return 'Se llegó al tope de retiros de hoy para este local: avísale a tu encargado.';
+  if(/JWT|expired|vencid/i.test(m)) return 'La sesión venció: vuelve a entrar con la cuenta en Datos.';
+  if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin conexión: se envía solo cuando vuelva la señal.';
+  if(/^(GitHub|Supabase) \d|ocupado|tardó|timeout/i.test(m)) return 'El servidor no pudo guardarlo por ahora: reintenta en un momento.';
+  return m.slice(0,200);
+}
+async function retEnviar(id, avisar){
+  var r=retiros.find(function(x){ return x.id===id; });
+  if(!r || r.estado==='ok' || ret.enviando[id]) return;
+  ret.enviando[id]=1; retPintar();
+  try{
+    if(navigator.onLine===false || !(await esperaLib(4000))) throw new Error('Sin conexión: se envía solo cuando vuelva la señal.');
+    var s=await sesion();
+    if(!s) throw new Error('Falta conectar este aparato con la cuenta del local (en Datos).');
+    if(sedeDeCuenta(s.user)!==sedeIF()) throw new Error('La cuenta conectada es de otro local: entra con la de '+SEDES_IF[sedeIF()].n+' en Datos.');
+    if(!r.foto){                                // la foto sube una sola vez: si después falla el registro, no se repite
+      var blob=await fotoLeerP(r.id);
+      if(!blob) throw new Error('La foto ya no está en este aparato: descarta este retiro y regístralo de nuevo.');
+      var datos=await new Promise(function(res){ blobADataUrl(blob, function(u){ res(u ? String(u).split(',')[1]||'' : ''); }); });
+      var resp, d=null;
+      try{
+        resp=await fetch(RET_API, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+s.access_token },
+                                    body:JSON.stringify({ accion:'foto-retiro', id:r.id, datos:datos, tipo:'jpg' }) });
+      }catch(e){ throw new Error('Sin conexión: se envía solo cuando vuelva la señal.'); }
+      try{ d=await resp.json(); }catch(e){}
+      if(!resp.ok || !d || !d.ok) throw new Error((d && d.error) || (resp.status===404 ? 'Este servidor no guarda fotos de retiros.' : 'No se pudo guardar la foto ('+resp.status+').'));
+      r.foto=String(d.f||''); saveRet();
+    }
+    var q=await getSB().rpc('egresos_retiro', { p_fila:{ id:r.id, fecha:r.fecha, monto:r.monto, clase:r.clase, persona:r.persona,
+                                                         dia:r.dia, comentario:r.comentario, foto:r.foto, nota:'', quien:r.quien } });
+    if(q.error) throw new Error(q.error.message||'No se pudo registrar');
+    r.estado='ok'; r.error=''; r.enviado=ahora();
+  }catch(e){ r.error=retTraduce(e && e.message); }
+  delete ret.enviando[id]; saveRet(); retPintar();
+  if(avisar) toast(r.estado==='ok' ? 'Retiro registrado y enviado' : 'Quedó guardado en este aparato: falta enviarlo');
+}
+/* los que quedaron sin enviar: uno tras otro, y no más de una pasada cada 20 s */
+async function retPendientes(forzar){
+  var P=retiros.filter(function(r){ return r.estado!=='ok'; });
+  if(!P.length || (!forzar && Date.now()-retUltimo<20000)) return;
+  retUltimo=Date.now();
+  for(var i=0;i<P.length;i++) await retEnviar(P[i].id, false);
+}
+function retDescartar(id){
+  var r=retiros.find(function(x){ return x.id===id; });
+  if(!r || r.estado==='ok') return;
+  if(!confirm('Descartar este retiro de '+plataCL(r.monto)+'.\n\nNo se envió: se borra de este aparato junto con su foto.')) return;
+  retiros=retiros.filter(function(x){ return x.id!==id; }); saveRet();
+  fotoBorrar(id, retPintar);
+}
+
+/* --- Lo que se ve --- */
+function retPintar(){
+  if(!$('#retFotoBox')) return;
+  var t=ret.fotoId && thumbs[ret.fotoId];
+  $('#retFotoBox').innerHTML = ret.ocupado ? '<div class="retTomar" style="cursor:default"><span class="rueda"></span> Preparando la foto…</div>'
+    : t ? '<div class="retFoto"><img src="'+t.t+'" alt="Foto del vale"><button class="btn sec sm" id="btnRetFoto">'+ico('camara')+' Cambiar la foto</button></div>'
+    : '<button class="retTomar" id="btnRetFoto">'+ico('camara')+' Tomar la foto</button>';
+  $('#retCausas').innerHTML = RET_CAUSAS.map(function(c){
+    return '<button class="chip'+(ret.clase===c[0]?' on':'')+'" data-retcausa="'+c[0]+'">'+c[1]+'</button>';
+  }).join('');
+  $('#retTurno').classList.toggle('hide', ret.clase!=='personal');
+  if(ret.clase==='personal' && !$('#retDia').value) $('#retDia').value=hoyISO();
+  var dt=RET_DETALLE[ret.clase]||RET_DETALLE[''];
+  $('#retDetalleLbl').textContent=dt[0]; $('#retDetalle').placeholder=dt[1];
+
+  var L=retiros.filter(esMio), pend=L.filter(function(r){ return r.estado!=='ok'; }).length;
+  $('#retLista').innerHTML = !L.length ? '' :
+    '<div class="card"><h2>Registrados en este aparato'+(pend ? ' · '+pend+' sin enviar' : '')+'</h2>'+L.map(function(r){
+      var th=thumbs[r.id], env=!!ret.enviando[r.id], d=r.fecha.slice(0,10);
+      return '<div class="retIt">'+(th ? '<img src="'+th.t+'" alt="">' : '<div class="sinFoto"></div>')+
+        '<div class="cu"><b>'+plataCL(r.monto)+'</b> · '+esc(r.comentario)+
+        '<small>'+(d===hoyISO() ? 'hoy' : etiqueta(d))+' '+esc(r.fecha.slice(11,16))+(r.quien ? ' · '+esc(r.quien) : '')+'</small>'+
+        (r.estado==='ok' ? '<span class="pill ok">Enviado</span>'
+          : env ? '<span class="pill">Enviando…</span>'
+          : '<span class="pill pend">Sin enviar</span>'+(r.error ? '<small class="falla">'+esc(r.error)+'</small>' : '')+
+            '<div class="btns"><button class="btn sec sm" data-retenviar="'+r.id+'">'+ico('sync')+' Reintentar</button>'+
+            '<button class="btn sec sm" data-retdel="'+r.id+'">'+ico('basura')+' Descartar</button></div>')+
+        '</div></div>';
+    }).join('')+
+    '<p class="hint">Quedan aquí '+RET_DIAS+' días. Si te equivocaste en un retiro ya enviado, avísale a tu encargado: se corrige en El Pase.</p></div>';
+
+  /* sin la cuenta del local se puede registrar igual, pero no sale del aparato */
+  sesion().then(function(s){
+    var a=$('#retAviso'); if(!a) return;
+    var m = !window.supabase ? '' : !s ? 'Este aparato no está conectado con la cuenta del local: lo que registres queda aquí y se envía al conectarlo.'
+          : sedeDeCuenta(s.user)!==sedeIF() ? 'La cuenta conectada es de '+SEDES_IF[sedeDeCuenta(s.user)].n+', no de '+SEDES_IF[sedeIF()].n+': los retiros no se envían hasta entrar con la cuenta correcta.' : '';
+    a.innerHTML = m ? '<div class="aviso">'+ico('alerta')+'<div>'+m+' <button class="btn sec sm" data-ir="datos" style="margin-top:6px">Ir a Datos</button></div></div>' : '';
+  });
+}
+document.addEventListener('click', function(e){
+  var t=e.target.closest('button'); if(!t) return;
+  if(t.id==='btnRetFoto'){ $('#retCam').click(); return; }
+  if(t.id==='btnRetGuardar'){ retGuardar(); return; }
+  if(t.dataset.retcausa){ ret.clase=t.dataset.retcausa; retPintar(); return; }
+  if(t.dataset.retenviar){ retEnviar(t.dataset.retenviar, true); return; }
+  if(t.dataset.retdel){ retDescartar(t.dataset.retdel); return; }
+});
+document.addEventListener('change', function(e){
+  if(e.target.id!=='retCam') return;
+  var f=e.target.files && e.target.files[0]; e.target.value='';
+  if(f) retFoto(f);
+});
+document.addEventListener('input', function(e){
+  if(e.target.id!=='retMonto') return;
+  var n=retNum(e.target.value); e.target.value = n ? plataCL(n) : '';
+});
+
 /* ================= Eventos ================= */
 document.addEventListener('click', function(e){
   if(e.target && e.target.dataset && e.target.dataset.quitar){ quitarDelForm(e.target.dataset.quitar); return; }
@@ -3004,9 +3254,10 @@ document.addEventListener('click', function(e){
 
   if(t.dataset.tab){
     document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b===t); });
-    ['notas','generar','informes','datos'].forEach(function(id){
+    ['notas','retiro','generar','informes','datos'].forEach(function(id){
       $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
     });
+    if(t.dataset.tab==='retiro'){ retPintar(); retPendientes(); }
     if(t.dataset.tab==='generar'){ renderPreview(); preRevisar(); alDia(); }
     if(t.dataset.tab==='informes') renderInformes();
     if(t.dataset.tab==='datos'){ stats(); pintarSync(); }
@@ -3370,20 +3621,22 @@ function aplicaTema(){
   stats();
   estadoInstal();
   if(yaInstalada()) $('#btnInstall').style.display='none';
-  thumbsCargar(function(){ limpiarHuerfanas(); renderLista(); renderThumbsForm(); renderPreview(); stats(); });
+  retLimpiarViejos(); retPintar();
+  thumbsCargar(function(){ limpiarHuerfanas(); renderLista(); renderThumbsForm(); renderPreview(); stats(); retPintar(); });
 
   esperaLib(8000).then(function(hay){
     pintarSync();
     if(hay) saldoArrancar();
     var listo = hay ? sincronizar('cambio') : Promise.resolve();   // al abrir, sube lo que quedó pendiente y baja lo nuevo
     listo.then(entradaSede);
+    if(hay) retPendientes();                                       // y manda los retiros de caja que quedaron sin enviar
   });
 })();
 
 /* Al volver a la app (cambiar de pestaña, desbloquear el teléfono) y al
    recuperar la señal, vuelve a mirar la nube. */
-document.addEventListener('visibilitychange', function(){ if(!document.hidden){ sincronizar('auto'); saldoCargar(); } });
-window.addEventListener('online', function(){ sincronizar('cambio'); });
+document.addEventListener('visibilitychange', function(){ if(!document.hidden){ sincronizar('auto'); saldoCargar(); retPendientes(); } });
+window.addEventListener('online', function(){ sincronizar('cambio'); retPendientes(); });
 
 window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault(); window._ip=e;
