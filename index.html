@@ -89,6 +89,15 @@ nav.tabs button{
   background:var(--card); color:var(--tx2); font-size:14px; font-weight:600; cursor:pointer;
 }
 nav.tabs button.on{background:var(--acc); border-color:var(--acc); color:var(--onAcc)}
+nav.tabs button{position:relative}
+nav.tabs button.hide{display:none}
+.tabN{position:absolute; top:-6px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--danger); color:#fff; font-size:11.5px; font-weight:700; line-height:20px; text-align:center}
+#turnoSeg{margin:0 0 16px}
+#turnoSeg button{padding:11px 6px}
+.sepTit{margin:26px 2px 12px; font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--tx2)}
+details.masNota{margin-top:14px}
+.verNueva{position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:60; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:14px; background:var(--acc); color:var(--onAcc); font-weight:600; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.verNueva .btn{background:var(--onAcc); color:var(--acc); border-color:transparent}
 
 /* Íconos de línea (sprite al inicio del body): toman el color del texto */
 svg.i{width:18px; height:18px; flex:0 0 auto; fill:none; stroke:currentColor; stroke-width:2;
@@ -431,6 +440,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <button class="iconbtn" id="btnNube" title="Sincronía" aria-label="Sincronía"><svg class="i"><use href="#i-nube"/></svg></button>
       <button class="iconbtn" id="btnTheme" title="Modo claro / oscuro" aria-label="Modo claro / oscuro"><svg class="i"><use href="#i-luna"/></svg></button>
       <button class="iconbtn" id="btnInstall" title="Instalar en el teléfono" aria-label="Instalar en el teléfono"><svg class="i"><use href="#i-movil"/></svg></button>
+      <button class="iconbtn" data-ir="datos" title="Ajustes y cuenta" aria-label="Ajustes y cuenta"><svg class="i"><use href="#i-datos"/></svg></button>
     </div>
   </div>
 </header>
@@ -438,22 +448,22 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 <div class="wrap">
 
   <nav class="tabs">
-    <button data-tab="notas" class="on"><svg class="i"><use href="#i-nota"/></svg><span>Notas</span></button>
-    <button data-tab="retiro"><svg class="i"><use href="#i-billete"/></svg><span>Retiro</span></button>
-    <button data-tab="generar"><svg class="i"><use href="#i-generar"/></svg><span>Generar</span></button>
-    <button data-tab="informes"><svg class="i"><use href="#i-informes"/></svg><span>Informes</span></button>
-    <button data-tab="datos"><svg class="i"><use href="#i-datos"/></svg><span>Datos</span></button>
+    <button data-tab="notas" class="on"><svg class="i"><use href="#i-nota"/></svg><span>Turno</span></button>
+    <button data-tab="caja"><svg class="i"><use href="#i-billete"/></svg><span>Caja</span><b class="tabN hide" id="cajaN" aria-label="pendientes por cuadrar"></b></button>
+    <button data-tab="generar"><svg class="i"><use href="#i-generar"/></svg><span>Informe</span></button>
+    <!-- sin botón propio: Retiro vive en Turno, los informes guardados en Informe y Datos en el ícono de ajustes (irVista) -->
+    <button data-tab="retiro" class="hide" tabindex="-1" aria-hidden="true"></button><button data-tab="informes" class="hide" tabindex="-1" aria-hidden="true"></button><button data-tab="datos" class="hide" tabindex="-1" aria-hidden="true"></button>
   </nav>
+  <div class="seg" id="turnoSeg" role="tablist" aria-label="Qué vas a registrar">
+    <button data-turno="nota" class="on">Anotar</button>
+    <button data-turno="retiro">Retiro de caja</button>
+  </div>
 
   <!-- ============ NOTAS ============ -->
   <section id="tab-notas">
     <div class="card">
       <h2 id="formTitle">Nueva nota</h2>
-      <div class="row">
-        <div><label class="f" for="fFecha">Fecha</label><input type="date" id="fFecha"></div>
-        <div><label class="f" for="fHora">Hora</label><input type="time" id="fHora"></div>
-      </div>
-      <div class="mt">
+      <div>
         <label class="f">Área</label>
         <div class="chips" id="fAreas"></div>
       </div>
@@ -468,6 +478,12 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <input type="file" id="fGal" accept="image/*" multiple class="hide">
         <div class="thumbs" id="fThumbs"></div>
       </div>
+      <details class="verNotas masNota" id="masNota">
+      <summary><svg class="i flecha"><use href="#i-abajo"/></svg> <span>Medida tomada, fecha y hora</span></summary>
+      <div class="row mt">
+        <div><label class="f" for="fFecha">Fecha</label><input type="date" id="fFecha"></div>
+        <div><label class="f" for="fHora">Hora</label><input type="time" id="fHora"></div>
+      </div>
       <div class="mt">
         <label class="f" for="fMedida">Medida tomada en el momento <span style="text-transform:none;font-weight:600">(opcional)</span></label>
         <textarea id="fMedida" style="min-height:56px" placeholder="Qué hiciste ahí mismo. Ej: se hizo arqueo ciego de nuevo y se dejó la diferencia anotada"></textarea>
@@ -479,11 +495,12 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <input type="file" id="fGalM" accept="image/*" multiple class="hide">
         <div class="thumbs" id="fThumbsM"></div>
       </div>
+      </details>
       <div class="btns mt">
         <button class="btn" id="btnGuardar">Agregar nota</button>
         <button class="btn sec hide" id="btnCancelar">Cancelar</button>
       </div>
-      <p class="hint">Ctrl + Enter para agregar rápido. La hora y la fecha vienen puestas en «ahora». Cada foto queda pegada a lo que respalda: las de arriba al hecho, las de abajo a la medida. Se guardan en el teléfono junto a la nota — el prompt solo avisa que hay foto, la imagen no viaja al chat.</p>
+      <p class="hint">La fecha y la hora vienen puestas en «ahora».</p>
     </div>
 
     <div class="card">
@@ -535,19 +552,22 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <div class="btns mt">
         <button class="btn" id="btnRetGuardar">Registrar retiro</button>
       </div>
-      <p class="hint">Anótalo también en Fudo como egreso de caja, con el mismo monto. La foto y el monto quedan como evidencia; el cuadre con Fudo lo ve el encargado en El Pase.</p>
+      <p class="hint">Anótalo también en Fudo como egreso de caja, con el mismo monto. La foto y el monto quedan como evidencia; lo que falte por cuadrar se completa en la pestaña Caja.</p>
     </div>
     <div id="retLista"></div>
+  </section>
 
+  <!-- ============ CAJA: lo que falta por cuadrar y el Excel de Fudo ============ -->
+  <section id="tab-caja" class="hide">
     <div class="card">
       <h2><svg class="i"><use href="#i-check"/></svg> Lo que falta por cuadrar</h2>
-      <p class="hint" style="margin-top:0">Solo el encargado. Los retiros anotados en Fudo que todavía no tienen su vale con foto y los depósitos sin comprobante del banco: se completan aquí mismo, tomando la foto.</p>
+      <p class="hint" style="margin-top:0">Los retiros anotados en Fudo sin su vale con foto y los depósitos sin comprobante del banco. Se completan aquí mismo, con una foto.</p>
       <div id="faltaCaja"></div>
     </div>
 
     <div class="card">
       <h2><svg class="i"><use href="#i-subir"/></svg> Movimientos de caja de Fudo</h2>
-      <p class="hint" style="margin-top:0">Solo el encargado. Sube aquí el Excel «Movimientos de Caja» que se baja de Fudo: es el mismo que se sube en El Pase y llega al mismo lugar. Con él se cuadran los retiros.</p>
+      <p class="hint" style="margin-top:0">El Excel «Movimientos de Caja» que se baja de Fudo. Con él aparecen arriba los retiros por cuadrar.</p>
       <div id="movCaja"></div>
     </div>
   </section>
@@ -581,7 +601,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint" id="conteo"></p>
       <details class="verNotas" id="verNotas">
         <summary><svg class="i flecha"><use href="#i-abajo"/></svg> <span id="verNotasTit">Ver las notas que entran</span></summary>
-        <p class="hint" style="margin:6px 0 8px">Son exactamente las líneas que van a DeepSeek o a Claude, en orden.</p>
+        <p class="hint" style="margin:6px 0 8px">Son exactamente las notas que entran al informe, en orden.</p>
         <pre class="out" id="listaPeriodo"></pre>
       </details>
     </div>
@@ -593,19 +613,17 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
 
     <div class="card cardIA" id="cardPre">
-      <h2><svg class="i"><use href="#i-chispa"/></svg> Pre-informe</h2>
-      <p class="hint" style="margin-top:0"><b>Armar pre-informe</b>: DeepSeek lee todas las notas del período con las reglas de la bitácora y deja el borrador abajo, en «Informe». <b>Copiar para Claude</b>: copia las notas y las reglas —y el pre-informe, si ya está armado— para pegarlo en Claude y que te devuelva la versión final.</p>
+      <h2><svg class="i"><use href="#i-chispa"/></svg> Armar el informe</h2>
+      <p class="hint" style="margin-top:0">Lee todas las notas del período y deja el borrador abajo, listo para revisar y enviar.</p>
       <div class="btns mt">
-        <button class="btn" id="btnPre"><svg class="i"><use href="#i-chispa"/></svg> <span>Armar pre-informe</span></button>
-        <button class="btn sec" id="btnClaude"><svg class="i"><use href="#i-copiar"/></svg> Copiar para Claude</button>
-        <button class="btn sec" id="btnAbrirClaude">Abrir Claude <svg class="i"><use href="#i-externo"/></svg></button>
+        <button class="btn" id="btnPre"><svg class="i"><use href="#i-chispa"/></svg> <span>Armar el informe</span></button>
       </div>
       <div id="preEstado"></div>
     </div>
 
     <div class="card" id="cardInf">
       <h2>Informe <span class="pill">revísalo y envíalo</span></h2>
-      <p class="hint" style="margin:0 0 10px">Aquí queda el pre-informe de DeepSeek, o lo que pegues de otro chat. Corrígelo si hace falta: abajo ves cómo va a llegar al grupo.</p>
+      <p class="hint" style="margin:0 0 10px">Aquí queda el borrador. Corrígelo si hace falta: abajo ves cómo va a llegar al grupo.</p>
       <div class="fmt">
         <button class="fmtb" data-fmt="negrita" title="Poner en negrita lo seleccionado">*N*</button>
         <button class="fmtb" data-fmt="titulo" title="Convertir la línea en título">*TÍTULO*</button>
@@ -626,28 +644,36 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <div class="thumbs" id="thumbsInf"></div>
       </div>
 
-      <div class="row mt">
-        <div><label class="f" for="rNum">Enviar directo a este número <span style="text-transform:none;font-weight:600">(opcional)</span></label>
-          <input type="text" id="rNum" placeholder="56912345678" inputmode="numeric"></div>
-      </div>
       <div class="btns mt">
         <button class="btn ok" id="btnWA"><svg class="i"><use href="#i-enviar"/></svg> Enviar por WhatsApp</button>
         <button class="btn sec hide" id="btnFotosWA"><svg class="i"><use href="#i-clip"/></svg> <span>Enviar fotos</span></button>
         <button class="btn sec" id="btnPDF"><svg class="i"><use href="#i-imprimir"/></svg> PDF</button>
         <button class="btn sec" id="btnCopiarInf"><svg class="i"><use href="#i-copiar"/></svg> Copiar</button>
-        <button class="btn sec" id="btnGuardarInf"><svg class="i"><use href="#i-guardar"/></svg> Guardar</button>
-        <button class="btn sec" id="btnSoloInf"><svg class="i"><use href="#i-tijera"/></svg> Dejar solo el informe</button>
-        <button class="btn sec" id="btnLimpiarInf">Limpiar</button>
       </div>
-      <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación. Al enviar se guarda solo en Informes. <b>Enviar fotos</b> las manda aparte (el enlace de WhatsApp solo lleva texto) y <b>PDF</b> arma una hoja con el informe y cada foto bajo el punto que le corresponde: en el teléfono elige «Guardar como PDF».</p>
+      <details class="verNotas" style="margin-top:12px">
+        <summary><svg class="i flecha"><use href="#i-abajo"/></svg> <span>Más opciones</span></summary>
+        <div class="row mt">
+          <div><label class="f" for="rNum">Enviar directo a este número <span style="text-transform:none;font-weight:600">(opcional)</span></label>
+            <input type="text" id="rNum" placeholder="56912345678" inputmode="numeric"></div>
+        </div>
+        <div class="btns mt">
+          <button class="btn sec" id="btnGuardarInf"><svg class="i"><use href="#i-guardar"/></svg> Guardar sin enviar</button>
+          <button class="btn sec" id="btnSoloInf"><svg class="i"><use href="#i-tijera"/></svg> Dejar solo el informe</button>
+          <button class="btn sec" id="btnLimpiarInf">Limpiar</button>
+        </div>
+        <p class="hint">Sin número, WhatsApp abre el selector de chat y eliges el grupo. Con número (56 + celular, sin +) va directo a esa conversación.</p>
+      </details>
+      <p class="hint">Al enviar se guarda solo en «Informes guardados», más abajo. Las fotos van aparte, justo después del informe.</p>
     </div>
 
     <details class="card plegable" id="cardPrompt">
-      <summary><h2>Usar otra IA: copiar el prompt</h2><svg class="i flecha"><use href="#i-abajo"/></svg></summary>
+      <summary><h2>Usar otro asistente</h2><svg class="i flecha"><use href="#i-abajo"/></svg></summary>
       <p class="hint" style="margin-top:0">Si prefieres Claude, ChatGPT u otro chat: copia el prompt, pégalo allá y trae la respuesta al cuadro «Informe» (al pegar en el cuadro vacío, la app quita lo que el chat agrega antes y después).</p>
       <label class="chk mt"><input type="checkbox" id="gTodos"> Incluir las reglas de los tres modos</label>
       <div class="btns mt">
-        <button class="btn sec" id="btnCopiar"><svg class="i"><use href="#i-copiar"/></svg> Copiar prompt</button>
+        <button class="btn sec" id="btnClaude"><svg class="i"><use href="#i-copiar"/></svg> Copiar para Claude</button>
+        <button class="btn sec" id="btnAbrirClaude">Abrir Claude <svg class="i"><use href="#i-externo"/></svg></button>
+        <button class="btn sec" id="btnCopiar"><svg class="i"><use href="#i-copiar"/></svg> Copiar las instrucciones</button>
         <button class="btn sec" id="btnCopiarNotas">Copiar solo las notas</button>
         <button class="btn sec" id="btnTxt"><svg class="i"><use href="#i-bajar"/></svg> Descargar .txt</button>
       </div>
@@ -666,6 +692,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
   <!-- ============ INFORMES ============ -->
   <section id="tab-informes" class="hide">
+    <h2 class="sepTit">Informes guardados</h2>
     <div id="listaInf"></div>
   </section>
 
@@ -718,11 +745,11 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint" style="margin-top:0" id="statTxt"></p>
       <label class="chk"><input type="checkbox" id="gFotos" checked> Incluir las fotos en el respaldo <span style="color:var(--tx3)">(archivo mucho más pesado)</span></label>
       <div class="btns mt">
-        <button class="btn sec" id="btnExport"><svg class="i"><use href="#i-bajar"/></svg> Exportar JSON</button>
+        <button class="btn sec" id="btnExport"><svg class="i"><use href="#i-bajar"/></svg> Descargar respaldo</button>
         <button class="btn sec" id="btnImport"><svg class="i"><use href="#i-subir"/></svg> Importar JSON</button>
         <input type="file" id="fileImport" accept="application/json" class="hide">
       </div>
-      <p class="hint">Las notas se guardan solo en este dispositivo (localStorage) y las fotos en el almacén del navegador. Exporta de vez en cuando.</p>
+      <p class="hint">Las notas y las fotos quedan en este aparato y, con la cuenta conectada, también en la nube. Descarga un respaldo de vez en cuando.</p>
     </div>
     <div class="card">
       <h2>App en el teléfono</h2>
@@ -1813,7 +1840,7 @@ function renderPreview(){
   }
   if(!verTodo() && yo)
     h+='<br><span class="solo">Solo entran las notas de '+esc(yo.nombre)+
-       (soyAdmin()?': para sumar las de todos, en Datos activa «Ver también las notas de los demás».':'.')+'</span>';
+       (soyAdmin()?': para sumar las de todos, en Ajustes activa «Ver también las notas de los demás».':'.')+'</span>';
   $('#conteo').innerHTML=h;
   $('#verNotas').classList.toggle('hide', !arr.length);
   $('#verNotasTit').textContent='Ver '+(arr.length===1?'la nota que entra':'las '+arr.length+' notas que entran');
@@ -2223,7 +2250,7 @@ function preEstado(html){ $('#preEstado').innerHTML=html||''; }
 function preAviso(tipo, icono, html){
   return '<div class="aviso'+(tipo?' '+tipo:'')+'">'+ico(icono)+'<span>'+html+'</span></div>';
 }
-function preIrDatos(){ return '<div class="btns mt"><button class="btn sec sm" data-ir="datos">Ir a Datos</button></div>'; }
+function preIrDatos(){ return '<div class="btns mt"><button class="btn sec sm" data-ir="datos">Ir a Ajustes</button></div>'; }
 /* Al cambiar de modo o de período, lo que dijo DeepSeek del anterior ya no aplica */
 function preLimpiar(){ if(!pre.ocupado) preEstado(''); }
 /* Una vez por visita: si el servidor no tiene la clave, se avisa antes de apretar */
@@ -2231,7 +2258,7 @@ function preRevisar(){
   if(pre.revisado) return; pre.revisado=true;
   fetch('api/preinforme').then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
     if(d && d.deepseek===false && !$('#preEstado').innerHTML)
-      preEstado(preAviso('', 'alerta', 'DeepSeek todavía no está conectado: falta la clave <b>DEEPSEEK_API_KEY</b> en Vercel (proyecto informe-francois). Mientras tanto puedes usar «Usar otra IA».'));
+      preEstado(preAviso('', 'alerta', 'El asistente todavía no está conectado: avísale a quien administra la app. Mientras tanto puedes usar «Usar otro asistente», más abajo.'));
   }).catch(function(){});
 }
 /* Antes de armar, baja lo que el otro teléfono haya anotado: si la sincronía
@@ -2294,7 +2321,7 @@ async function armarPreinforme(){
     if(/Failed to fetch|NetworkError|Load failed/i.test(msg)) msg='No se pudo conectar con el servidor. ¿Hay internet?';
     preEstado(preAviso('', 'alerta', esc(msg))+(e && e.sinSesion ? preIrDatos() : ''));
   }finally{
-    pre.ocupado=false; btn.disabled=false; btn.querySelector('span').textContent='Armar pre-informe';
+    pre.ocupado=false; btn.disabled=false; btn.querySelector('span').textContent='Armar el informe';
   }
 }
 
@@ -2939,7 +2966,7 @@ async function sincronizar(modo){
   if(modo==='auto' && prefs.lastSync && Date.now()-ms(prefs.lastSync) < 15000) return;
 
   var s=await sesion();
-  if(!s){ if(manual) toast('Primero entra con tu correo en Datos'); pintarSync(); return; }
+  if(!s){ if(manual) toast('Primero entra con tu correo en Ajustes'); pintarSync(); return; }
   /* nunca se mezclan dos sedes: si la cuenta es de otra, no se sube ni se baja nada */
   if(sedeDeCuenta(s.user)!==sedeIF()){
     nube('alerta','Cuenta de otra sede');
@@ -3032,14 +3059,14 @@ async function sincronizar(modo){
       if(kc.sube) p.unshift('subieron '+kc.sube+' comentario'+(kc.sube===1?'':'s'));
       if(subeN.length) p.unshift('subieron '+subeN.length+' nota'+(subeN.length===1?'':'s'));
       if(f.sube) p.push('subieron '+f.sube+' foto'+(f.sube===1?'':'s'));
-      toast(p.length ? 'Al día: '+p.join(', ') : 'Al día · el detalle, en Datos');
+      toast(p.length ? 'Al día: '+p.join(', ') : 'Al día · el detalle, en Ajustes');
     }
   }catch(e){
     syncOcupado=false;
     anotaFalla(paso, e);
     nube('alerta','No pudo sincronizar');
     pintarSync();
-    toast('Falló la sincronía. El detalle quedó en Datos');
+    toast('Falló la sincronía. El detalle quedó en Ajustes');
   }
 }
 function syncPronto(){
@@ -3125,9 +3152,9 @@ function retTraduce(m){
   m=String(m||'');
   if(/could not find the function|PGRST202|does not exist|schema cache/i.test(m)) return 'Falta instalar el retiro de caja en Supabase (SQL-retiro-caja.sql).';
   if(/sin permiso|permission denied|no autorizada/i.test(m)) return 'Esta cuenta no está autorizada para registrar retiros: avísale a quien administra la app.';
-  if(/falta qui[eé]n/i.test(m)) return 'Tu nombre no está entre las personas de esta cuenta: sincroniza en Datos y reintenta.';
+  if(/falta qui[eé]n/i.test(m)) return 'Tu nombre no está entre las personas de esta cuenta: sincroniza en Ajustes y reintenta.';
   if(/demasiados retiros/i.test(m)) return 'Se llegó al tope de retiros de hoy para este local: avísale a tu encargado.';
-  if(/JWT|expired|vencid/i.test(m)) return 'La sesión venció: vuelve a entrar con la cuenta en Datos.';
+  if(/JWT|expired|vencid/i.test(m)) return 'La sesión venció: vuelve a entrar con la cuenta en Ajustes.';
   if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin conexión: se envía solo cuando vuelva la señal.';
   if(/^(GitHub|Supabase) \d|ocupado|tardó|timeout/i.test(m)) return 'El servidor no pudo guardarlo por ahora: reintenta en un momento.';
   return m.slice(0,200);
@@ -3139,8 +3166,8 @@ async function retEnviar(id, avisar){
   try{
     if(navigator.onLine===false || !(await esperaLib(4000))) throw new Error('Sin conexión: se envía solo cuando vuelva la señal.');
     var s=await sesion();
-    if(!s) throw new Error('Falta conectar este aparato con la cuenta del local (en Datos).');
-    if(sedeDeCuenta(s.user)!==sedeIF()) throw new Error('La cuenta conectada es de otro local: entra con la de '+SEDES_IF[sedeIF()].n+' en Datos.');
+    if(!s) throw new Error('Falta conectar este aparato con la cuenta del local (en Ajustes).');
+    if(sedeDeCuenta(s.user)!==sedeIF()) throw new Error('La cuenta conectada es de otro local: entra con la de '+SEDES_IF[sedeIF()].n+' en Ajustes.');
     if(!r.foto){                                // la foto sube una sola vez: si después falla el registro, no se repite
       var blob=await fotoLeerP(r.id);
       if(!blob) throw new Error('La foto ya no está en este aparato: descarta este retiro y regístralo de nuevo.');
@@ -3213,7 +3240,7 @@ function retPintar(){
     var a=$('#retAviso'); if(!a) return;
     var m = !window.supabase ? '' : !s ? 'Este aparato no está conectado con la cuenta del local: lo que registres queda aquí y se envía al conectarlo.'
           : sedeDeCuenta(s.user)!==sedeIF() ? 'La cuenta conectada es de '+SEDES_IF[sedeDeCuenta(s.user)].n+', no de '+SEDES_IF[sedeIF()].n+': los retiros no se envían hasta entrar con la cuenta correcta.' : '';
-    a.innerHTML = m ? '<div class="aviso">'+ico('alerta')+'<div>'+m+' <button class="btn sec sm" data-ir="datos" style="margin-top:6px">Ir a Datos</button></div></div>' : '';
+    a.innerHTML = m ? '<div class="aviso">'+ico('alerta')+'<div>'+m+' <button class="btn sec sm" data-ir="datos" style="margin-top:6px">Ir a Ajustes</button></div></div>' : '';
   });
 }
 document.addEventListener('click', function(e){
@@ -3278,7 +3305,7 @@ async function movAbrir(){
   try{
     if(!(await esperaLib(4000))) throw new Error('Sin conexión.');
     var s=await sesion();
-    if(!s) throw new Error('Primero conecta este aparato con la cuenta del local, en Datos.');
+    if(!s) throw new Error('Primero conecta este aparato con la cuenta del local, en Ajustes.');
     var q=await getSB().rpc('egresos_retiro_mandos');
     if(q.error) throw new Error(retTraduce(q.error.message));
     mov.mandos=Array.isArray(q.data) ? q.data : [];
@@ -3376,7 +3403,7 @@ async function faltaAbrir(){
   if(mov.mandos) return;
   try{
     if(!(await esperaLib(4000))) throw new Error('Sin conexión.');
-    if(!(await sesion())) throw new Error('Primero conecta este aparato con la cuenta del local, en Datos.');
+    if(!(await sesion())) throw new Error('Primero conecta este aparato con la cuenta del local, en Ajustes.');
     var q=await getSB().rpc('egresos_retiro_mandos');
     if(q.error) throw new Error(q.error.message);
     mov.mandos=Array.isArray(q.data) ? q.data : [];
@@ -3390,7 +3417,7 @@ async function faltaEntrar(){
   if(!hayCripto()){ toast('Este navegador no puede revisar el PIN'); return; }
   falta.cred={ p_nombre:nombre, p_hash:await movSha(pin), p_sede:sedeIF() };
   await faltaCargar();
-  if(falta.error) falta.cred=null; else encRecordar(nombre);
+  if(falta.error) falta.cred=null; else { encRecordar(nombre); mov.abierto=true; }
   faltaPintar(); movPintar();   // el mismo ingreso sirve para subir el Excel
 }
 async function faltaCargar(){
@@ -3487,6 +3514,7 @@ function faltaPintar(){
     return;
   }
   var P=faltaListas(), suma=function(A){ return plataCL(A.reduce(function(s,x){ return s+x.monto; },0)); };
+  var nC=P.vale.length+P.dep.length, bC=$('#cajaN'); if(bC){ bC.textContent=nC||''; bC.classList.toggle('hide', !nC); }
   var ayer=hoyISO(sumaDias(new Date(), -1)), atras=!falta.ultimo || falta.ultimo.slice(0,10)<ayer;
   var h=err+(falta.ocupado && !falta.sel ? '<p class="hint"><span class="rueda"></span> Revisando…</p>' : '');
   h+='<p class="hint" style="margin-top:0;font-weight:600">'+(P.vale.length||P.dep.length
@@ -3506,7 +3534,7 @@ document.addEventListener('click', function(e){
   if(t.id==='btnFaltaAbrir') faltaAbrir();
   else if(t.id==='btnFaltaEntrar') faltaEntrar();
   else if(t.id==='btnFaltaCerrar'){ falta.abierto=false; falta.error=''; faltaPintar(); }
-  else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; faltaPintar(); movPintar(); }
+  else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; faltaPintar(); movPintar(); if($('#cajaN')) $('#cajaN').classList.add('hide'); }
   else if(t.id==='btnFaltaRecargar') faltaCargar();
   else if(t.id==='btnFaltaFoto'){ if($('#faltaCam')) $('#faltaCam').click(); }
   else if(t.id==='btnFaltaGuardar') faltaGuardar();
@@ -3527,6 +3555,34 @@ document.addEventListener('input', function(e){
   if(e.target.id!=='faltaMonto') return;
   var n=retNum(e.target.value); e.target.value = n ? plataCL(n) : '';
 });
+
+/* ================= Tres pestañas =================
+   Turno (anotar una nota o registrar un retiro, con el selector de arriba), Caja (lo que falta
+   por cuadrar y el Excel de Fudo, abierta: quien usa la app es encargado) e Informe (armar,
+   enviar y, debajo, los guardados). Ajustes es el ícono de la cabecera.
+   Las secciones siguen siendo las de siempre (#tab-…): aquí solo se decide cuáles se ven. */
+var turnoVista='nota', vistaTab='notas';
+function irVista(tb){
+  vistaTab=tb;
+  document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.tab===tb); });
+  var ver={ notas:[turnoVista==='retiro' ? 'retiro' : 'notas'], caja:['caja'], generar:['generar','informes'], datos:['datos'] }[tb] || ['notas'];
+  ['notas','retiro','caja','generar','informes','datos'].forEach(function(id){ $('#tab-'+id).classList.toggle('hide', ver.indexOf(id)<0); });
+  $('#turnoSeg').classList.toggle('hide', tb!=='notas');
+  document.querySelectorAll('#turnoSeg button').forEach(function(b){ b.classList.toggle('on', b.dataset.turno===turnoVista); });
+  if(ver.indexOf('retiro')>=0){ retPintar(); retPendientes(); }
+  if(tb==='caja'){
+    if(falta.cred && !mov.abierto) mov.abierto=true;   // ya entró: el Excel se elige de una vez
+    movPintar(); faltaPintar();
+    if(!falta.abierto) faltaAbrir();                   // lo pendiente a la vista, sin un botón de por medio
+  }
+  if(tb==='generar'){ renderPreview(); preRevisar(); alDia(); renderInformes(); }
+  if(tb==='datos'){ stats(); pintarSync(); }
+}
+/* al editar una nota con medida, con fotos de la medida o de otro día, lo plegado se abre solo */
+function masAuto(){
+  var d=$('#masNota'); if(!d) return;
+  d.open = !!($('#fMedida').value.trim() || $('#fThumbsM').children.length || ($('#fFecha').value && $('#fFecha').value!==hoyISO()));
+}
 
 /* ================= Eventos ================= */
 document.addEventListener('click', function(e){
@@ -3558,22 +3614,19 @@ document.addEventListener('click', function(e){
     return;
   }
 
+  if(t.dataset.turno){ turnoVista=t.dataset.turno; irVista('notas'); return; }
   if(t.dataset.tab){
-    document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b===t); });
-    ['notas','retiro','generar','informes','datos'].forEach(function(id){
-      $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
-    });
-    if(t.dataset.tab==='retiro'){ retPintar(); retPendientes(); movPintar(); faltaPintar(); }
-    if(t.dataset.tab==='generar'){ renderPreview(); preRevisar(); alDia(); }
-    if(t.dataset.tab==='informes') renderInformes();
-    if(t.dataset.tab==='datos'){ stats(); pintarSync(); }
+    var tb=t.dataset.tab;
+    if(tb==='retiro'){ turnoVista='retiro'; tb='notas'; }   // las direcciones de antes: Retiro vive en Turno…
+    if(tb==='informes') tb='generar';                        // …y los informes guardados, en Informe
+    irVista(tb);
     window.scrollTo({top:0});
     return;
   }
   if(t.dataset.area){ sel.area=t.dataset.area; renderChips(); return; }
   if(t.dataset.comentar){ comAbrir(t.dataset.comentar); return; }
   if(t.dataset.delcom){ comBorrar(t.dataset.delcom); return; }
-  if(t.dataset.edit){ editar(t.dataset.edit); return; }
+  if(t.dataset.edit){ editar(t.dataset.edit); masAuto(); return; }
   if(t.dataset.del){ borrar(t.dataset.del); return; }
   if(t.dataset.modo){ setModo(t.dataset.modo); return; }
   if(t.dataset.ia){ abrirIA(t.dataset.ia); return; }
@@ -3955,7 +4008,17 @@ window.addEventListener('appinstalled', function(){
   window._ip=null; cerrarInstalar(); estadoInstal(); toast('App instalada');
 });
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
-  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  window.addEventListener('load', function(){
+    var tenia=!!navigator.serviceWorker.controller;   // la primera instalación no es «versión nueva»
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(!tenia || document.getElementById('verNueva')) return;
+      var d=document.createElement('div'); d.id='verNueva'; d.className='verNueva';
+      d.innerHTML='<span>Hay una versión nueva de la app.</span><button class="btn sm" id="btnVerNueva">Actualizar</button>';
+      document.body.appendChild(d);
+    });
+  });
+  document.addEventListener('click', function(e){ if(e.target && e.target.id==='btnVerNueva') location.reload(); });
 }
 </script>
 </body>
