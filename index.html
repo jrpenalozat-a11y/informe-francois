@@ -540,6 +540,12 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     <div id="retLista"></div>
 
     <div class="card">
+      <h2><svg class="i"><use href="#i-check"/></svg> Lo que falta por cuadrar</h2>
+      <p class="hint" style="margin-top:0">Solo el encargado. Los retiros anotados en Fudo que todavía no tienen su vale con foto y los depósitos sin comprobante del banco: se completan aquí mismo, tomando la foto.</p>
+      <div id="faltaCaja"></div>
+    </div>
+
+    <div class="card">
       <h2><svg class="i"><use href="#i-subir"/></svg> Movimientos de caja de Fudo</h2>
       <p class="hint" style="margin-top:0">Solo el encargado. Sube aquí el Excel «Movimientos de Caja» que se baja de Fudo: es el mismo que se sube en El Pase y llega al mismo lugar. Con él se cuadran los retiros.</p>
       <div id="movCaja"></div>
@@ -3334,6 +3340,172 @@ document.addEventListener('click', function(e){
   else if(t.id==='btnMovCerrar'){ mov.abierto=false; if(mov.mal) mov.aviso=''; movPintar(); }
 });
 
+/* ================= Lo que falta por cuadrar (solo el encargado) =================
+   Lo mismo que muestra El Pase en «Lo que falta para que cuadre», para completarlo desde el
+   teléfono: a cada retiro de Fudo sin vale se le toma la foto del vale, y a cada depósito
+   sin comprobante, la foto del comprobante del banco (uno puede cubrir varios retiros).
+   Entra el encargado con su nombre y PIN de El Pase y todo pasa por las funciones de El
+   Pase (egresos_leer, egresos_editar, egresos_deposito y /api/egresos): aquí no hay reglas
+   propias, el estado de cada retiro lo dicen egrEstado (egresos.js de El Pase) y la base
+   (dep_est). El PIN queda solo en memoria hasta cerrar o recargar la app. */
+var FALTA_DIAS=30;
+var falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null};
+
+function faltaErr(e){
+  var m=String((e && e.message) || e);
+  return /sin permiso|Solo el mando/i.test(m) ? 'El nombre o el PIN no son de un encargado de este local.' : retTraduce(m);
+}
+async function faltaAbrir(){
+  falta.abierto=true; falta.error=''; faltaPintar();
+  if(falta.cred){ faltaCargar(); return; }
+  if(mov.mandos) return;
+  try{
+    if(!(await esperaLib(4000))) throw new Error('Sin conexión.');
+    if(!(await sesion())) throw new Error('Primero conecta este aparato con la cuenta del local, en Datos.');
+    var q=await getSB().rpc('egresos_retiro_mandos');
+    if(q.error) throw new Error(q.error.message);
+    mov.mandos=Array.isArray(q.data) ? q.data : [];
+  }catch(e){ falta.error=faltaErr(e); }
+  faltaPintar();
+}
+async function faltaEntrar(){
+  var nombre=$('#faltaQuien') ? $('#faltaQuien').value : '', pin=$('#faltaPin') ? $('#faltaPin').value.trim() : '';
+  if(!nombre){ toast('Elige tu nombre'); return; }
+  if(!pin){ toast('Escribe tu PIN de El Pase'); $('#faltaPin').focus(); return; }
+  if(!hayCripto()){ toast('Este navegador no puede revisar el PIN'); return; }
+  falta.cred={ p_nombre:nombre, p_hash:await movSha(pin), p_sede:sedeIF() };
+  await faltaCargar();
+  if(falta.error) falta.cred=null;
+  faltaPintar();
+}
+async function faltaCargar(){
+  falta.ocupado=true; falta.error=''; faltaPintar();
+  try{
+    if(navigator.onLine===false || !(await esperaLib(4000))) throw new Error('Sin conexión.');
+    await movScript(PASE_URL+'/egresos.js', function(){ return typeof egrEstado==='function' && typeof egrNormalizar==='function'; });
+    var q=await getSB().rpc('egresos_leer', Object.assign({}, falta.cred, { p_desde:null }));
+    if(q.error) throw new Error(q.error.message);
+    falta.filas=egrNormalizar(q.data && q.data.filas); falta.ultimo=String((q.data && q.data.ultimo_fudo) || '');
+  }catch(e){ falta.error=faltaErr(e); }
+  falta.ocupado=false; faltaPintar();
+}
+/* lo pendiente de los últimos 30 días, con las reglas de El Pase */
+function faltaListas(){
+  var desde=hoyISO(sumaDias(new Date(), -FALTA_DIAS)), R=(falta.filas||[]).filter(function(x){ return x.fecha.slice(0,10)>=desde; });
+  return { vale:R.filter(function(x){ return egrEstado(x)==='falta'; }),
+           dep:R.filter(function(x){ return x.dep_est==='falta'; }),
+           otros:R.filter(function(x){ return egrEstado(x)==='dif' || egrEstado(x)==='solo' || x.dep_est==='dif'; }) };
+}
+function faltaCuando(f){ var d=f.slice(0,10); return (d===hoyISO() ? 'hoy' : etiqueta(d))+' '+f.slice(11,16); }
+function faltaFoto(file){
+  if(!file || !/^image\//.test(file.type||'')){ toast('Eso no es una imagen'); return; }
+  cargarImg(file, function(img){
+    if(!img){ toast('La foto no se pudo abrir'); return; }
+    aBlob(lienzo(img,RET_LADO), function(blob){
+      if(!blob){ toast('La foto no se pudo preparar'); return; }
+      var th=lienzo(img,LTH*2).toDataURL('image/jpeg',0.6);
+      if(img.close) img.close();
+      blobADataUrl(blob, function(u){
+        falta.foto = u ? { datos:String(u).split(',')[1]||'', th:th } : null;
+        var m=$('#faltaMonto') ? $('#faltaMonto').value : '', marc=[].slice.call(document.querySelectorAll('[data-faltajunto]:checked')).map(function(i){ return i.value; });
+        faltaPintar();
+        if($('#faltaMonto')) $('#faltaMonto').value=m;
+        marc.forEach(function(id){ var c=document.querySelector('[data-faltajunto][value="'+id+'"]'); if(c) c.checked=true; });
+      });
+    });
+  });
+}
+async function faltaGuardar(){
+  if(falta.ocupado || !falta.sel) return;
+  var tipo=falta.sel.split(':')[0], id=falta.sel.split(':')[1], monto=retNum($('#faltaMonto').value);
+  var juntos=[].slice.call(document.querySelectorAll('[data-faltajunto]:checked')).map(function(i){ return i.value; });
+  if(!falta.foto || !falta.foto.datos){ toast(tipo==='dep' ? 'Falta la foto del comprobante' : 'Falta la foto del vale'); return; }
+  if(!monto){ toast(tipo==='dep' ? 'Escribe el monto que dice el comprobante' : 'Escribe el monto que dice el vale'); $('#faltaMonto').focus(); return; }
+  falta.ocupado=true; falta.error=''; faltaPintar();
+  try{
+    var resp, d=null;
+    try{
+      resp=await fetch(RET_API, { method:'POST', headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ sede:falta.cred.p_sede, usuario:falta.cred.p_nombre, pinHash:falta.cred.p_hash, accion:'foto', id:id, datos:falta.foto.datos, tipo:'jpg' }) });
+    }catch(e){ throw new Error('Sin conexión: la foto no se pudo enviar.'); }
+    try{ d=await resp.json(); }catch(e){}
+    if(!resp.ok || !d || !d.ok) throw new Error((d && d.error) || 'No se pudo guardar la foto ('+resp.status+').');
+    var q = tipo==='dep'
+      ? await getSB().rpc('egresos_deposito', Object.assign({}, falta.cred, { p_ids:[id].concat(juntos), p_dep:{ monto:monto, foto:d.f, nota:'' } }))
+      : await getSB().rpc('egresos_editar', Object.assign({}, falta.cred, { p_id:id, p_cambios:{ vale:{ monto:monto, foto:d.f, nota:'' } } }));
+    if(q.error) throw new Error(q.error.message);
+    falta.sel=''; falta.foto=null; falta.ocupado=false;
+    toast(tipo==='dep' ? 'Comprobante guardado' : 'Vale guardado');
+    await faltaCargar();
+    return;
+  }catch(e){ falta.error=faltaErr(e); }
+  falta.ocupado=false; faltaPintar();
+}
+function faltaItem(x, tipo){
+  var k=tipo+':'+x.id, ab=falta.sel===k, L=ab && tipo==='dep' ? faltaListas().dep.filter(function(y){ return y.id!==x.id; }).slice(0,12) : [];
+  return '<div class="retIt"><div class="cu"><b>'+plataCL(x.monto)+'</b> · '+esc(x.comentario||'(sin comentario)')+
+    '<small>'+esc(faltaCuando(x.fecha))+(x.fuente==='fudo' ? ' · Fudo N° '+esc(x.id.slice(1)) : ' · registrado aquí')+'</small>'+
+    (!ab ? '<div class="btns"><button class="btn sec sm" data-faltasel="'+k+'">'+ico('camara')+(tipo==='dep' ? ' Foto del comprobante' : ' Foto del vale')+'</button></div>'
+      : '<div class="mt">'+(falta.foto ? '<div class="retFoto"><img src="'+falta.foto.th+'" alt=""><button class="btn sec sm" id="btnFaltaFoto">'+ico('camara')+' Cambiar la foto</button></div>'
+                                       : '<button class="retTomar" id="btnFaltaFoto">'+ico('camara')+(tipo==='dep' ? ' Foto del comprobante del banco' : ' Tomar la foto del vale')+'</button>')+'</div>'+
+        (L.length ? '<div class="mt"><label class="f">¿El mismo depósito cubre más retiros?</label>'+L.map(function(y){
+            return '<label class="chk" style="margin-bottom:6px"><input type="checkbox" data-faltajunto value="'+esc(y.id)+'"> <span>'+esc(faltaCuando(y.fecha))+' · '+plataCL(y.monto)+'</span></label>'; }).join('')+'</div>' : '')+
+        '<div class="mt"><label class="f" for="faltaMonto">'+(tipo==='dep' ? 'Monto que dice el comprobante' : 'Monto que dice el vale')+'</label>'+
+        '<input type="text" id="faltaMonto" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="$ 0"></div>'+
+        '<div class="btns mt"><button class="btn" id="btnFaltaGuardar"'+(falta.ocupado?' disabled':'')+'>'+(falta.ocupado?'Guardando…':'Guardar')+'</button>'+
+        '<button class="btn sec" data-faltasel=""'+(falta.ocupado?' disabled':'')+'>Cancelar</button></div>')+
+    '</div></div>';
+}
+function faltaPintar(){
+  var c=$('#faltaCaja'); if(!c) return;
+  var err = falta.error ? '<div class="aviso">'+ico('alerta')+'<div>'+esc(falta.error)+'</div></div>' : '';
+  if(!falta.abierto){ c.innerHTML='<div class="btns"><button class="btn sec" id="btnFaltaAbrir">'+ico('lupa')+' Ver lo que falta</button></div>'; return; }
+  if(!falta.cred || !falta.filas){
+    if(falta.ocupado){ c.innerHTML='<p class="hint"><span class="rueda"></span> Revisando…</p>'; return; }
+    if(!mov.mandos){ c.innerHTML = err ? err+'<div class="btns mt"><button class="btn sec sm" id="btnFaltaCerrar">Cerrar</button></div>' : '<p class="hint"><span class="rueda"></span> Buscando a los encargados…</p>'; return; }
+    if(!mov.mandos.length){ c.innerHTML='<div class="aviso">'+ico('alerta')+'<div>Este local no tiene encargados con PIN en El Pase.</div></div><div class="btns mt"><button class="btn sec sm" id="btnFaltaCerrar">Cerrar</button></div>'; return; }
+    c.innerHTML='<div class="row mt"><div><label class="f" for="faltaQuien">Encargado</label><select id="faltaQuien"><option value="">Elige tu nombre</option>'+
+        mov.mandos.map(function(n){ return '<option value="'+esc(n).replace(/"/g,'&quot;')+'">'+esc(n.replace(/^[a-z0-9]{2,6}:/,''))+'</option>'; }).join('')+'</select></div>'+
+      '<div><label class="f" for="faltaPin">PIN de El Pase</label><input type="password" id="faltaPin" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"></div></div>'+
+      '<div class="btns mt"><button class="btn" id="btnFaltaEntrar">Entrar</button><button class="btn sec" id="btnFaltaCerrar">Cancelar</button></div>'+err;
+    return;
+  }
+  var P=faltaListas(), suma=function(A){ return plataCL(A.reduce(function(s,x){ return s+x.monto; },0)); };
+  var ayer=hoyISO(sumaDias(new Date(), -1)), atras=!falta.ultimo || falta.ultimo.slice(0,10)<ayer;
+  var h=err+(falta.ocupado && !falta.sel ? '<p class="hint"><span class="rueda"></span> Revisando…</p>' : '');
+  h+='<p class="hint" style="margin-top:0;font-weight:600">'+(P.vale.length||P.dep.length
+      ? [P.vale.length ? P.vale.length+(P.vale.length===1?' retiro sin vale':' retiros sin vale')+' ('+suma(P.vale)+')' : '', P.dep.length ? P.dep.length+(P.dep.length===1?' depósito sin comprobante':' depósitos sin comprobante')+' ('+suma(P.dep)+')' : ''].filter(Boolean).join(' · ')
+      : 'Todo al día: los retiros de los últimos '+FALTA_DIAS+' días tienen su foto.')+'</p>';
+  if(atras) h+='<div class="aviso">'+ico('info')+'<div>'+(falta.ultimo ? 'Fudo está cargado hasta el '+esc(faltaCuando(falta.ultimo))+': lo que salió después todavía no aparece aquí. Sube el Excel más abajo.' : 'Todavía no hay movimientos de Fudo cargados: sube el Excel más abajo.')+'</div></div>';
+  if(P.vale.length) h+='<div class="day">Falta el vale con foto</div>'+P.vale.map(function(x){ return faltaItem(x,'vale'); }).join('');
+  if(P.dep.length) h+='<div class="day">Falta el comprobante del banco</div>'+P.dep.map(function(x){ return faltaItem(x,'dep'); }).join('');
+  if(P.otros.length) h+='<p class="hint">Además hay '+P.otros.length+(P.otros.length===1?' retiro que no calza':' retiros que no calzan')+' (otro monto, o vale que aún no está en Fudo): eso se revisa en El Pase, en Finanzas → Egresos.</p>';
+  h+='<div class="btns mt"><button class="btn sec sm" id="btnFaltaRecargar">'+ico('sync')+' Actualizar</button><button class="btn sec sm" id="btnFaltaSalir">Cerrar y olvidar el PIN</button></div>'+
+     '<input type="file" id="faltaCam" accept="image/*" class="hide">';
+  c.innerHTML=h;
+  var cam=$('#faltaCam'); if(cam && falta.sel.indexOf('vale:')===0) cam.setAttribute('capture','environment');   // el vale se fotografía; el comprobante puede ser una captura
+}
+document.addEventListener('click', function(e){
+  var t=e.target.closest('button'); if(!t) return;
+  if(t.id==='btnFaltaAbrir') faltaAbrir();
+  else if(t.id==='btnFaltaEntrar') faltaEntrar();
+  else if(t.id==='btnFaltaCerrar'){ falta.abierto=false; falta.error=''; faltaPintar(); }
+  else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; faltaPintar(); }
+  else if(t.id==='btnFaltaRecargar') faltaCargar();
+  else if(t.id==='btnFaltaFoto'){ if($('#faltaCam')) $('#faltaCam').click(); }
+  else if(t.id==='btnFaltaGuardar') faltaGuardar();
+  else if(t.dataset.faltasel!=null){ falta.sel=t.dataset.faltasel; falta.foto=null; falta.error=''; faltaPintar(); }
+});
+document.addEventListener('change', function(e){
+  if(e.target.id!=='faltaCam') return;
+  var f=e.target.files && e.target.files[0]; e.target.value='';
+  if(f) faltaFoto(f);
+});
+document.addEventListener('input', function(e){
+  if(e.target.id!=='faltaMonto') return;
+  var n=retNum(e.target.value); e.target.value = n ? plataCL(n) : '';
+});
+
 /* ================= Eventos ================= */
 document.addEventListener('click', function(e){
   if(e.target && e.target.dataset && e.target.dataset.quitar){ quitarDelForm(e.target.dataset.quitar); return; }
@@ -3369,7 +3541,7 @@ document.addEventListener('click', function(e){
     ['notas','retiro','generar','informes','datos'].forEach(function(id){
       $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
     });
-    if(t.dataset.tab==='retiro'){ retPintar(); retPendientes(); movPintar(); }
+    if(t.dataset.tab==='retiro'){ retPintar(); retPendientes(); movPintar(); faltaPintar(); }
     if(t.dataset.tab==='generar'){ renderPreview(); preRevisar(); alDia(); }
     if(t.dataset.tab==='informes') renderInformes();
     if(t.dataset.tab==='datos'){ stats(); pintarSync(); }
