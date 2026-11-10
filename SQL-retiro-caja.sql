@@ -19,6 +19,10 @@
 --      en El Pase.
 --    · egresos_retiro_puede: la usa /api/egresos (El Pase) para saber en qué
 --      local guardar la foto de quien entra con la cuenta de Informe.
+--    · egresos_retiro_mandos: los encargados del local de la cuenta, para que
+--      uno de ellos suba desde Informe el Excel «Movimientos de Caja» de Fudo.
+--      Subirlo sigue pidiendo su nombre y su PIN de El Pase (egresos_subir):
+--      esta función solo entrega la lista de nombres.
 --
 --  Requiere: SQL-egresos.sql (El Pase) y supabase.sql (Informe) ya corridos.
 --  Se puede correr dos veces sin borrar nada.
@@ -130,12 +134,26 @@ begin
 end;
 $$;
 
+-- 4b) Los encargados (mando) del local de la cuenta: los mismos que acepta ventas_puede.
+create or replace function public.egresos_retiro_mandos()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(u.nombre order by u.nombre), '[]'::jsonb)
+    from public.usuarios u, (select public.egresos_retiro_sede() as sede) s
+   where s.sede is not null
+     and coalesce(u.activo, true) = true
+     and u.pin_hash is not null
+     and u.rol in ('dueño', 'encargado', 'encargado de local', 'jefe de local')
+     and case when s.sede = 'lf' then u.nombre !~ '^[a-z0-9]{2,6}:' else u.nombre like s.sede || ':%' end;
+$$;
+
 -- 5) Permisos: solo con sesión (y adentro se revisa que la cuenta esté en la lista)
 revoke all on function public.egresos_retiro_sede() from public, anon, authenticated;
 revoke all on function public.egresos_retiro_puede() from public, anon, authenticated;
 revoke all on function public.egresos_retiro(jsonb) from public, anon, authenticated;
 grant execute on function public.egresos_retiro_puede() to authenticated;
 grant execute on function public.egresos_retiro(jsonb) to authenticated;
+revoke all on function public.egresos_retiro_mandos() from public, anon, authenticated;
+grant execute on function public.egresos_retiro_mandos() to authenticated;
 
 -- Para autorizar más adelante una cuenta nueva (cambia el correo y el local: lf, s2 o s3):
 --   insert into public.caja_cuentas (uid, sede)

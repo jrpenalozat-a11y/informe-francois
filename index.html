@@ -538,6 +538,12 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <p class="hint">Anótalo también en Fudo como egreso de caja, con el mismo monto. La foto y el monto quedan como evidencia; el cuadre con Fudo lo ve el encargado en El Pase.</p>
     </div>
     <div id="retLista"></div>
+
+    <div class="card">
+      <h2><svg class="i"><use href="#i-subir"/></svg> Movimientos de caja de Fudo</h2>
+      <p class="hint" style="margin-top:0">Solo el encargado. Sube aquí el Excel «Movimientos de Caja» que se baja de Fudo: es el mismo que se sube en El Pase y llega al mismo lugar. Con él se cuadran los retiros.</p>
+      <div id="movCaja"></div>
+    </div>
   </section>
 
   <!-- ============ GENERAR ============ -->
@@ -3222,6 +3228,112 @@ document.addEventListener('input', function(e){
   var n=retNum(e.target.value); e.target.value = n ? plataCL(n) : '';
 });
 
+/* ================= Movimientos de caja de Fudo (solo el encargado) =================
+   El mismo Excel «Movimientos de Caja» que se sube en El Pase → Finanzas → Egresos,
+   ahora también desde aquí. Llega a la misma tabla por la misma función
+   (egresos_subir), que exige el nombre y el PIN de El Pase de un encargado del
+   local: la cuenta del local sola no puede subirlo. El PIN no se guarda.
+   Las reglas para leer el Excel NO se copian: se carga el lector de El Pase
+   (egresos.js) y se usa su egrLeerLibro. */
+var PASE_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '' : 'https://francois-operaciones.vercel.app';
+var XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+var mov={abierto:false, mandos:null, ocupado:false, aviso:'', mal:false};
+
+function movScript(src, hay){
+  if(hay()) return Promise.resolve();
+  return new Promise(function(res, rej){
+    var s=document.createElement('script'); s.src=src;
+    s.onload=function(){ hay() ? res() : rej(new Error('No se pudo preparar el lector del Excel.')); };
+    s.onerror=function(){ rej(new Error('No se pudo cargar el lector del Excel. Revisa la conexión.')); };
+    document.head.appendChild(s);
+  });
+}
+/* lo que el lector de El Pase espera encontrar */
+if(!window.sinTildes) window.sinTildes=function(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); };
+if(!window.fechaISO) window.fechaISO=function(d){ return hoyISO(d); };
+async function movSha(s){
+  var buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+}
+async function movLibro(f){
+  var buf=await f.arrayBuffer();
+  if(!/\.csv$/i.test(f.name)) return XLSX.read(buf, {type:'array'});
+  var txt; try{ txt=new TextDecoder('utf-8',{fatal:true}).decode(buf); }catch(e){ txt=new TextDecoder('windows-1252').decode(buf); }
+  return XLSX.read(txt.replace(/^\uFEFF/,''), {type:'string', raw:true});
+}
+async function movAbrir(){
+  mov.abierto=true; mov.aviso=''; movPintar();
+  if(mov.mandos) return;
+  try{
+    if(!(await esperaLib(4000))) throw new Error('Sin conexión.');
+    var s=await sesion();
+    if(!s) throw new Error('Primero conecta este aparato con la cuenta del local, en Datos.');
+    var q=await getSB().rpc('egresos_retiro_mandos');
+    if(q.error) throw new Error(retTraduce(q.error.message));
+    mov.mandos=Array.isArray(q.data) ? q.data : [];
+  }catch(e){ mov.aviso=retTraduce(e && e.message); mov.mal=true; }
+  movPintar();
+}
+async function movSubir(){
+  if(mov.ocupado) return;
+  var nombre=$('#movQuien') ? $('#movQuien').value : '', pin=$('#movPin') ? $('#movPin').value.trim() : '';
+  var files=[].slice.call(($('#movArch') && $('#movArch').files) || []);
+  if(!nombre){ toast('Elige tu nombre'); return; }
+  if(!pin){ toast('Escribe tu PIN de El Pase'); $('#movPin').focus(); return; }
+  if(!files.length){ toast('Elige el Excel de Fudo'); return; }
+  if(!hayCripto()){ toast('Este navegador no puede revisar el PIN'); return; }
+  mov.ocupado=true; mov.aviso='Leyendo el Excel…'; mov.mal=false; movPintar();
+  try{
+    if(navigator.onLine===false || !(await esperaLib(4000))) throw new Error('Sin conexión: el Excel se sube con internet.');
+    await movScript(XLSX_URL, function(){ return !!window.XLSX; });
+    await movScript(PASE_URL+'/egresos.js', function(){ return typeof egrLeerLibro==='function'; });
+    var porId={}, avisos=[];
+    for(var i=0;i<files.length;i++){
+      var wb; try{ wb=await movLibro(files[i]); }catch(e){ avisos.push(files[i].name+': no es una hoja de cálculo que se pueda leer.'); continue; }
+      var L=egrLeerLibro(wb);
+      if(!L){ avisos.push(files[i].name+': no es el Excel «Movimientos de Caja» de Fudo.'); continue; }
+      if(!L.length) avisos.push(files[i].name+': viene sin movimientos. Revisa el período en Fudo.');
+      L.forEach(function(x){ porId[x.id]=x; });
+    }
+    var filas=Object.keys(porId).map(function(k){ return porId[k]; }).sort(function(a,b){ return a.fecha<b.fecha?-1:1; });
+    if(!filas.length) throw new Error(avisos.join(' ') || 'No se encontraron movimientos.');
+    var cr={ p_nombre:nombre, p_hash:await movSha(pin), p_sede:sedeIF() }, r={nuevos:0, cambiados:0, iguales:0};
+    for(var j=0;j<filas.length;j+=300){
+      var q=await getSB().rpc('egresos_subir', Object.assign({}, cr, { p_filas:filas.slice(j, j+300) }));
+      if(q.error) throw new Error(/sin permiso/i.test(q.error.message||'') ? 'El nombre o el PIN no son de un encargado de este local.' : retTraduce(q.error.message));
+      Object.keys(r).forEach(function(k){ r[k]+= +(q.data && q.data[k]) || 0; });
+    }
+    var eg=filas.filter(function(x){ return sinTildes(x.tipo)==='egreso' && x.cancelado!=='true'; });
+    var d0=filas[0].fecha.slice(0,10), d1=filas[filas.length-1].fecha.slice(0,10);
+    mov.aviso='Listo: '+filas.length+(filas.length===1?' movimiento':' movimientos')+' del '+etiqueta(d0)+(d1!==d0?' al '+etiqueta(d1):'')+
+      ' ('+eg.length+(eg.length===1?' egreso':' egresos')+' por '+plataCL(eg.reduce(function(s,x){ return s+x.monto; },0))+'). '+
+      r.nuevos+(r.nuevos===1?' nuevo':' nuevos')+(r.cambiados?', '+r.cambiados+' con cambios':'')+(r.iguales?', '+r.iguales+' ya estaban':'')+'.'+
+      (avisos.length?' '+avisos.join(' '):'')+' El cuadre con los vales se ve en El Pase.';
+    mov.mal=false; mov.abierto=false;
+  }catch(e){ mov.aviso=String((e && e.message) || e).slice(0,260); mov.mal=true; }
+  mov.ocupado=false; movPintar();
+}
+function movPintar(){
+  var c=$('#movCaja'); if(!c) return;
+  var av = mov.aviso ? '<div class="aviso'+(mov.mal?'':' ok')+'">'+ico(mov.mal?'alerta':'check')+'<div>'+esc(mov.aviso)+'</div></div>' : '';
+  if(!mov.abierto){ c.innerHTML='<div class="btns"><button class="btn sec" id="btnMovAbrir">'+ico('subir')+' Subir el Excel de Fudo</button></div>'+av; return; }
+  if(!mov.mandos){ c.innerHTML = mov.aviso ? av+'<div class="btns mt"><button class="btn sec sm" id="btnMovCerrar">Cerrar</button></div>' : '<p class="hint"><span class="rueda"></span> Buscando a los encargados…</p>'; return; }
+  if(!mov.mandos.length){ c.innerHTML='<div class="aviso">'+ico('alerta')+'<div>Este local no tiene encargados con PIN en El Pase. El Excel se sube desde El Pase, en Finanzas → Egresos.</div></div><div class="btns mt"><button class="btn sec sm" id="btnMovCerrar">Cerrar</button></div>'; return; }
+  var antes=$('#movQuien') ? $('#movQuien').value : '';
+  c.innerHTML='<div class="row mt"><div><label class="f" for="movQuien">Encargado</label><select id="movQuien"><option value="">Elige tu nombre</option>'+
+      mov.mandos.map(function(n){ return '<option value="'+esc(n).replace(/"/g,'&quot;')+'"'+(n===antes?' selected':'')+'>'+esc(n.replace(/^[a-z0-9]{2,6}:/,''))+'</option>'; }).join('')+'</select></div>'+
+    '<div><label class="f" for="movPin">PIN de El Pase</label><input type="password" id="movPin" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"></div></div>'+
+    '<div class="mt"><label class="f" for="movArch">Excel «Movimientos de Caja»</label><input type="file" id="movArch" accept=".xlsx,.xls,.csv" multiple></div>'+
+    '<div class="btns mt"><button class="btn" id="btnMovSubir"'+(mov.ocupado?' disabled':'')+'>'+(mov.ocupado?'Subiendo…':'Subir')+'</button><button class="btn sec" id="btnMovCerrar"'+(mov.ocupado?' disabled':'')+'>Cancelar</button></div>'+av+
+    '<p class="hint">En Fudo, baja el Excel «Movimientos de Caja» desde el último día cargado y súbelo tal cual. Si subes días repetidos no se duplican. El PIN no se guarda en este aparato.</p>';
+}
+document.addEventListener('click', function(e){
+  var t=e.target.closest('button'); if(!t) return;
+  if(t.id==='btnMovAbrir') movAbrir();
+  else if(t.id==='btnMovSubir') movSubir();
+  else if(t.id==='btnMovCerrar'){ mov.abierto=false; if(mov.mal) mov.aviso=''; movPintar(); }
+});
+
 /* ================= Eventos ================= */
 document.addEventListener('click', function(e){
   if(e.target && e.target.dataset && e.target.dataset.quitar){ quitarDelForm(e.target.dataset.quitar); return; }
@@ -3257,7 +3369,7 @@ document.addEventListener('click', function(e){
     ['notas','retiro','generar','informes','datos'].forEach(function(id){
       $('#tab-'+id).classList.toggle('hide', id!==t.dataset.tab);
     });
-    if(t.dataset.tab==='retiro'){ retPintar(); retPendientes(); }
+    if(t.dataset.tab==='retiro'){ retPintar(); retPendientes(); movPintar(); }
     if(t.dataset.tab==='generar'){ renderPreview(); preRevisar(); alDia(); }
     if(t.dataset.tab==='informes') renderInformes();
     if(t.dataset.tab==='datos'){ stats(); pintarSync(); }
