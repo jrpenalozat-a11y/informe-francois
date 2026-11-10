@@ -3244,6 +3244,11 @@ document.addEventListener('input', function(e){
 var PASE_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '' : 'https://francois-operaciones.vercel.app';
 var XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 var mov={abierto:false, mandos:null, ocupado:false, aviso:'', mal:false};
+/* El encargado entra UNA vez (nombre y PIN de El Pase) y sirve para las dos tarjetas: «Lo que falta por
+   cuadrar» y el Excel de Fudo (falta.cred, solo en memoria). En el aparato se recuerda el nombre, nunca el PIN. */
+function encNombre(){ try{ return localStorage.getItem('if.encargado.'+sedeIF()) || ''; }catch(e){ return ''; } }
+function encRecordar(n){ try{ if(n) localStorage.setItem('if.encargado.'+sedeIF(), n); }catch(e){} }
+function encCorto(n){ return String(n||'').replace(/^[a-z0-9]{2,6}:/,''); }
 
 function movScript(src, hay){
   if(hay()) return Promise.resolve();
@@ -3282,10 +3287,11 @@ async function movAbrir(){
 }
 async function movSubir(){
   if(mov.ocupado) return;
-  var nombre=$('#movQuien') ? $('#movQuien').value : '', pin=$('#movPin') ? $('#movPin').value.trim() : '';
+  var ya=falta.cred;   // ya entró en «Lo que falta por cuadrar»: no se le pide de nuevo
+  var nombre=ya ? ya.p_nombre : ($('#movQuien') ? $('#movQuien').value : ''), pin=!ya && $('#movPin') ? $('#movPin').value.trim() : '';
   var files=[].slice.call(($('#movArch') && $('#movArch').files) || []);
   if(!nombre){ toast('Elige tu nombre'); return; }
-  if(!pin){ toast('Escribe tu PIN de El Pase'); $('#movPin').focus(); return; }
+  if(!ya && !pin){ toast('Escribe tu PIN de El Pase'); $('#movPin').focus(); return; }
   if(!files.length){ toast('Elige el Excel de Fudo'); return; }
   if(!hayCripto()){ toast('Este navegador no puede revisar el PIN'); return; }
   mov.ocupado=true; mov.aviso='Leyendo el Excel…'; mov.mal=false; movPintar();
@@ -3303,7 +3309,7 @@ async function movSubir(){
     }
     var filas=Object.keys(porId).map(function(k){ return porId[k]; }).sort(function(a,b){ return a.fecha<b.fecha?-1:1; });
     if(!filas.length) throw new Error(avisos.join(' ') || 'No se encontraron movimientos.');
-    var cr={ p_nombre:nombre, p_hash:await movSha(pin), p_sede:sedeIF() }, r={nuevos:0, cambiados:0, iguales:0};
+    var cr=ya || { p_nombre:nombre, p_hash:await movSha(pin), p_sede:sedeIF() }, r={nuevos:0, cambiados:0, iguales:0};
     for(var j=0;j<filas.length;j+=300){
       var q=await getSB().rpc('egresos_subir', Object.assign({}, cr, { p_filas:filas.slice(j, j+300) }));
       if(q.error) throw new Error(/sin permiso/i.test(q.error.message||'') ? 'El nombre o el PIN no son de un encargado de este local.' : retTraduce(q.error.message));
@@ -3314,8 +3320,10 @@ async function movSubir(){
     mov.aviso='Listo: '+filas.length+(filas.length===1?' movimiento':' movimientos')+' del '+etiqueta(d0)+(d1!==d0?' al '+etiqueta(d1):'')+
       ' ('+eg.length+(eg.length===1?' egreso':' egresos')+' por '+plataCL(eg.reduce(function(s,x){ return s+x.monto; },0))+'). '+
       r.nuevos+(r.nuevos===1?' nuevo':' nuevos')+(r.cambiados?', '+r.cambiados+' con cambios':'')+(r.iguales?', '+r.iguales+' ya estaban':'')+'.'+
-      (avisos.length?' '+avisos.join(' '):'')+' El cuadre con los vales se ve en El Pase.';
+      (avisos.length?' '+avisos.join(' '):'')+' Arriba, en «Lo que falta por cuadrar», quedó lo que hay que completar con foto.';
     mov.mal=false; mov.abierto=false;
+    /* el paso que sigue es completar las fotos: la lista se abre sola, con el mismo ingreso */
+    encRecordar(cr.p_nombre); falta.cred=cr; falta.abierto=true; falta.sel=''; falta.foto=null; faltaCargar();
   }catch(e){ mov.aviso=String((e && e.message) || e).slice(0,260); mov.mal=true; }
   mov.ocupado=false; movPintar();
 }
@@ -3325,7 +3333,14 @@ function movPintar(){
   if(!mov.abierto){ c.innerHTML='<div class="btns"><button class="btn sec" id="btnMovAbrir">'+ico('subir')+' Subir el Excel de Fudo</button></div>'+av; return; }
   if(!mov.mandos){ c.innerHTML = mov.aviso ? av+'<div class="btns mt"><button class="btn sec sm" id="btnMovCerrar">Cerrar</button></div>' : '<p class="hint"><span class="rueda"></span> Buscando a los encargados…</p>'; return; }
   if(!mov.mandos.length){ c.innerHTML='<div class="aviso">'+ico('alerta')+'<div>Este local no tiene encargados con PIN en El Pase. El Excel se sube desde El Pase, en Finanzas → Egresos.</div></div><div class="btns mt"><button class="btn sec sm" id="btnMovCerrar">Cerrar</button></div>'; return; }
-  var antes=$('#movQuien') ? $('#movQuien').value : '';
+  if(falta.cred){   // ya entró arriba: solo falta elegir el Excel
+    c.innerHTML='<p class="hint" style="margin-top:0">Entraste como <b>'+esc(encCorto(falta.cred.p_nombre))+'</b>.</p>'+
+      '<div class="mt"><label class="f" for="movArch">Excel «Movimientos de Caja»</label><input type="file" id="movArch" accept=".xlsx,.xls,.csv" multiple></div>'+
+      '<div class="btns mt"><button class="btn" id="btnMovSubir"'+(mov.ocupado?' disabled':'')+'>'+(mov.ocupado?'Subiendo…':'Subir')+'</button><button class="btn sec" id="btnMovCerrar"'+(mov.ocupado?' disabled':'')+'>Cancelar</button></div>'+av+
+      '<p class="hint">En Fudo, baja el Excel «Movimientos de Caja» desde el último día cargado y súbelo tal cual. Si subes días repetidos no se duplican.</p>';
+    return;
+  }
+  var antes=($('#movQuien') ? $('#movQuien').value : '') || encNombre();
   c.innerHTML='<div class="row mt"><div><label class="f" for="movQuien">Encargado</label><select id="movQuien"><option value="">Elige tu nombre</option>'+
       mov.mandos.map(function(n){ return '<option value="'+esc(n).replace(/"/g,'&quot;')+'"'+(n===antes?' selected':'')+'>'+esc(n.replace(/^[a-z0-9]{2,6}:/,''))+'</option>'; }).join('')+'</select></div>'+
     '<div><label class="f" for="movPin">PIN de El Pase</label><input type="password" id="movPin" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"></div></div>'+
@@ -3375,8 +3390,8 @@ async function faltaEntrar(){
   if(!hayCripto()){ toast('Este navegador no puede revisar el PIN'); return; }
   falta.cred={ p_nombre:nombre, p_hash:await movSha(pin), p_sede:sedeIF() };
   await faltaCargar();
-  if(falta.error) falta.cred=null;
-  faltaPintar();
+  if(falta.error) falta.cred=null; else encRecordar(nombre);
+  faltaPintar(); movPintar();   // el mismo ingreso sirve para subir el Excel
 }
 async function faltaCargar(){
   falta.ocupado=true; falta.error=''; faltaPintar();
@@ -3464,8 +3479,9 @@ function faltaPintar(){
     if(falta.ocupado){ c.innerHTML='<p class="hint"><span class="rueda"></span> Revisando…</p>'; return; }
     if(!mov.mandos){ c.innerHTML = err ? err+'<div class="btns mt"><button class="btn sec sm" id="btnFaltaCerrar">Cerrar</button></div>' : '<p class="hint"><span class="rueda"></span> Buscando a los encargados…</p>'; return; }
     if(!mov.mandos.length){ c.innerHTML='<div class="aviso">'+ico('alerta')+'<div>Este local no tiene encargados con PIN en El Pase.</div></div><div class="btns mt"><button class="btn sec sm" id="btnFaltaCerrar">Cerrar</button></div>'; return; }
+    var rec=encNombre();
     c.innerHTML='<div class="row mt"><div><label class="f" for="faltaQuien">Encargado</label><select id="faltaQuien"><option value="">Elige tu nombre</option>'+
-        mov.mandos.map(function(n){ return '<option value="'+esc(n).replace(/"/g,'&quot;')+'">'+esc(n.replace(/^[a-z0-9]{2,6}:/,''))+'</option>'; }).join('')+'</select></div>'+
+        mov.mandos.map(function(n){ return '<option value="'+esc(n).replace(/"/g,'&quot;')+'"'+(n===rec?' selected':'')+'>'+esc(n.replace(/^[a-z0-9]{2,6}:/,''))+'</option>'; }).join('')+'</select></div>'+
       '<div><label class="f" for="faltaPin">PIN de El Pase</label><input type="password" id="faltaPin" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"></div></div>'+
       '<div class="btns mt"><button class="btn" id="btnFaltaEntrar">Entrar</button><button class="btn sec" id="btnFaltaCerrar">Cancelar</button></div>'+err;
     return;
@@ -3476,7 +3492,7 @@ function faltaPintar(){
   h+='<p class="hint" style="margin-top:0;font-weight:600">'+(P.vale.length||P.dep.length
       ? [P.vale.length ? P.vale.length+(P.vale.length===1?' retiro sin vale':' retiros sin vale')+' ('+suma(P.vale)+')' : '', P.dep.length ? P.dep.length+(P.dep.length===1?' depósito sin comprobante':' depósitos sin comprobante')+' ('+suma(P.dep)+')' : ''].filter(Boolean).join(' · ')
       : 'Todo al día: los retiros de los últimos '+FALTA_DIAS+' días tienen su foto.')+'</p>';
-  if(atras) h+='<div class="aviso">'+ico('info')+'<div>'+(falta.ultimo ? 'Fudo está cargado hasta el '+esc(faltaCuando(falta.ultimo))+': lo que salió después todavía no aparece aquí. Sube el Excel más abajo.' : 'Todavía no hay movimientos de Fudo cargados: sube el Excel más abajo.')+'</div></div>';
+  if(atras) h+='<div class="aviso">'+ico('info')+'<div>'+(falta.ultimo ? 'Fudo está cargado hasta el '+esc(faltaCuando(falta.ultimo))+': lo que salió después todavía no aparece aquí. Sube el Excel más abajo: no te va a pedir el PIN otra vez.' : 'Todavía no hay movimientos de Fudo cargados: sube el Excel más abajo.')+'</div></div>';
   if(P.vale.length) h+='<div class="day">Falta el vale con foto</div>'+P.vale.map(function(x){ return faltaItem(x,'vale'); }).join('');
   if(P.dep.length) h+='<div class="day">Falta el comprobante del banco</div>'+P.dep.map(function(x){ return faltaItem(x,'dep'); }).join('');
   if(P.otros.length) h+='<p class="hint">Además hay '+P.otros.length+(P.otros.length===1?' retiro que no calza':' retiros que no calzan')+' (otro monto, o vale que aún no está en Fudo): eso se revisa en El Pase, en Finanzas → Egresos.</p>';
@@ -3490,16 +3506,22 @@ document.addEventListener('click', function(e){
   if(t.id==='btnFaltaAbrir') faltaAbrir();
   else if(t.id==='btnFaltaEntrar') faltaEntrar();
   else if(t.id==='btnFaltaCerrar'){ falta.abierto=false; falta.error=''; faltaPintar(); }
-  else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; faltaPintar(); }
+  else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; faltaPintar(); movPintar(); }
   else if(t.id==='btnFaltaRecargar') faltaCargar();
   else if(t.id==='btnFaltaFoto'){ if($('#faltaCam')) $('#faltaCam').click(); }
   else if(t.id==='btnFaltaGuardar') faltaGuardar();
-  else if(t.dataset.faltasel!=null){ falta.sel=t.dataset.faltasel; falta.foto=null; falta.error=''; faltaPintar(); }
+  else if(t.dataset.faltasel!=null){ falta.sel=t.dataset.faltasel; falta.foto=null; falta.error=''; faltaPintar();
+    if(falta.sel && $('#faltaCam')) $('#faltaCam').click(); }   // de una vez a la cámara: un toque menos por cada retiro
 });
 document.addEventListener('change', function(e){
   if(e.target.id!=='faltaCam') return;
   var f=e.target.files && e.target.files[0]; e.target.value='';
   if(f) faltaFoto(f);
+});
+document.addEventListener('keydown', function(e){
+  if(e.key!=='Enter' || e.isComposing) return;
+  if(e.target.id==='faltaPin'){ e.preventDefault(); faltaEntrar(); }
+  else if(e.target.id==='faltaMonto'){ e.preventDefault(); e.target.blur(); faltaGuardar(); }
 });
 document.addEventListener('input', function(e){
   if(e.target.id!=='faltaMonto') return;
