@@ -175,6 +175,10 @@ body.dark .note .meta b{color:var(--acc2)}
 .note .txt{white-space:pre-wrap; word-break:break-word}
 .note .med{white-space:pre-wrap; word-break:break-word; font-size:13.5px; color:var(--ok); margin-top:4px; padding-left:14px; position:relative}
 .note .med:before{content:"↳"; position:absolute; left:0; opacity:.75}
+.note .pago{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.note .pago button{font:inherit; font-size:12.5px; padding:6px 11px; border-radius:999px; border:1px solid currentColor; background:none; color:inherit; opacity:.75; cursor:pointer}
+.note .pago button.on{opacity:1; font-weight:600; background:var(--ok); border-color:var(--ok); color:#fff}
+.note .pago button.on.parte{background:#b7791f; border-color:#b7791f}
 .note .acts{display:flex; gap:4px; flex:0 0 auto}
 .note .coms{margin-top:8px; padding-top:2px; border-top:1px solid var(--line)}
 .note .com{display:flex; gap:6px; align-items:flex-start; padding:6px 0 0; font-size:13.5px}
@@ -1688,6 +1692,7 @@ function renderLista(){
       '<div class="txt">'+esc(n.texto)+'</div>'+
       tira(fs,'')+
       (n.medida?'<div class="med">'+esc(n.medida)+'</div>':'')+
+      pagoHTML(n)+
       tira(fm,'m')+comentariosHTML(n)+'</div>'+
       '<div class="acts"><button data-edit="'+n.id+'" title="Editar" aria-label="Editar">'+ico('lapiz')+'</button>'+
       '<button data-del="'+n.id+'" title="Borrar" aria-label="Borrar">'+ico('basura')+'</button></div></div>';
@@ -1699,6 +1704,35 @@ function renderLista(){
   if(cta){ cta.focus(); cta.setSelectionRange(pos,pos); }
 }
 function esc(s){ return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+/* ================= Propinas: ¿se pagaron? =================
+   La nota de propinas la escribe sola la base cuando El Pase sube el informe
+   (área PROPINAS). Aquí se marca si ya se pagaron, todas o una parte. El estado
+   va en la medida de la nota, así viaja con la sincronía y entra al informe. */
+function esPropina(n){ return String(n.area||'').toUpperCase()==='PROPINAS'; }
+function estadoPago(n){ var m=String(n.medida||''); return /^Pagadas en parte/i.test(m) ? 'parte' : /^Pagadas/i.test(m) ? 'si' : 'no'; }
+function pagoHTML(n){
+  if(!esPropina(n)) return '';
+  var e=estadoPago(n);
+  function b(k, t){ return '<button type="button" data-pago="'+k+'" data-id="'+n.id+'" class="'+(e===k?'on':'')+(k==='parte'?' parte':'')+'" aria-pressed="'+(e===k)+'">'+t+'</button>'; }
+  return '<div class="pago" role="group" aria-label="Pago de las propinas">'+b('si','Pagadas')+b('parte','Pagadas en parte')+b('no','Por pagar')+'</div>';
+}
+function pagarPropina(id, k){
+  var n=notas.find(function(x){ return x.id===id; }); if(!n) return;
+  var d=new Date(), dia=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2), med;
+  if(k==='si') med='Pagadas el '+dia+'.';
+  else if(k==='parte'){
+    var r=window.prompt('¿Cuánta plata de estas propinas ya se pagó? Solo el número, en pesos.', '');
+    if(r===null) return;
+    var v=parseInt(String(r).replace(/\D/g,''),10);
+    if(!v){ toast('Escribe el monto pagado'); return; }
+    med='Pagadas en parte: $'+v.toLocaleString('es-CL')+' el '+dia+'.';
+  }
+  else med='Por pagar.';
+  n.medida=med; n.act=ahora();
+  save(); renderLista(); renderPreview(); syncPronto();
+  toast(k==='si' ? 'Propinas marcadas como pagadas' : k==='parte' ? 'Pago parcial anotado' : 'Propinas marcadas por pagar');
+}
 
 /* ================= Comentarios =================
    Lo que se dice después sobre un tema ya anotado. Van aparte de la nota, uno
@@ -3628,6 +3662,7 @@ document.addEventListener('click', function(e){
   if(t.dataset.delcom){ comBorrar(t.dataset.delcom); return; }
   if(t.dataset.edit){ editar(t.dataset.edit); masAuto(); return; }
   if(t.dataset.del){ borrar(t.dataset.del); return; }
+  if(t.dataset.pago){ pagarPropina(t.dataset.id, t.dataset.pago); return; }
   if(t.dataset.modo){ setModo(t.dataset.modo); return; }
   if(t.dataset.ia){ abrirIA(t.dataset.ia); return; }
   if(t.dataset.ir){ var bi=document.querySelector('nav.tabs button[data-tab="'+t.dataset.ir+'"]'); if(bi) bi.click(); return; }
