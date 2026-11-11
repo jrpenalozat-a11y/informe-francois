@@ -177,13 +177,13 @@ module.exports = async function handler(req, res) {
   const b = req.body || {};
   const modo = String(b.modo || "").toUpperCase();
   if (!MODOS.includes(modo)) return res.status(400).json({ error: "Modo desconocido" });
-  const notas = String(b.notas || "").trim();
-  if (!notas) return res.status(400).json({ error: "No hay notas en el período" });
+  const notas = String(b.notas || "").trim(), datos = String(b.datos || "").slice(0, 8000).trim();   // datos: cifras del local (ventas, propinas, por pagar)
+  if (!notas && !datos) return res.status(400).json({ error: "No hay notas ni cifras en el período" });
   if (notas.length > MAX_NOTAS) return res.status(413).json({ error: "Son demasiadas notas para un solo informe: acorta el período." });
-  const o = { modo, rango: String(b.rango || "").slice(0, 80).trim(), notas,
+  const o = { modo, rango: String(b.rango || "").slice(0, 80).trim(), notas, datos,
               pendientes: modo === "CIERRE" ? String(b.pendientes || "").slice(0, MAX_PEND).trim() : "" };
 
-  const recibidas = notas.split(/\n/).filter(l => l.trim()).length;   // una nota por línea (lineaNota)
+  const recibidas = notas ? notas.split(/\n/).filter(l => l.trim()).length : 0;   // una nota por línea (lineaNota)
   const t0 = Date.now();
   try {
     const r = await conDeepseek(PROMPT.sistemaIA(modo, o.rango, sede), PROMPT.mensajeIA(o));

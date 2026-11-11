@@ -583,7 +583,22 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 
   <!-- ============ GENERAR ============ -->
   <section id="tab-generar" class="hide">
-    <div class="card">
+    <div class="seg" id="segInf" style="margin-bottom:12px">
+      <button data-vinf="gen" class="on">Informe</button>
+      <button data-vinf="conf">Configuración</button>
+    </div>
+
+    <div class="card hide" id="cardConf">
+      <h2>Qué incluye el informe</h2>
+      <p class="hint" style="margin-top:0">Marca lo que debe ir en el pre-informe. Vale para el diario y el semanal.</p>
+      <label class="chk mt"><input type="checkbox" data-inc="ventas"> Ventas de cada día</label>
+      <label class="chk mt"><input type="checkbox" data-inc="propinas"> Propinas de cada día y total de la semana</label>
+      <label class="chk mt"><input type="checkbox" data-inc="notas"> Lo anotado en la bitácora</label>
+      <label class="chk mt"><input type="checkbox" data-inc="pagar"> Cuentas por pagar: propinas por pagar y lo vencido</label>
+      <p class="hint">Las ventas y las propinas llegan solas desde El Pase. Las cuentas por pagar se leen con tu PIN: entra una vez en la pestaña Caja, en «Lo que falta por cuadrar».</p>
+    </div>
+
+    <div class="card" id="cardQue">
       <div class="tituloBtn">
         <h2>Qué informe</h2>
         <button class="btn sec sm hide" id="btnReunion"><svg class="i"><use href="#i-libreta"/></svg> Preparar reunión</button>
@@ -591,7 +606,6 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
       <div class="seg" id="segModo">
         <button data-modo="DIARIO" class="on">Diario</button>
         <button data-modo="SEMANAL">Semanal</button>
-        <button data-modo="CIERRE">Cierre</button>
       </div>
       <p class="hint" id="modoHint"></p>
       <div id="boxDia" class="row mt">
@@ -603,7 +617,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
         <div><label class="f" for="gHasta">Hasta</label><input type="date" id="gHasta"></div>
         <div style="flex:0 0 auto; align-self:flex-end"><button class="btn sec sm" data-atajo="estaSem">Esta semana</button> <button class="btn sec sm" data-atajo="semPasada">Semana pasada</button></div>
       </div>
-      <div class="mt">
+      <div class="mt hide">
         <label class="f" for="gRango">Cómo se escribe el período en el informe</label>
         <input type="text" id="gRango" placeholder="lun 18-08">
       </div>
@@ -622,10 +636,10 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
 
     <div class="card cardIA" id="cardPre">
-      <h2><svg class="i"><use href="#i-chispa"/></svg> Armar el informe</h2>
-      <p class="hint" style="margin-top:0">Lee todas las notas del período y deja el borrador abajo, listo para revisar y enviar.</p>
+      <h2><svg class="i"><use href="#i-chispa"/></svg> Generar preinforme</h2>
+      <p class="hint" style="margin-top:0">Junta lo marcado en Configuración (ventas, propinas, notas y cuentas por pagar) y deja el borrador abajo, listo para revisar y enviar.</p>
       <div class="btns mt">
-        <button class="btn" id="btnPre"><svg class="i"><use href="#i-chispa"/></svg> <span>Armar el informe</span></button>
+        <button class="btn" id="btnPre"><svg class="i"><use href="#i-chispa"/></svg> <span>Generar preinforme</span></button>
       </div>
       <div id="preEstado"></div>
     </div>
@@ -1872,7 +1886,70 @@ function diaDe(n){ return String(n.fecha||'').slice(0,10); }
 function notasDelPeriodo(){
   var p=periodo();
   if(!p.ok) return [];
-  return ordenadas(mias(notas).filter(function(n){ var f=diaDe(n); return f>=p.desde && f<=p.hasta; }));
+  return ordenadas(mias(notas).filter(function(n){ var f=diaDe(n); return !esAuto(n) && f>=p.desde && f<=p.hasta; }));
+}
+
+/* ================= Qué incluye el informe (Configuración) =================
+   Todo marcado de partida; se recuerda en el aparato. */
+var INC_DEF={ ventas:true, propinas:true, notas:true, pagar:true };
+function incluir(){ try{ return Object.assign({}, INC_DEF, JSON.parse(localStorage.getItem('if.incluir')||'{}')); }catch(e){ return Object.assign({}, INC_DEF); } }
+function incluirPoner(k, v){ var o=incluir(); o[k]=v; try{ localStorage.setItem('if.incluir', JSON.stringify(o)); }catch(e){} }
+function incPintar(){ var o=incluir(); document.querySelectorAll('[data-inc]').forEach(function(c){ c.checked=o[c.dataset.inc]!==false; }); }
+document.addEventListener('change', function(e){
+  var c=e.target; if(!c.dataset || !c.dataset.inc) return;
+  incluirPoner(c.dataset.inc, c.checked); renderPreview(); preLimpiar();
+});
+var vistaInf='gen';
+function infVista(v){
+  vistaInf=v;
+  document.querySelectorAll('#segInf button').forEach(function(b){ b.classList.toggle('on', b.dataset.vinf===v); });
+  var conf=v==='conf';
+  ['cardQue','cardPre','cardInf'].forEach(function(id){ var x=$('#'+id); if(x) x.classList.toggle('hide', conf); });
+  if(conf) $('#boxPend').classList.add('hide');
+  $('#cardConf').classList.toggle('hide', !conf); $('#cardPrompt').classList.toggle('hide', !conf);
+  $('#tab-informes').classList.toggle('hide', conf);
+  if(conf) incPintar();
+}
+document.addEventListener('click', function(e){
+  var b=e.target.closest('[data-vinf]'); if(b) infVista(b.dataset.vinf);
+});
+
+/* Las cifras del local para el informe: salen de las notas automáticas de El Pase (ventas y
+   propinas de cada día) y del resumen de propinas por pagar (pestaña Caja, con PIN). */
+function autoDe(area, d){ return notas.find(function(n){ return esAuto(n) && !n.borrada && String(n.area).toUpperCase()===area && diaDe(n)===d; }); }
+function sinMarca(t){ return String(t||'').replace(/^[^:]*\(automática\):\s*/i,''); }
+function primeraFrase(t){ var m=/^(.*?\.)(\s|$)/.exec(t); return m ? m[1] : t; }
+function montoDe(t){ var m=/\$\s?([\d.]+)/.exec(t||''); return m ? +m[1].replace(/\./g,'') : 0; }
+function diasEntre(a, b){ var L=[], d=dObj(a); while(hoyISO(d)<=b){ L.push(hoyISO(d)); d=sumaDias(d,1); } return L; }
+function datosInforme(){
+  var p=periodo(); if(!p.ok) return { txt:'', partes:[] };
+  var o=incluir(), L=[], partes=[], dias=diasEntre(p.desde, p.hasta);
+  if(o.ventas){
+    var V=dias.map(function(d){ var n=autoDe('VENTAS', d); return n ? { d:d, t:sinMarca(n.texto) } : null; }).filter(Boolean);
+    V.forEach(function(x){ L.push('Venta '+etiqueta(x.d)+': '+(gen.modo==='DIARIO' ? x.t : primeraFrase(x.t))); });
+    if(V.length>1) L.push('Venta total del período: '+plataCL(V.reduce(function(s,x){ return s+montoDe(x.t); },0)).replace('$ ','$')+' ('+V.length+' días)');
+    if(V.length) partes.push('ventas de '+V.length+(V.length===1?' día':' días'));
+  }
+  if(o.propinas){
+    var P=dias.map(function(d){ var n=autoDe('PROPINAS', d); return n ? { d:d, t:sinMarca(n.texto) } : null; }).filter(Boolean);
+    P.forEach(function(x){ L.push('Propinas '+etiqueta(x.d)+': '+primeraFrase(x.t)); });
+    /* total de cada semana (lunes a domingo) que toca el período */
+    var sem=[]; dias.forEach(function(d){ var l=hoyISO(lunesDe(dObj(d))); if(sem.indexOf(l)<0) sem.push(l); });
+    sem.forEach(function(l){
+      var tot=0, n=0, hasta=hoyISO(sumaDias(dObj(l),6));
+      diasEntre(l, hasta).forEach(function(d){ var x=autoDe('PROPINAS', d); if(x){ tot+=montoDe(sinMarca(x.texto)); n++; } });
+      if(n) L.push('Total propinas de la semana del '+corta(l)+' al '+corta(hasta)+': '+plataCL(tot).replace('$ ','$')+' ('+n+(n===1?' día cargado':' días cargados')+')');
+    });
+    if(P.length) partes.push('propinas');
+  }
+  if(o.pagar && propSem.datos && (propSem.datos.S||[]).length){
+    var D=propSem.datos, hoy=hoyISO(new Date()), venc=D.viejo||0;
+    D.S.forEach(function(s){ if(s.tot>0 && s.vence<hoy) venc+=s.tot; });
+    L.push('Propinas por pagar (según El Pase): '+plataCL(D.tot).replace('$ ','$')+(venc?'; vencido '+plataCL(venc).replace('$ ','$'):'; nada vencido'));
+    D.S.filter(function(s){ return s.tot>0; }).forEach(function(s){ L.push('Semana del '+corta(s.l)+' al '+corta(s.dom)+': por pagar '+plataCL(s.tot).replace('$ ','$')+(s.vence<hoy?' (vencida, se pagaba el lunes '+corta(s.vence)+')':' (se paga el lunes '+corta(s.vence)+')')); });
+    partes.push('cuentas por pagar');
+  }
+  return { txt:L.join('\n'), partes:partes };
 }
 /* Si «desde» quedó después de «hasta», se dan vuelta en vez de dejar el período vacío */
 function ordenarFechas(){
@@ -1889,7 +1966,8 @@ function textoNotas(){
 /* Lo que se le pasa al prompt: el mismo pedido sirve para copiar y para DeepSeek */
 function pedidoInforme(){
   return { modo:gen.modo, rango:$('#gRango').value.trim(),
-           notas:notasDelPeriodo().map(lineaNota).join('\n'),
+           notas:incluir().notas ? notasDelPeriodo().map(lineaNota).join('\n') : '',
+           datos:datosInforme().txt,
            pendientes: gen.modo==='CIERRE' ? $('#gPend').value.trim() : '',
            todos:$('#gTodos').checked, sede:sedeIF() };
 }
@@ -1910,12 +1988,18 @@ function renderPreview(){
   if(!verTodo() && yo)
     h+='<br><span class="solo">Solo entran las notas de '+esc(yo.nombre)+
        (soyAdmin()?': para sumar las de todos, en Ajustes activa «Ver también las notas de los demás».':'.')+'</span>';
+  if(p.ok){
+    var inc=incluir(), di=datosInforme();
+    if(!inc.notas) h+='<br>Las notas no entran (desmarcadas en Configuración).';
+    h+='<br>Cifras: '+(di.partes.length ? esc(di.partes.join(', ')) : 'ninguna')+'.';
+    if(inc.pagar && !(propSem.datos && (propSem.datos.S||[]).length)) h+=' <span class="solo">Para sumar las cuentas por pagar, entra con tu PIN en la pestaña Caja.</span>';
+  }
   $('#conteo').innerHTML=h;
   $('#verNotas').classList.toggle('hide', !arr.length);
   $('#verNotasTit').textContent='Ver '+(arr.length===1?'la nota que entra':'las '+arr.length+' notas que entran');
   $('#listaPeriodo').textContent=arr.map(lineaNota).join('\n');
   $('#preview').textContent=construirPrompt();
-  $('#btnReunion').classList.toggle('hide', !!perfilesVivos().length && !soyAdmin());   // sin ver a todos, el cierre saldría cojo
+  $('#btnReunion').classList.add('hide');   // el informe quedó en diario y semanal: el cierre ya no se arma aquí
   renderFotosInf();
 }
 function quienesDe(arr){
@@ -2354,16 +2438,15 @@ async function armarPreinforme(){
   try{
     preEstado('<div class="preCarga"><span class="rueda"></span><span>Trayendo las notas nuevas de la nube…</span></div>');
     await alDia();
-    var arr=notasDelPeriodo();
-    if(!arr.length) throw {error:'No hay notas '+p.texto+': cambia el día o las fechas.'};
-    var pedido=pedidoInforme();
+    var pedido=pedidoInforme(), arr=pedido.notas ? notasDelPeriodo() : [];
+    if(!arr.length && !pedido.datos) throw {error:'No hay notas ni cifras '+p.texto+': cambia el día o las fechas, o revisa la Configuración.'};
     if(pedido.notas.length>MAX_NOTAS_IA)
       throw {error:'Son demasiadas notas para DeepSeek de una vez ('+arr.length+'). Acorta el período, o usa «Copiar para Claude».'};
-    preEstado('<div class="preCarga"><span class="rueda"></span><span>DeepSeek está leyendo '+arr.length+' nota'+(arr.length===1?'':'s')+' '+esc(p.texto)+
+    preEstado('<div class="preCarga"><span class="rueda"></span><span>DeepSeek está leyendo '+arr.length+' nota'+(arr.length===1?'':'s')+(pedido.datos?' y las cifras del local':'')+' '+esc(p.texto)+
               '. Suele tardar menos de un minuto; con muchas notas, un poco más.</span></div>');
     var r=await fetch('api/preinforme', { method:'POST',
       headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+s.access_token },
-      body:JSON.stringify({ modo:pedido.modo, rango:pedido.rango, notas:pedido.notas, pendientes:pedido.pendientes,
+      body:JSON.stringify({ modo:pedido.modo, rango:pedido.rango, notas:pedido.notas, datos:pedido.datos, pendientes:pedido.pendientes,
                             sede:pedido.sede }) });            // la sede la manda la cuenta; esto solo vale en la prueba local
     var d=await r.json().catch(function(){ return {}; });
     if(!r.ok || !d.ok) throw (d.error ? d : {error:'El servidor respondió '+r.status+'.'});
@@ -2374,7 +2457,7 @@ async function armarPreinforme(){
     var seg=Math.max(1, Math.round((Date.now()-t0)/1000)), leidas=d.recibidas||arr.length;
     var h=preAviso('ok', 'check', 'Pre-informe listo en '+seg+' s: DeepSeek leyó '+leidas+' nota'+(leidas===1?'':'s')+' '+esc(p.texto)+
                    (d.modelo?' · '+esc(d.modelo):'')+'. Revísalo abajo antes de enviarlo.');
-    if(d.recibidas && d.recibidas!==arr.length)
+    if(arr.length && d.recibidas && d.recibidas!==arr.length)
       h+=preAviso('', 'alerta', 'Iban '+arr.length+' notas y DeepSeek recibió '+d.recibidas+': vuelve a armarlo.');
     if(d.cortado) h+=preAviso('', 'alerta', 'DeepSeek llegó a su largo máximo: revisa que el final no haya quedado cortado.');
     if(d.observaciones && d.observaciones.length){
@@ -2390,7 +2473,7 @@ async function armarPreinforme(){
     if(/Failed to fetch|NetworkError|Load failed/i.test(msg)) msg='No se pudo conectar con el servidor. ¿Hay internet?';
     preEstado(preAviso('', 'alerta', esc(msg))+(e && e.sinSesion ? preIrDatos() : ''));
   }finally{
-    pre.ocupado=false; btn.disabled=false; btn.querySelector('span').textContent='Armar el informe';
+    pre.ocupado=false; btn.disabled=false; btn.querySelector('span').textContent='Generar preinforme';
   }
 }
 
@@ -3693,7 +3776,7 @@ function irVista(tb){
     movPintar(); faltaPintar(); propSemPintar(); datosPasePintar();
     if(!falta.abierto) faltaAbrir();                   // lo pendiente a la vista, sin un botón de por medio
   }
-  if(tb==='generar'){ renderPreview(); preRevisar(); alDia(); renderInformes(); }
+  if(tb==='generar'){ infVista(vistaInf); renderPreview(); preRevisar(); alDia(); renderInformes(); }
   if(tb==='datos'){ stats(); pintarSync(); }
 }
 /* al editar una nota con medida, con fotos de la medida o de otro día, lo plegado se abre solo */

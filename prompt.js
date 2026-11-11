@@ -68,6 +68,16 @@ function bloqueCierre(){ return (
 'FALTA INFORMACIÓN\n'+
 'Preguntas que las notas dejan abiertas y que conviene resolver en la reunión. Si no falta nada, escribe "Sin vacíos".'); }
 
+/* Las cifras del local que manda la app (ventas, propinas, cuentas por pagar), sacadas de El Pase.
+   Van en su propio bloque, antes de las notas, y el informe las muestra tal cual. */
+var REGLA_DATOS =
+'CIFRAS DEL LOCAL\n'+
+'Si el mensaje trae un bloque "CIFRAS DEL LOCAL", el informe abre, justo después del título, con:\n'+
+'*NÚMEROS*\n'+
+'• una línea por cada dato del bloque (ventas de cada día, propinas y su total de la semana, propinas o cuentas por pagar y lo vencido), con las cifras exactas tal como vienen, en pesos chilenos.\n'+
+'No calcules ni redondees nada que el bloque no traiga; no inventes cifras. Si el bloque no trae algún dato, omite esa línea. '+
+'Estas cifras no cuentan para el máximo de palabras. Después siguen los puntos de las notas como siempre. Si no hay notas, el informe es solo el título y *NÚMEROS*.';
+function textoDatos(d){ return 'CIFRAS DEL LOCAL\n'+d; }
 function bloqueDe(modo, rango, sede){
   return modo==='DIARIO' ? bloqueDiario(rango, sede) : (modo==='SEMANAL' ? bloqueSemanal(rango, sede) : bloqueCierre());
 }
@@ -82,7 +92,9 @@ function armar(o){
   var partes=[sedeDe(o.sede).intro, 'MODO: '+modo+'\nPERÍODO: '+rango, REGLAS];
   if(o.todos){ partes.push(bloqueDiario(rango, o.sede), bloqueSemanal(rango, o.sede), bloqueCierre()); }
   else partes.push(bloqueDe(modo, rango, o.sede));
+  if(o.datos) partes.push(REGLA_DATOS);
   if(modo==='CIERRE' && o.pendientes) partes.push(textoPendientes(o.pendientes));
+  if(o.datos) partes.push(textoDatos(o.datos));
   partes.push('NOTAS DEL PERÍODO\n'+(o.notas || '(sin notas registradas en el período)'));
   return partes.join('\n\n');
 }
@@ -108,11 +120,12 @@ var SALIDA_JSON =
 '"observaciones": lista de 0 a 5 frases cortas para el supervisor, que NO van en el informe: notas ambiguas que marcaste con "(revisar)", áreas que no calzan con lo que dice la nota (respeta el área anotada en el informe y avísalo aquí para que la corrija en la app), datos que faltan. Lista vacía si no hay nada que decir.';
 
 function sistemaIA(modo, rango, sede){
-  return [sedeDe(sede).intro, REGLAS, bloqueDe(modo, rango || '(sin período)', sede), SALIDA_JSON].join('\n\n');
+  return [sedeDe(sede).intro, REGLAS, bloqueDe(modo, rango || '(sin período)', sede), REGLA_DATOS, SALIDA_JSON].join('\n\n');
 }
 function mensajeIA(o){
   var partes=['MODO: '+o.modo+'\nPERÍODO: '+(o.rango || '(sin período)')];
   if(o.modo==='CIERRE' && o.pendientes) partes.push(textoPendientes(o.pendientes));
+  if(o.datos) partes.push(textoDatos(o.datos));
   partes.push('NOTAS DEL PERÍODO\n'+(o.notas || '(sin notas registradas en el período)'));
   return partes.join('\n\n');
 }
