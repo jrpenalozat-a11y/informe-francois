@@ -1899,9 +1899,9 @@ document.addEventListener('change', function(e){
   var c=e.target; if(!c.dataset || !c.dataset.inc) return;
   incluirPoner(c.dataset.inc, c.checked); renderPreview(); preLimpiar();
 });
-var vistaInf='gen';
+var infModo='gen';
 function infVista(v){
-  vistaInf=v;
+  infModo=v;
   document.querySelectorAll('#segInf button').forEach(function(b){ b.classList.toggle('on', b.dataset.vinf===v); });
   var conf=v==='conf';
   ['cardQue','cardPre','cardInf'].forEach(function(id){ var x=$('#'+id); if(x) x.classList.toggle('hide', conf); });
@@ -3776,7 +3776,7 @@ function irVista(tb){
     movPintar(); faltaPintar(); propSemPintar(); datosPasePintar();
     if(!falta.abierto) faltaAbrir();                   // lo pendiente a la vista, sin un botón de por medio
   }
-  if(tb==='generar'){ infVista(vistaInf); renderPreview(); preRevisar(); alDia(); renderInformes(); }
+  if(tb==='generar'){ infVista(infModo); renderPreview(); preRevisar(); alDia(); renderInformes(); }
   if(tb==='datos'){ stats(); pintarSync(); }
 }
 /* al editar una nota con medida, con fotos de la medida o de otro día, lo plegado se abre solo */
