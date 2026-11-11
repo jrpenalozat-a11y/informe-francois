@@ -948,9 +948,12 @@ function perfilPorNombre(nom){
 function soyAdmin(){ return !!(yo && yo.admin); }
 /* Qué notas/informes le tocan a quien está usando la app */
 function verTodo(){ return !perfilesVivos().length || (soyAdmin() && prefs.verTodo!==false); }
+/* las notas que escribe sola la base al subir ventas, caja o propinas en El Pase son del local: las ve todo el equipo */
+function esAuto(x){ return /^autom[aá]tico$/i.test((x.quien||'').trim()); }
 function esMio(x){
   if(verTodo()) return true;
   if(!yo) return true;
+  if(esAuto(x)) return true;
   var q=(x.quien||'').trim();
   return q ? q.toLowerCase()===yo.nombre.toLowerCase() : soyAdmin();  // lo viejo sin firma queda con el administrador
 }
@@ -3808,7 +3811,7 @@ document.addEventListener('click', function(e){
       break;
     case 'btnBorrarTodo':
       /* solo lo que estás viendo: nadie borra las notas de otro sin querer */
-      var quitar=mias(notas);
+      var quitar=mias(notas).filter(function(n){ return verTodo() || !esAuto(n); });   // las automáticas del local no se van con «borrar todo» de una persona
       if(!quitar.length){ toast('No hay notas tuyas que borrar'); break; }
       if(confirm('Esto borra las '+quitar.length+' notas que estás viendo'+
                  (verTodo()?'':' (las tuyas)')+'. ¿Seguro?')){
