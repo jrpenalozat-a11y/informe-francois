@@ -561,7 +561,7 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     <div id="retLista"></div>
   </section>
 
-  <!-- ============ CAJA: lo que falta por cuadrar y el Excel de Fudo ============ -->
+  <!-- ============ CAJA: lo que falta por cuadrar y las propinas por pagar ============ -->
   <section id="tab-caja" class="hide">
     <div class="card">
       <h2><svg class="i"><use href="#i-check"/></svg> Lo que falta por cuadrar</h2>
@@ -570,9 +570,9 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
     </div>
 
     <div class="card">
-      <h2><svg class="i"><use href="#i-subir"/></svg> Movimientos de caja de Fudo</h2>
-      <p class="hint" style="margin-top:0">El Excel «Movimientos de Caja» que se baja de Fudo. Con él aparecen arriba los retiros por cuadrar.</p>
-      <div id="movCaja"></div>
+      <h2><svg class="i"><use href="#i-billete"/></svg> Propinas por pagar</h2>
+      <p class="hint" style="margin-top:0">Lo mismo que muestra El Pase en Cuentas por pagar: las últimas 4 semanas, de lunes a domingo. Cada semana se paga el lunes siguiente.</p>
+      <div id="propCaja"></div>
     </div>
   </section>
 
@@ -3467,6 +3467,55 @@ async function faltaCargar(){
     falta.filas=egrNormalizar(q.data && q.data.filas); falta.ultimo=String((q.data && q.data.ultimo_fudo) || '');
   }catch(e){ falta.error=faltaErr(e); }
   falta.ocupado=false; faltaPintar();
+  if(!falta.error) propSemCargar();
+}
+
+/* ================= Propinas por pagar (solo lectura) =================
+   El Pase calcula el reparto y registra los pagos; cada vez que cambian deja el resumen de las
+   últimas 4 semanas en la base (propinas_semanas). Aquí se lee con el mismo ingreso de
+   «Lo que falta por cuadrar». Los pagos se marcan en El Pase. */
+var propSem={datos:null, error:'', ocupado:false};
+async function propSemCargar(){
+  if(!falta.cred){ propSemPintar(); return; }
+  propSem.ocupado=true; propSemPintar();
+  try{
+    var q=await getSB().rpc('propinas_semanas_leer', falta.cred);
+    if(q.error) throw new Error(q.error.message);
+    propSem.datos=q.data || null; propSem.error='';
+  }catch(e){
+    var m=String((e && e.message) || e);
+    propSem.error=/propinas_semanas_leer|schema cache|does not exist/i.test(m) ? 'Falta instalar en la base el resumen de propinas (SQL-bitacora-caja-propinas.sql).' : faltaErr(e);
+  }
+  propSem.ocupado=false; propSemPintar();
+}
+function propSemDia(f){ var d=new Date(f+'T12:00'); return d.getDate()+' '+d.toLocaleDateString('es-CL',{month:'short'}).replace('.',''); }
+function propSemPintar(){
+  var c=$('#propCaja'); if(!c) return;
+  if(!falta.cred){ c.innerHTML='<p class="hint">Entra con tu nombre y PIN de El Pase en «Lo que falta por cuadrar» para verlas.</p>'; return; }
+  if(propSem.ocupado && !propSem.datos){ c.innerHTML='<p class="hint"><span class="rueda"></span> Trayendo las propinas…</p>'; return; }
+  if(propSem.error){ c.innerHTML='<div class="aviso">'+ico('alerta')+'<div>'+esc(propSem.error)+'</div></div>'; return; }
+  var D=propSem.datos;
+  if(!D || !(D.S||[]).length){ c.innerHTML='<p class="hint">Todavía no hay propinas de las últimas 4 semanas. Se suben en El Pase, en Finanzas → Informes por subir.</p>'; return; }
+  var hoy=hoyISO(new Date()), venc=0, nV=0;
+  D.S.forEach(function(s){ if(s.tot>0 && s.vence<hoy){ venc+=s.tot; nV++; } });
+  venc+=(D.viejo||0);
+  var h='';
+  if(venc) h+='<div class="aviso">'+ico('alerta')+'<div><b>Vencido: '+plataCL(venc)+'</b>'+(nV?' · '+nV+(nV===1?' semana':' semanas')+' sin pagar después de su lunes':'')+(D.viejo?' (incluye '+plataCL(D.viejo)+' de semanas anteriores)':'')+'</div></div>';
+  h+='<p class="hint" style="font-weight:600">Por pagar: '+plataCL(D.tot)+'</p>';
+  h+=D.S.map(function(s){
+    var est = !s.tot ? '<b style="color:var(--ok)">Pagada</b>'
+      : s.vence<hoy ? '<b style="color:var(--bad)">Vencida</b> · se pagaba el lunes '+propSemDia(s.vence)
+      : s.vence===hoy ? '<b>Se paga hoy</b>' : 'Se paga el lunes '+propSemDia(s.vence);
+    return '<details class="note" style="display:block"><summary style="cursor:pointer;list-style:none">'+
+      '<div class="meta">'+propSemDia(s.l)+' al '+propSemDia(s.dom)+(s.dom>=hoy?' · en curso':'')+' · '+est+'</div>'+
+      '<div class="txt">'+s.n+' propinas · '+plataCL(s.bruto)+' · pagado '+plataCL(s.pag)+' · <b>por pagar '+plataCL(s.tot)+'</b></div>'+
+      '<div class="hint" style="margin:4px 0 0">Ver detalle por persona</div></summary>'+
+      '<div style="margin-top:6px">'+(s.T||[]).map(function(x){
+        return '<div class="hint" style="margin:2px 0;display:flex;justify-content:space-between;gap:8px"><span>'+esc(x.n)+'</span><span>'+plataCL(x.c)+' · pagado '+plataCL(x.p)+' · <b>'+(x.s?'debe '+plataCL(x.s):'al día')+'</b></span></div>';
+      }).join('')+'</div></details>';
+  }).join('');
+  if(D.actualizado) h+='<p class="hint">Según El Pase, actualizado el '+esc(new Date(D.actualizado).toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+(D.por?' por '+esc(encCorto(D.por)):'')+'. Los pagos se marcan en El Pase, en Cuentas por pagar.</p>';
+  c.innerHTML=h;
 }
 /* lo pendiente de los últimos 30 días, con las reglas de El Pase */
 function faltaListas(){
@@ -3557,7 +3606,7 @@ function faltaPintar(){
   h+='<p class="hint" style="margin-top:0;font-weight:600">'+(P.vale.length||P.dep.length
       ? [P.vale.length ? P.vale.length+(P.vale.length===1?' retiro sin vale':' retiros sin vale')+' ('+suma(P.vale)+')' : '', P.dep.length ? P.dep.length+(P.dep.length===1?' depósito sin comprobante':' depósitos sin comprobante')+' ('+suma(P.dep)+')' : ''].filter(Boolean).join(' · ')
       : 'Todo al día: los retiros de los últimos '+FALTA_DIAS+' días tienen su foto.')+'</p>';
-  if(atras) h+='<div class="aviso">'+ico('info')+'<div>'+(falta.ultimo ? 'Fudo está cargado hasta el '+esc(faltaCuando(falta.ultimo))+': lo que salió después todavía no aparece aquí. Sube el Excel más abajo: no te va a pedir el PIN otra vez.' : 'Todavía no hay movimientos de Fudo cargados: sube el Excel más abajo.')+'</div></div>';
+  if(atras) h+='<div class="aviso">'+ico('info')+'<div>'+(falta.ultimo ? 'Fudo está cargado hasta el '+esc(faltaCuando(falta.ultimo))+': lo que salió después todavía no aparece aquí. Se sube en El Pase, en Finanzas → Informes por subir.' : 'Todavía no hay movimientos de Fudo cargados: se suben en El Pase, en Finanzas → Informes por subir.')+'</div></div>';
   if(P.vale.length) h+='<div class="day">Falta el vale con foto</div>'+P.vale.map(function(x){ return faltaItem(x,'vale'); }).join('');
   if(P.dep.length) h+='<div class="day">Falta el comprobante del banco</div>'+P.dep.map(function(x){ return faltaItem(x,'dep'); }).join('');
   if(P.otros.length) h+='<p class="hint">Además hay '+P.otros.length+(P.otros.length===1?' retiro que no calza':' retiros que no calzan')+' (otro monto, o vale que aún no está en Fudo): eso se revisa en El Pase, en Finanzas → Egresos.</p>';
@@ -3571,7 +3620,7 @@ document.addEventListener('click', function(e){
   if(t.id==='btnFaltaAbrir') faltaAbrir();
   else if(t.id==='btnFaltaEntrar') faltaEntrar();
   else if(t.id==='btnFaltaCerrar'){ falta.abierto=false; falta.error=''; faltaPintar(); }
-  else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; faltaPintar(); movPintar(); if($('#cajaN')) $('#cajaN').classList.add('hide'); }
+  else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; propSem={datos:null, error:'', ocupado:false}; faltaPintar(); movPintar(); propSemPintar(); if($('#cajaN')) $('#cajaN').classList.add('hide'); }
   else if(t.id==='btnFaltaRecargar') faltaCargar();
   else if(t.id==='btnFaltaFoto'){ if($('#faltaCam')) $('#faltaCam').click(); }
   else if(t.id==='btnFaltaGuardar') faltaGuardar();
@@ -3595,7 +3644,7 @@ document.addEventListener('input', function(e){
 
 /* ================= Tres pestañas =================
    Turno (anotar una nota o registrar un retiro, con el selector de arriba), Caja (lo que falta
-   por cuadrar y el Excel de Fudo, abierta: quien usa la app es encargado) e Informe (armar,
+   por cuadrar y las propinas por pagar, abierta: quien usa la app es encargado) e Informe (armar,
    enviar y, debajo, los guardados). Ajustes es el ícono de la cabecera.
    Las secciones siguen siendo las de siempre (#tab-…): aquí solo se decide cuáles se ven. */
 var turnoVista='nota', vistaTab='notas';
@@ -3609,7 +3658,7 @@ function irVista(tb){
   if(ver.indexOf('retiro')>=0){ retPintar(); retPendientes(); }
   if(tb==='caja'){
     if(falta.cred && !mov.abierto) mov.abierto=true;   // ya entró: el Excel se elige de una vez
-    movPintar(); faltaPintar();
+    movPintar(); faltaPintar(); propSemPintar();
     if(!falta.abierto) faltaAbrir();                   // lo pendiente a la vista, sin un botón de por medio
   }
   if(tb==='generar'){ renderPreview(); preRevisar(); alDia(); renderInformes(); }
