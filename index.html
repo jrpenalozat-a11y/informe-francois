@@ -564,6 +564,11 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
   <!-- ============ CAJA: lo que falta por cuadrar y las propinas por pagar ============ -->
   <section id="tab-caja" class="hide">
     <div class="card">
+      <h2><svg class="i"><use href="#i-billete"/></svg> Ventas, caja y propinas</h2>
+      <p class="hint" style="margin-top:0">Lo que se sube en El Pase queda aquí solo, día por día. No se mezcla con las notas del turno, pero el informe lo usa.</p>
+      <div id="datosPase"></div>
+    </div>
+    <div class="card">
       <h2><svg class="i"><use href="#i-check"/></svg> Lo que falta por cuadrar</h2>
       <p class="hint" style="margin-top:0">Los retiros anotados en Fudo sin su vale con foto y los depósitos sin comprobante del banco. Se completan aquí mismo, con una foto.</p>
       <div id="faltaCaja"></div>
@@ -1656,11 +1661,38 @@ function ordenadas(arr){
   });
 }
 
+/* ventas, caja y propinas que anota sola la base al subirlas en El Pase: una tarjeta por día */
+var datosPaseDias=7;
+function datosPasePintar(){
+  var c=$('#datosPase'); if(!c) return;
+  var A=notas.filter(function(n){ return esAuto(n) && !n.borrada; });
+  if(!A.length){ c.innerHTML='<p class="hint">Todavía no llega nada de El Pase. Al subir las ventas, la caja o las propinas en El Pase, aparecen aquí solas.</p>'; return; }
+  var dias=[]; A.forEach(function(n){ if(dias.indexOf(n.fecha)<0) dias.push(n.fecha); });
+  dias.sort().reverse();
+  var orden={VENTAS:1, CAJA:2, PROPINAS:3}, nom={VENTAS:'Venta', CAJA:'Caja', PROPINAS:'Propinas'};
+  var h=dias.slice(0, datosPaseDias).map(function(d){
+    var L=A.filter(function(n){ return n.fecha===d; }).sort(function(a,b){ return (orden[String(a.area).toUpperCase()]||9)-(orden[String(b.area).toUpperCase()]||9); });
+    return '<div class="day">'+etiqueta(d)+'</div>'+L.map(function(n){
+      var t=String(n.texto||'').replace(/^[^:]*\(automática\):\s*/i,'');
+      var ar=String(n.area||'').toUpperCase();
+      return '<div class="note"><div class="body"><div class="meta"><b>'+(nom[ar]||cap(n.area))+'</b></div><div class="txt">'+esc(t)+'</div>'+
+        (ar==='PROPINAS' && n.medida ? '<div class="med">'+esc(n.medida)+'</div>' : '')+'</div></div>';
+    }).join('');
+  }).join('');
+  if(dias.length>datosPaseDias) h+='<div class="btns mt"><button class="btn sec sm" id="btnDatosMas">Ver más días</button></div>';
+  c.innerHTML=h;
+}
+document.addEventListener('click', function(e){
+  var t=e.target.closest('button'); if(!t || t.id!=='btnDatosMas') return;
+  datosPaseDias+=7; datosPasePintar();
+});
 function renderLista(){
+  datosPasePintar();
   var q=$('#fBuscar').value.trim().toLowerCase();
   var filtro=$('#fFiltro').value, sem=filtro==='reunion' ? semanaReunion() : null;
   var limite = sem ? sem.desde : (+filtro ? hoyISO(sumaDias(new Date(), -(+filtro-1))) : '');
   var arr=mias(notas).filter(function(n){
+    if(esAuto(n)) return false;   // ventas, caja y propinas de El Pase van aparte, en la pestaña Caja
     if(limite && n.fecha < limite) return false;
     if(sem && n.fecha > sem.hasta) return false;
     if(q && (n.texto+' '+n.area+' '+(n.medida||'')+' '+comentariosDe(n.id).map(function(c){ return c.texto; }).join(' ')).toLowerCase().indexOf(q)<0) return false;
@@ -3658,7 +3690,7 @@ function irVista(tb){
   if(ver.indexOf('retiro')>=0){ retPintar(); retPendientes(); }
   if(tb==='caja'){
     if(falta.cred && !mov.abierto) mov.abierto=true;   // ya entró: el Excel se elige de una vez
-    movPintar(); faltaPintar(); propSemPintar();
+    movPintar(); faltaPintar(); propSemPintar(); datosPasePintar();
     if(!falta.abierto) faltaAbrir();                   // lo pendiente a la vista, sin un botón de por medio
   }
   if(tb==='generar'){ renderPreview(); preRevisar(); alDia(); renderInformes(); }
