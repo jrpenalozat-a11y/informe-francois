@@ -378,6 +378,30 @@ details.verNotas[open] .flecha{transform:rotate(180deg)}
 #saldoDS.bajo{border-color:var(--danger)}
 #saldoDS.bajo .cab, #saldoDS.bajo .cab svg.i{color:var(--danger)}
 
+/* Boleta: botón fijo y su hoja */
+#btnBoleta{
+  position:fixed; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); z-index:56;
+  display:inline-flex; align-items:center; gap:8px; padding:13px 18px; border:0; border-radius:999px;
+  background:var(--acc); color:var(--onAcc); font:inherit; font-size:15px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.22); cursor:pointer;
+}
+#btnBoleta svg.i{width:20px; height:20px}
+.ovlCard h2 svg.i{width:18px; height:18px; vertical-align:-3px; color:var(--acc)}
+.bolTop{display:flex; gap:12px; align-items:flex-start}
+.bolFoto{width:92px; height:92px; object-fit:cover; border-radius:12px; border:1px solid var(--line); background:var(--bg2); flex:0 0 auto; display:block}
+.bolLei{flex:1; min-width:0; overflow-wrap:anywhere}
+.bolLei small{display:block; font-size:12.5px; color:var(--tx3); margin:2px 0 6px}
+.bolConf{display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--okSoft); color:var(--ok)}
+.bolConf.media{background:var(--accSoft); color:var(--tx)}
+.bolConf.baja{background:var(--dangerSoft); color:var(--danger)}
+.bolMal{color:var(--danger); font-weight:600}
+.bolEspera{display:flex; align-items:center; gap:9px; color:var(--tx2); margin:14px 0}
+#bolMonto{font-size:22px; font-weight:700; font-variant-numeric:tabular-nums}
+#bolMonto.bolBaja{border-color:var(--danger); outline-color:var(--danger)}
+.bolCand{display:block; width:100%; text-align:left; margin:0 0 8px; padding:11px 13px; border:1px solid var(--line); border-radius:12px;
+  background:var(--bg2); color:var(--tx); font:inherit; font-size:14.5px; line-height:1.4; cursor:pointer}
+.bolCand small{display:block; font-size:12px; font-weight:700; color:var(--ok); margin-top:2px}
+.bolCand.on{border-color:var(--acc); outline:2px solid var(--acc); background:var(--card)}
+
 /* Toast */
 #toast{
   position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%) translateY(20px);
@@ -866,6 +890,9 @@ footer{text-align:center; color:var(--tx3); font-size:12px; padding:18px 0 4px}
 </div>
 
 <div id="saldoDS" class="hide" role="status" title="Saldo de la cuenta de DeepSeek · toca para ver el detalle"></div>
+<button id="btnBoleta" class="hide" aria-label="Boleta: sacar la foto de una boleta, factura o vale"><svg class="i"><use href="#i-camara"/></svg> Boleta</button>
+<input type="file" id="bolArch" accept="image/*" capture="environment" hidden>
+<div class="ovl hide" id="bolOvl" role="dialog" aria-modal="true" aria-label="Boleta"><div class="ovlCard" id="bolCard"></div></div>
 <div id="toast"></div>
 
 <script src="prompt.js"></script>
@@ -3336,7 +3363,7 @@ async function retEnviar(id, avisar){
       r.foto=String(d.f||''); saveRet();
     }
     var q=await getSB().rpc('egresos_retiro', { p_fila:{ id:r.id, fecha:r.fecha, monto:r.monto, clase:r.clase, persona:r.persona,
-                                                         dia:r.dia, comentario:r.comentario, foto:r.foto, nota:'', quien:r.quien } });
+                                                         dia:r.dia, comentario:r.comentario, foto:r.foto, nota:r.nota||'', quien:r.quien } });
     if(q.error) throw new Error(q.error.message||'No se pudo registrar');
     r.estado='ok'; r.error=''; r.enviado=ahora();
   }catch(e){ r.error=retTraduce(e && e.message); }
@@ -3359,6 +3386,215 @@ function retDescartar(id){
 }
 
 /* --- Lo que se ve --- */
+/* ================= Boleta =================
+   Botón fijo «Boleta»: la foto de una boleta, factura o vale llega sola a El Pase como el vale
+   del egreso de Fudo que corresponde (SQL-boleta.sql + /api/egresos de El Pase).
+     1. la foto se comprime (1600 px, JPEG) y va a /api/egresos «boleta-leer» con la sesión:
+        la IA (DeepSeek y, si falla, Claude) lee monto, fecha y comercio, y llegan los egresos
+        de Fudo del local que pueden ser esa boleta;
+     2. la persona confirma el monto (el que leyó la IA, nunca el de Fudo) y elige el egreso,
+        o «Ninguno»: entonces va como vale suelto por el mismo camino del Retiro de caja, y
+        El Pase lo une solo cuando se sube el Excel de Fudo.
+   Solo lo ven las cuentas de config «boleta_cuentas» (egresos_boleta_puede). */
+var BOL_DIAS=['dom','lun','mar','mié','jue','vie','sáb'], BOL_MAX=1400000;
+var bol={ puede:false, ovl:false, fase:'', blob:null, th:'', datos:'', lectura:null, candidatos:[], aviso:'', elegido:'', fotoF:{}, error:'', t:0 };
+
+async function bolPermiso(){
+  var ok=false;
+  try{
+    var s=await sesion();
+    if(s){ var q=await getSB().rpc('egresos_boleta_puede'); ok=!q.error && typeof q.data==='string' && !!q.data; }
+  }catch(e){}
+  bol.puede=ok;
+  var b=$('#btnBoleta'); if(b) b.classList.toggle('hide', !ok);
+}
+function bolTraduce(m){
+  m=String(m||'');
+  if(/no autorizada para subir boletas|sin permiso|permission denied/i.test(m)) return 'Esta cuenta no está autorizada para subir boletas.';
+  if(/SQL-boleta|could not find the function|PGRST202/i.test(m)) return 'Falta instalar las boletas en Supabase (SQL-boleta.sql).';
+  if(/ya tiene vale/i.test(m)) return 'Ese egreso ya tiene vale: elige otro o «Ninguno».';
+  if(/aprobado a mano/i.test(m)) return 'Ese egreso ya está aprobado a mano: elige otro o «Ninguno».';
+  if(/no está en este local|no es un egreso vigente/i.test(m)) return 'Ese egreso ya no está disponible: vuelve a sacar la foto.';
+  return retTraduce(m);
+}
+async function bolApi(cuerpo){
+  if(navigator.onLine===false || !(await esperaLib(4000))) throw new Error('Sin conexión: la boleta necesita señal para leerse.');
+  var s=await sesion();
+  if(!s) throw new Error('Falta conectar este aparato con la cuenta del local (en Ajustes).');
+  var r, d=null;
+  try{ r=await fetch(RET_API, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+s.access_token }, body:JSON.stringify(cuerpo) }); }
+  catch(e){ throw new Error('Sin conexión: la boleta necesita señal para leerse.'); }
+  try{ d=await r.json(); }catch(e){}
+  if(!r.ok || !d || !d.ok) throw new Error((d && d.error) || 'El servidor no respondió ('+r.status+').');
+  return d;
+}
+
+/* --- 1. Tomar la foto --- */
+function bolTomar(){
+  if(!bol.puede) return;
+  if(perfilesVivos().length && !yo){ abrirQuien(true); return; }
+  var i=$('#bolArch'); i.value=''; i.click();
+}
+function bolFalla(msg){ bol.fase='error'; bol.error=msg; bolPintar(); }
+function bolFoto(file){
+  if(!file || !/^image\//.test(file.type||'')){ toast('Eso no es una imagen'); return; }
+  bolAbrir('preparando');
+  cargarImg(file, function(img){
+    if(!img) return bolFalla('La foto no se pudo abrir.');
+    var c=lienzo(img,LADO), th=lienzo(img,LTH*2).toDataURL('image/jpeg',0.6);
+    aBlob(c, function(blob){
+      if(!blob){ if(img.close) img.close(); return bolFalla('La foto no se pudo preparar.'); }
+      blobADataUrl(blob, function(u){
+        var datos=u ? String(u).split(',')[1]||'' : '';
+        if(datos.length<=BOL_MAX){ if(img.close) img.close(); return bolLeer(blob, th, datos); }
+        /* muy pesada para el servidor: otra pasada más chica */
+        lienzo(img,1400).toBlob(function(b2){
+          if(img.close) img.close();
+          if(!b2) return bolFalla('La foto no se pudo preparar.');
+          blobADataUrl(b2, function(u2){ bolLeer(b2, th, u2 ? String(u2).split(',')[1]||'' : ''); });
+        }, 'image/jpeg', 0.6);
+      });
+    });
+  });
+}
+/* --- 2. Leer con la IA y traer los candidatos --- */
+async function bolLeer(blob, th, datos){
+  if(!bol.ovl) return;                             // cancelaron mientras se preparaba
+  var t=bol.t=Date.now();
+  bol.blob=blob; bol.th=th; bol.datos=datos; bol.lectura=null; bol.candidatos=[]; bol.aviso=''; bol.elegido=''; bol.fotoF={}; bol.error='';
+  if(!datos || datos.length>BOL_MAX) return bolFalla('La foto quedó muy pesada: sácala de nuevo, más de cerca.');
+  bol.fase='leyendo'; bolPintar();
+  try{
+    var d=await bolApi({ accion:'boleta-leer', datos:datos, tipo:'jpg' });
+    if(t!==bol.t) return;
+    bol.lectura=d.lectura||null; bol.candidatos=d.candidatos||[]; bol.aviso=d.aviso||'';
+    bol.fase='elegir';
+  }catch(e){
+    if(t!==bol.t) return;
+    /* sin lectura igual se puede seguir (el monto se escribe a mano), salvo que no haya señal o permiso */
+    bol.aviso=bolTraduce(e && e.message);
+    if(/autorizada|instalar|conectar|Sin conexión|venció/.test(bol.aviso)) return bolFalla(bol.aviso);
+    bol.fase='elegir';
+  }
+  bolPintar();
+  var m=$('#bolMonto'); if(m && !(bol.lectura && bol.lectura.monto)) m.focus();
+}
+/* el monto cambió a mano: los candidatos se vuelven a buscar con ese monto */
+var bolTimer=0;
+function bolMontoCambia(){
+  clearTimeout(bolTimer);
+  bolTimer=setTimeout(async function(){
+    var monto=retNum($('#bolMonto') && $('#bolMonto').value), t=bol.t;
+    try{
+      var q=await getSB().rpc('egresos_boleta_candidatos', { p_monto:monto||null, p_fecha:(bol.lectura && bol.lectura.fecha) || null });
+      if(q.error || t!==bol.t || bol.fase!=='elegir') return;
+      bol.candidatos=q.data||[];
+      if(bol.elegido && bol.elegido!=='ninguno' && !bol.candidatos.some(function(c){ return c.id===bol.elegido; })) bol.elegido='';
+      bolPintarCandidatos();
+    }catch(e){}
+  }, 500);
+}
+
+/* --- 3. Guardar --- */
+function bolNota(){
+  var l=bol.lectura, com=l && (l.comercio || l.detalle);
+  return (l ? 'Boleta leída por '+l.leyo : 'Boleta con el monto escrito a mano')+(com ? ' · '+com : '');
+}
+async function bolGuardar(){
+  if(bol.fase!=='elegir') return;
+  var monto=retNum($('#bolMonto').value), el=bol.elegido;
+  if(!monto){ toast('Escribe el monto total de la boleta'); $('#bolMonto').focus(); return; }
+  if(!el){ toast('Elige el egreso de Fudo o «Ninguno»'); return; }
+  if(perfilesVivos().length && !yo){ abrirQuien(true); return; }
+  if(el==='ninguno') return bolSuelta(monto);
+  bol.fase='guardando'; bol.error=''; bolPintar();
+  try{
+    var s=await sesion();
+    if(s && sedeDeCuenta(s.user)!==sedeIF()) throw new Error('La cuenta conectada es de otro local: entra con la de '+SEDES_IF[sedeIF()].n+' en Ajustes.');
+    var f=bol.fotoF[el];                           // la foto sube una sola vez por egreso: reintentar no la repite
+    if(!f){ f=(await bolApi({ accion:'boleta-foto', id:el, datos:bol.datos, tipo:'jpg' })).f; bol.fotoF[el]=f; }
+    var q=await getSB().rpc('egresos_boleta_unir', { p_id:el, p_monto:monto, p_foto:f, p_nota:bolNota(), p_quien:yo ? yo.nombre : '' });
+    if(q.error) throw new Error(q.error.message||'No se pudo guardar');
+    bolCerrar(); toast('Boleta guardada como vale del egreso N° '+el.slice(1));
+  }catch(e){ bol.fase='elegir'; bol.error=bolTraduce(e && e.message); bolPintar(); }
+}
+/* «Ninguno»: un vale suelto por el camino del Retiro de caja (queda en el aparato y se envía) */
+function bolSuelta(monto){
+  var l=bol.lectura, id=retNuevoId(), d=new Date(), causa=(l && (l.comercio || l.detalle)) || 'sin comercio';
+  bol.fase='guardando'; bolPintar();
+  fotoGuardar(id, bol.blob, bol.th, function(bien){
+    if(!bien){ bol.fase='elegir'; bol.error='No se pudo guardar la foto en este aparato.'; return bolPintar(); }
+    var r={ id:id, fecha:retFechaLocal(d), monto:monto, clase:'gasto', persona:'', dia:hoyISO(d),
+            comentario:('Boleta: '+causa).slice(0,300), nota:bolNota().slice(0,200),
+            quien:yo?yo.nombre:'', foto:'', estado:'pend', error:'', creado:ahora() };
+    retiros.unshift(r); saveRet(); retPintar();
+    bolCerrar();
+    retEnviar(r.id, true);
+  });
+}
+
+/* --- La hoja --- */
+function bolAbrir(fase){ bol.ovl=true; bol.fase=fase; bol.error=''; bol.th=''; $('#bolOvl').classList.remove('hide'); bolPintar(); }
+function bolCerrar(){ bol.ovl=false; bol.t=0; bol.fase=''; bol.blob=null; bol.datos=''; $('#bolOvl').classList.add('hide'); }
+function bolCuando(f){
+  var d=new Date(f.slice(0,10)+'T12:00:00');
+  return BOL_DIAS[d.getDay()]+' '+f.slice(8,10)+'-'+f.slice(5,7)+' '+f.slice(11,16);
+}
+function bolPintarCandidatos(){
+  var box=$('#bolCands'); if(!box) return;
+  var C=bol.candidatos||[], dis=bol.fase==='guardando' ? ' disabled' : '';
+  box.innerHTML=(C.length ? C.map(function(c){
+      var que=String(c.comentario||'').trim();
+      return '<button class="bolCand'+(bol.elegido===c.id?' on':'')+'" data-bolelige="'+esc(c.id)+'"'+dis+'>¿Es '+(que ? '«'+esc(que)+'»' : 'el egreso N° '+esc(c.id.slice(1)))+', '+
+        esc(plataCL(c.monto).replace('$ ',''))+' pesos, del '+esc(bolCuando(c.fecha))+'?'+(c.exacto ? '<small>Mismo monto</small>' : '')+'</button>';
+    }).join('') : '<p class="hint" style="margin:0 0 8px">No hay egresos de Fudo sin vale con un monto parecido cerca de esa fecha. Si todavía no se sube el Excel, guárdala como vale suelto: se une sola cuando se suba.</p>')+
+    '<button class="bolCand'+(bol.elegido==='ninguno'?' on':'')+'" data-bolelige="ninguno"'+dis+'>Ninguno: guardarla como vale suelto</button>';
+}
+function bolPintar(){
+  var k=$('#bolCard'); if(!k || !bol.ovl) return;
+  var l=bol.lectura, cab='<h2>'+ico('camara')+' Boleta</h2>';
+  if(bol.fase==='preparando' || bol.fase==='leyendo'){
+    k.innerHTML=cab+(bol.th ? '<img class="bolFoto" src="'+bol.th+'" alt="Foto de la boleta">' : '')+
+      '<p class="bolEspera"><span class="rueda"></span> '+(bol.fase==='leyendo' ? 'Leyendo la boleta…' : 'Preparando la foto…')+'</p>'+
+      '<div class="btns"><button class="btn sec" data-bol="cerrar">Cancelar</button></div>';
+    return;
+  }
+  if(bol.fase==='error'){
+    k.innerHTML=cab+'<div class="aviso">'+ico('alerta')+'<div>'+esc(bol.error||'No se pudo.')+'</div></div>'+
+      '<div class="btns" style="margin-top:12px"><button class="btn" data-bol="otra">'+ico('camara')+' Sacar otra foto</button><button class="btn sec" data-bol="cerrar">Cerrar</button></div>';
+    return;
+  }
+  var guard=bol.fase==='guardando', conf=l ? l.confianza : 'baja';
+  var monto=$('#bolMonto') ? $('#bolMonto').value : (l && l.monto ? plataCL(l.monto).replace('$ ','') : '');   // «3.200»: retNum lo vuelve a leer sin puntos
+  k.innerHTML=cab+
+    '<div class="bolTop">'+(bol.th ? '<img class="bolFoto" src="'+bol.th+'" alt="Foto de la boleta">' : '')+
+      '<div class="bolLei">'+(l ? '<b>'+esc(l.comercio||'Sin comercio')+'</b>'+
+          '<small>'+esc([l.tipo, l.fecha ? l.fecha.split('-').reverse().join('-') : '', l.detalle].filter(Boolean).join(' · '))+'</small>'+
+          '<span class="bolConf '+esc(conf)+'">Leída por '+esc(l.leyo)+' · confianza '+esc(conf)+'</span>'
+        : '<b>Sin lectura</b><small>Escribe el monto a mano.</small>')+'</div></div>'+
+    (bol.aviso ? '<p class="hint bolMal">'+esc(bol.aviso)+'</p>' : '')+
+    (l && conf==='baja' ? '<p class="hint bolMal">La IA no está segura: revisa el monto con la boleta en la mano.</p>' : '')+
+    '<label class="f" for="bolMonto" style="margin-top:12px">Monto total de la boleta</label>'+
+    '<input type="text" id="bolMonto" class="'+(l && conf==='baja' ? 'bolBaja' : '')+'" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="$ 0" value="'+esc(monto)+'"'+(guard?' disabled':'')+'>'+
+    '<label class="f" style="margin-top:12px">¿De qué egreso de Fudo es?</label><div id="bolCands"></div>'+
+    (bol.error ? '<div class="aviso" style="margin-top:10px">'+ico('alerta')+'<div>'+esc(bol.error)+'</div></div>' : '')+
+    '<div class="btns" style="margin-top:14px"><button class="btn" data-bol="guardar"'+(guard?' disabled':'')+'>'+(guard ? '<span class="rueda"></span> Guardando…' : 'Guardar la boleta')+'</button>'+
+    '<button class="btn sec" data-bol="cerrar"'+(guard?' disabled':'')+'>Cancelar</button></div>'+
+    '<p class="hint">El vale lleva el monto que confirmas aquí, no el de Fudo: así El Pase ve si cuadra.</p>';
+  bolPintarCandidatos();
+}
+document.addEventListener('click', function(e){
+  var t=e.target.closest && e.target.closest('#btnBoleta,[data-bol],[data-bolelige]'); if(!t) return;
+  if(t.id==='btnBoleta') return bolTomar();
+  if(t.dataset.bolelige){ if(bol.fase!=='elegir') return; bol.elegido=t.dataset.bolelige; bol.error=''; return bolPintarCandidatos(); }
+  var a=t.dataset.bol;
+  if(a==='cerrar') bolCerrar();
+  else if(a==='otra'){ bolCerrar(); bolTomar(); }
+  else if(a==='guardar') bolGuardar();
+});
+document.addEventListener('change', function(e){ if(e.target && e.target.id==='bolArch' && e.target.files && e.target.files[0]) bolFoto(e.target.files[0]); });
+document.addEventListener('input', function(e){ if(e.target && e.target.id==='bolMonto') bolMontoCambia(); });
+
 function retPintar(){
   if(!$('#retFotoBox')) return;
   var t=ret.fotoId && thumbs[ret.fotoId];
@@ -4198,12 +4434,13 @@ function aplicaTema(){
     var listo = hay ? sincronizar('cambio') : Promise.resolve();   // al abrir, sube lo que quedó pendiente y baja lo nuevo
     listo.then(entradaSede);
     if(hay) retPendientes();                                       // y manda los retiros de caja que quedaron sin enviar
+    if(hay) bolPermiso();                                          // el botón «Boleta», solo para las cuentas autorizadas
   });
 })();
 
 /* Al volver a la app (cambiar de pestaña, desbloquear el teléfono) y al
    recuperar la señal, vuelve a mirar la nube. */
-document.addEventListener('visibilitychange', function(){ if(!document.hidden){ sincronizar('auto'); saldoCargar(); retPendientes(); } });
+document.addEventListener('visibilitychange', function(){ if(!document.hidden){ sincronizar('auto'); saldoCargar(); retPendientes(); bolPermiso(); } });
 window.addEventListener('online', function(){ sincronizar('cambio'); retPendientes(); });
 
 window.addEventListener('beforeinstallprompt', function(e){
