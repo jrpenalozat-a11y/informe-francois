@@ -247,6 +247,8 @@ body.dark .pill{color:var(--acc2)}
 .retTomar{width:100%; padding:22px 14px; border:2px dashed var(--line); border-radius:14px; background:var(--bg2); color:var(--tx);
   font:inherit; font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px}
 .retTomar svg.i{width:22px; height:22px; color:var(--acc)}
+.retDos{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.retDos .retTomar{padding:18px 8px; flex-direction:column; text-align:center; font-size:15px}
 body.dark .retTomar svg.i{color:var(--acc2)}
 #retMonto{font-size:22px; font-weight:700; font-variant-numeric:tabular-nums}
 .retIt{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line)}
@@ -3688,9 +3690,13 @@ function faltaItem(x, tipo){
   var k=tipo+':'+x.id, ab=falta.sel===k, L=ab && tipo==='dep' ? faltaListas().dep.filter(function(y){ return y.id!==x.id; }).slice(0,12) : [];
   return '<div class="retIt"><div class="cu"><b>'+plataCL(x.monto)+'</b> · '+esc(x.comentario||'(sin comentario)')+
     '<small>'+esc(faltaCuando(x.fecha))+(x.fuente==='fudo' ? ' · Fudo N° '+esc(x.id.slice(1)) : ' · registrado aquí')+'</small>'+
-    (!ab ? '<div class="btns"><button class="btn sec sm" data-faltasel="'+k+'">'+ico('camara')+(tipo==='dep' ? ' Foto del comprobante' : ' Foto del vale')+'</button></div>'
-      : '<div class="mt">'+(falta.foto ? '<div class="retFoto"><img src="'+falta.foto.th+'" alt=""><button class="btn sec sm" id="btnFaltaFoto">'+ico('camara')+' Cambiar la foto</button></div>'
-                                       : '<button class="retTomar" id="btnFaltaFoto">'+ico('camara')+(tipo==='dep' ? ' Foto del comprobante del banco' : ' Tomar la foto del vale')+'</button>')+'</div>'+
+    (!ab ? '<div class="btns"><button class="btn sec sm" data-faltasel="'+k+'" data-faltavia="cam">'+ico('camara')+' Tomar foto</button>'+
+              '<button class="btn sec sm" data-faltasel="'+k+'" data-faltavia="gal">'+ico('galeria')+' Elegir foto</button></div>'
+      : '<div class="mt">'+(falta.foto ? '<div class="retFoto"><img src="'+falta.foto.th+'" alt=""><div class="btns"><button class="btn sec sm" id="btnFaltaFoto">'+ico('camara')+' Tomar otra</button>'+
+                                         '<button class="btn sec sm" id="btnFaltaGal">'+ico('galeria')+' Elegir otra</button></div></div>'
+                                       : '<label class="f">'+(tipo==='dep' ? 'Foto del comprobante del banco' : 'Foto del vale')+'</label>'+
+                                         '<div class="retDos"><button class="retTomar" id="btnFaltaFoto">'+ico('camara')+' Tomar foto</button>'+
+                                         '<button class="retTomar" id="btnFaltaGal">'+ico('galeria')+' Elegir del teléfono o PC</button></div>')+'</div>'+
         (L.length ? '<div class="mt"><label class="f">¿El mismo depósito cubre más retiros?</label>'+L.map(function(y){
             return '<label class="chk" style="margin-bottom:6px"><input type="checkbox" data-faltajunto value="'+esc(y.id)+'"> <span>'+esc(faltaCuando(y.fecha))+' · '+plataCL(y.monto)+'</span></label>'; }).join('')+'</div>' : '')+
         '<div class="mt"><label class="f" for="faltaMonto">'+(tipo==='dep' ? 'Monto que dice el comprobante' : 'Monto que dice el vale')+'</label>'+
@@ -3726,9 +3732,9 @@ function faltaPintar(){
   if(P.dep.length) h+='<div class="day">Falta el comprobante del banco</div>'+P.dep.map(function(x){ return faltaItem(x,'dep'); }).join('');
   if(P.otros.length) h+='<p class="hint">Además hay '+P.otros.length+(P.otros.length===1?' retiro que no calza':' retiros que no calzan')+' (otro monto, o vale que aún no está en Fudo): eso se revisa en El Pase, en Finanzas → Egresos.</p>';
   h+='<div class="btns mt"><button class="btn sec sm" id="btnFaltaRecargar">'+ico('sync')+' Actualizar</button><button class="btn sec sm" id="btnFaltaSalir">Cerrar y olvidar el PIN</button></div>'+
-     '<input type="file" id="faltaCam" accept="image/*" class="hide">';
+     '<input type="file" id="faltaCam" accept="image/*" capture="environment" class="hide">'+   // la cámara
+     '<input type="file" id="faltaGal" accept="image/*" class="hide">';                          // una foto o captura ya guardada (teléfono o PC)
   c.innerHTML=h;
-  var cam=$('#faltaCam'); if(cam && falta.sel.indexOf('vale:')===0) cam.setAttribute('capture','environment');   // el vale se fotografía; el comprobante puede ser una captura
 }
 document.addEventListener('click', function(e){
   var t=e.target.closest('button'); if(!t) return;
@@ -3738,12 +3744,13 @@ document.addEventListener('click', function(e){
   else if(t.id==='btnFaltaSalir'){ falta={abierto:false, cred:null, filas:null, ultimo:'', sel:'', ocupado:false, aviso:'', error:'', foto:null}; propSem={datos:null, error:'', ocupado:false}; faltaPintar(); movPintar(); propSemPintar(); if($('#cajaN')) $('#cajaN').classList.add('hide'); }
   else if(t.id==='btnFaltaRecargar') faltaCargar();
   else if(t.id==='btnFaltaFoto'){ if($('#faltaCam')) $('#faltaCam').click(); }
+  else if(t.id==='btnFaltaGal'){ if($('#faltaGal')) $('#faltaGal').click(); }
   else if(t.id==='btnFaltaGuardar') faltaGuardar();
   else if(t.dataset.faltasel!=null){ falta.sel=t.dataset.faltasel; falta.foto=null; falta.error=''; faltaPintar();
-    if(falta.sel && $('#faltaCam')) $('#faltaCam').click(); }   // de una vez a la cámara: un toque menos por cada retiro
+    var en=falta.sel && $(t.dataset.faltavia==='gal' ? '#faltaGal' : '#faltaCam'); if(en) en.click(); }   // de una vez a la cámara o a los archivos: un toque menos por cada retiro
 });
 document.addEventListener('change', function(e){
-  if(e.target.id!=='faltaCam') return;
+  if(e.target.id!=='faltaCam' && e.target.id!=='faltaGal') return;
   var f=e.target.files && e.target.files[0]; e.target.value='';
   if(f) faltaFoto(f);
 });
